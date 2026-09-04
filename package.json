@@ -4,8 +4,8 @@
   "version": "2.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/patch-athlete-selection-v3.cjs && vite",
-    "prebuild": "node scripts/fix-current-end-plays.cjs && node scripts/patch-athlete-selection-v3.cjs",
+    "dev": "node scripts/patch-athlete-selection-v3.cjs && node scripts/patch-heatmap-v2.cjs && vite",
+    "prebuild": "node scripts/fix-current-end-plays.cjs && node scripts/patch-athlete-selection-v3.cjs && node scripts/patch-heatmap-v2.cjs",
     "build": "vite build",
     "preview": "vite preview"
   },
