@@ -12,10 +12,17 @@ if (src.includes('// PATCH: ui-review-v20')) {
   src = '// PATCH: dashboard-training-compat-v20b\n' + src;
 }
 
-// O patch v3 renomeia este campo para "Atleta Azul". O v21 usa um marcador
-// neutro para inserir os filtros independentes. Esta compatibilidade apenas
-// normaliza temporariamente o rótulo antes do v21.
-src = src.replace('<Field label="🔵 Atleta Azul">', '<Field label="Adversário cadastrado">');
+// O patch v3 renomeia o adversário para Atleta Azul e alguns patches mudam
+// a indentação. O v21 precisa de um ponto de inserção estável. Normalizamos
+// apenas o início do segundo ramo Individual, sem alterar o conteúdo do campo.
+const opponentStart = /\s*\{gameType === "Individual" \? \(\s*<Field label="(?:🔵 Atleta Azul|Atleta Azul|Adversário cadastrado)">/;
+if (!opponentStart.test(src)) {
+  throw new Error('v20b: início do campo do adversário não encontrado');
+}
+src = src.replace(
+  opponentStart,
+  '\n                {gameType === "Individual" ? (\n                  <Field label="Adversário cadastrado">'
+);
 
 fs.writeFileSync(file, src, 'utf8');
 console.log('dashboard-training-compat-v20b aplicado');
