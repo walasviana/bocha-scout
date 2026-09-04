@@ -15,7 +15,6 @@ function replaceText(from, to, label) {
   src = src.replace(from, to);
 }
 
-// No Scout ao vivo, mostra somente o nome do atleta; a cor do texto identifica o lado.
 replaceText(
   '<div style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#b91c1c" }}>Vermelho · {athlete}</div>\n        <div style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#1d4ed8" }}>Azul · {opponent}</div>',
   '<div style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#b91c1c" }}>{athlete}</div>\n        <div style={{ textAlign: "center", fontSize: 11, fontWeight: 800, color: "#1d4ed8" }}>{opponent}</div>',
@@ -62,7 +61,7 @@ const historyCard = `${livePanel}
                           <td>{play.ball}</td>
                           <td>
                             {play.whitePositionFrom}
-                            {play.play === "Mover branca" && play.whitePositionTo !== play.whitePositionFrom ? ` para ${play.whitePositionTo}` : ""}
+                            {play.play === "Mover branca" && play.whitePositionTo !== play.whitePositionFrom ? " para " + play.whitePositionTo : ""}
                           </td>
                           <td>{play.play}</td>
                           <td><ResultBadge result={play.result} /></td>
