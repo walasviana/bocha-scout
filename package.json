@@ -4,8 +4,8 @@
   "version": "2.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/patch-athlete-selection-v3.cjs && node scripts/patch-history-redblue-v4.cjs && node scripts/patch-heatmap-v2.cjs && node scripts/patch-live-final-v5.cjs && node scripts/patch-remove-end-history-v6.cjs && node scripts/patch-live-names-history-v7.cjs && node scripts/patch-tiebreak-v8.cjs && node scripts/patch-account-scope-v9a.cjs && node scripts/patch-dashboard-gender-v9b.cjs && node scripts/patch-newscout-filters-v9c.cjs && vite",
-    "prebuild": "node scripts/fix-current-end-plays.cjs && node scripts/patch-athlete-selection-v3.cjs && node scripts/patch-history-redblue-v4.cjs && node scripts/patch-heatmap-v2.cjs && node scripts/patch-live-final-v5.cjs && node scripts/patch-remove-end-history-v6.cjs && node scripts/patch-live-names-history-v7.cjs && node scripts/patch-tiebreak-v8.cjs && node scripts/patch-account-scope-v9a.cjs && node scripts/patch-dashboard-gender-v9b.cjs && node scripts/patch-newscout-filters-v9c.cjs",
+    "dev": "node scripts/patch-athlete-selection-v3.cjs && node scripts/patch-history-redblue-v4.cjs && node scripts/patch-heatmap-v2.cjs && node scripts/patch-live-final-v5.cjs && node scripts/patch-remove-end-history-v6.cjs && node scripts/patch-live-names-history-v7.cjs && node scripts/patch-tiebreak-v8.cjs && node scripts/patch-account-scope-v9a.cjs && node scripts/patch-dashboard-gender-v9b.cjs && node scripts/patch-newscout-filters-v9c.cjs && node scripts/patch-dashboard-account-count-v9d.cjs && vite",
+    "prebuild": "node scripts/fix-current-end-plays.cjs && node scripts/patch-athlete-selection-v3.cjs && node scripts/patch-history-redblue-v4.cjs && node scripts/patch-heatmap-v2.cjs && node scripts/patch-live-final-v5.cjs && node scripts/patch-remove-end-history-v6.cjs && node scripts/patch-live-names-history-v7.cjs && node scripts/patch-tiebreak-v8.cjs && node scripts/patch-account-scope-v9a.cjs && node scripts/patch-dashboard-gender-v9b.cjs && node scripts/patch-newscout-filters-v9c.cjs && node scripts/patch-dashboard-account-count-v9d.cjs",
     "build": "vite build",
     "preview": "vite preview"
   },
