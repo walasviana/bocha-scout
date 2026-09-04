@@ -11,11 +11,15 @@ function rep(a,b,label){
   src=src.replace(a,b);
 }
 
-rep(
-  '// PATCH: scout-approval-status-v18',
-  '// PATCH: scout-approval-status-v18\n// PATCH: super-admin-delete-scout-v19',
-  'marker'
-);
+// O patch v18 pode não inserir o marcador quando um patch anterior já alterou a mesma linha.
+// Portanto o v19 usa um marcador estável que certamente existe após o v17.
+if (src.includes('// PATCH: super-admin-history-v17')) {
+  src=src.replace('// PATCH: super-admin-history-v17','// PATCH: super-admin-history-v17\n// PATCH: super-admin-delete-scout-v19');
+} else if (src.includes('import { supabase } from "../lib/supabase";')) {
+  src=src.replace('import { supabase } from "../lib/supabase";','import { supabase } from "../lib/supabase";\n// PATCH: super-admin-delete-scout-v19');
+} else {
+  throw new Error('v19 não encontrou ponto seguro para inserir marcador');
+}
 
 rep(
   'function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, ownerAccounts = [] }) {',
