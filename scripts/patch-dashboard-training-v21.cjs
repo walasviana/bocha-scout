@@ -12,7 +12,6 @@ function replaceOnce(from, to, label) {
   src = src.replace(from, to);
 }
 
-// Marca o patch sem depender da posição exata dos imports criados pelos patches anteriores.
 if (src.includes('// PATCH: ui-review-v20')) {
   src = src.replace('// PATCH: ui-review-v20', '// PATCH: ui-review-v20\n// PATCH: dashboard-training-v21');
 } else if (src.includes('import { supabase } from "../lib/supabase";')) {
@@ -24,7 +23,7 @@ if (src.includes('// PATCH: ui-review-v20')) {
 // A escolha Treino/Campeonato fica no painel inicial; não repete no menu principal.
 src = src.replace('    ["new", "Novo Scout"],\n', '');
 
-// Dashboard novo: mantém filtros já existentes e mostra os cinco indicadores combinados.
+// Dashboard novo: mantém filtros existentes e mostra os cinco indicadores combinados.
 const dashboardStart = src.indexOf('function DashboardScreen(');
 const athletesStart = src.indexOf('function AthletesScreen(', dashboardStart);
 if (dashboardStart < 0 || athletesStart < 0) throw new Error('v21 DashboardScreen não encontrado');
@@ -77,17 +76,17 @@ const dashboard = `function DashboardScreen({ sessions, athletes, onNewTraining,
 
         <div style={styles.miniStats}>
           <MiniStat label="Total de scouts" value={visibleSessions.length} />
-          <MiniStat label="Melhor desempenho" value={best ? \`${'${best.efficiency.toFixed(1)}%'}\` : "—"} />
-          <MiniStat label="Pior desempenho" value={worst ? \`${'${worst.efficiency.toFixed(1)}%'}\` : "—"} />
-          <MiniStat label="Classe mais analisada" value={mostAnalyzedClass ? \`${'${mostAnalyzedClass[0]} · ${mostAnalyzedClass[1]}'}\` : "—"} />
+          <MiniStat label="Melhor desempenho" value={best ? best.efficiency.toFixed(1) + "%" : "—"} />
+          <MiniStat label="Pior desempenho" value={worst ? worst.efficiency.toFixed(1) + "%" : "—"} />
+          <MiniStat label="Classe mais analisada" value={mostAnalyzedClass ? mostAnalyzedClass[0] + " · " + mostAnalyzedClass[1] : "—"} />
           <MiniStat label="Último scout" value={last ? formatDateBR(last.date) : "—"} />
         </div>
 
         {(best || worst || last) && (
           <div style={{ ...styles.grid, marginTop: 14 }}>
-            <InfoBox title="Melhor" value={best ? \`${'${best.session.athlete} · ${best.efficiency.toFixed(1)}%'}\` : "—"} />
-            <InfoBox title="Ponto de atenção" value={worst ? \`${'${worst.session.athlete} · ${worst.efficiency.toFixed(1)}%'}\` : "—"} />
-            <InfoBox title="Última análise" value={last ? \`${'${last.athlete} × ${last.opponent}'}\` : "—"} />
+            <InfoBox title="Melhor" value={best ? best.session.athlete + " · " + best.efficiency.toFixed(1) + "%" : "—"} />
+            <InfoBox title="Ponto de atenção" value={worst ? worst.session.athlete + " · " + worst.efficiency.toFixed(1) + "%" : "—"} />
+            <InfoBox title="Última análise" value={last ? last.athlete + " × " + last.opponent : "—"} />
           </div>
         )}
 
@@ -104,14 +103,12 @@ const dashboard = `function DashboardScreen({ sessions, athletes, onNewTraining,
 `;
 src = src.slice(0, dashboardStart) + dashboard + src.slice(athletesStart);
 
-// Campo de fase do campeonato.
 replaceOnce(
   '  const [competitionName, setCompetitionName] = useState("");',
   '  const [competitionName, setCompetitionName] = useState("");\n  const [competitionPhase, setCompetitionPhase] = useState("");',
   'estado fase campeonato'
 );
 
-// Troca o filtro compartilhado do Novo Scout por filtros independentes dos dois lados.
 replaceOnce(
   '  const [newScoutClassFilter, setNewScoutClassFilter] = useState("Todos");\n  const [newScoutGenderFilter, setNewScoutGenderFilter] = useState("Todos");',
   '  const [athleteClassFilter, setAthleteClassFilter] = useState("Todos");\n  const [athleteGenderFilter, setAthleteGenderFilter] = useState("Todos");\n  const [opponentClassFilter, setOpponentClassFilter] = useState("Todos");\n  const [opponentGenderFilter, setOpponentGenderFilter] = useState("Todos");',
@@ -150,25 +147,21 @@ const newFilterLogic = `  const filteredPrimaryAthletes = availableAthletes.filt
   });`;
 replaceOnce(oldFilterLogic, newFilterLogic, 'lógica filtros independentes');
 
-// Validação do Campeonato antes de iniciar a partida.
 replaceOnce(
   '  function startGame() {\n    if (!athlete.trim()) {',
   '  function startGame() {\n    if (sessionKind === "Campeonato" && !competitionName.trim()) {\n      alert("Informe o nome do campeonato.");\n      return;\n    }\n    if (sessionKind === "Campeonato" && !competitionPhase.trim()) {\n      alert("Informe a fase do campeonato.");\n      return;\n    }\n    if (!athlete.trim()) {',
   'validação campeonato'
 );
 
-// Reseta corretamente os novos campos.
 src = src.replace('    setCompetitionName("");\n', '    setCompetitionName("");\n    setCompetitionPhase("");\n');
 src = src.replace('    setNewScoutClassFilter("Todos");\n    setNewScoutGenderFilter("Todos");', '    setAthleteClassFilter("Todos");\n    setAthleteGenderFilter("Todos");\n    setOpponentClassFilter("Todos");\n    setOpponentGenderFilter("Todos");');
 
-// Salva a fase junto com a sessão, sem remover campos existentes.
 replaceOnce(
   '          competitionName: sessionKind === "Campeonato" ? competitionName.trim() : "",',
   '          competitionName: sessionKind === "Campeonato" ? competitionName.trim() : "",\n          competitionPhase: sessionKind === "Campeonato" ? competitionPhase.trim() : "",',
   'persistência fase'
 );
 
-// Exibe a fase nos relatórios quando houver.
 src = src.replace(
   '    if (sessionKind === "Campeonato" && competitionName.trim()) {\n      line(`Campeonato: ${competitionName.trim()}`);\n    }',
   '    if (sessionKind === "Campeonato" && competitionName.trim()) {\n      line(`Campeonato: ${competitionName.trim()}`);\n      if (competitionPhase.trim()) line(`Fase: ${competitionPhase.trim()}`);\n    }'
@@ -182,14 +175,12 @@ src = src.replace(
   '{item.competitionName ? ` · ${item.competitionName}` : ""}{item.competitionPhase ? ` · ${item.competitionPhase}` : ""}'
 );
 
-// Liga os dois botões do dashboard ao fluxo correto.
 replaceOnce(
   '              onNewScout={() => setView("new")}\n              onHistory={() => setView("history")}',
   '              onNewTraining={() => { setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setView("new"); }}\n              onNewCompetition={() => { setSessionKind("Campeonato"); setCompetitionName(""); setCompetitionPhase(""); setView("new"); }}\n              onHistory={() => setView("history")}',
   'callbacks dashboard'
 );
 
-// Novo Scout: remove o seletor repetido de sessão, mostra o tipo definido e alinha Campeonato/Fase.
 const sessionField = `                <Field label="Sessão">
                   <select value={sessionKind} onChange={(e) => setSessionKind(e.target.value)} style={styles.input}>
                     <option>Treino</option>
@@ -222,7 +213,6 @@ const newCompetitionField = `                {sessionKind === "Campeonato" && (
                 )}`;
 replaceOnce(oldCompetitionField, newCompetitionField, 'campos campeonato');
 
-// Substitui o bloco de filtros compartilhados criado no v11.
 const filterBlockStart = src.indexOf('                {gameType === "Individual" && (\n                  <>\n                    <Field label="Filtrar por classe">');
 const individualBranchStart = src.indexOf('                {gameType === "Individual" ? (', filterBlockStart + 1);
 if (filterBlockStart < 0 || individualBranchStart < 0) throw new Error('v21 bloco de filtros v11 não encontrado');
@@ -247,10 +237,8 @@ const filterBlock = `                {gameType === "Individual" && sessionKind =
 `;
 src = src.slice(0, filterBlockStart) + filterBlock + src.slice(individualBranchStart);
 
-// Lista principal usa os filtros do atleta analisado.
 src = src.replace('{filteredNewScoutAthletes.map((item) => (', '{filteredPrimaryAthletes.map((item) => (');
 
-// Insere os filtros independentes do adversário imediatamente antes do campo de adversário.
 const opponentField = '                {gameType === "Individual" ? (\n                  <Field label="Adversário cadastrado">';
 const opponentFilters = `                {gameType === "Individual" && sessionKind === "Treino" && (
                   <>
