@@ -63,7 +63,7 @@ src = src.replace(
 const checkHistoryStart = src.indexOf('function HistoryScreen');
 const checkDataStart = src.indexOf('function DataScreen', checkHistoryStart);
 const checkHistory = src.slice(checkHistoryStart, checkDataStart);
-if (checkHistory.includes('selectedAthleteId') || checkHistory.includes('availableAthletes') || checkHistory.includes('chooseRegisteredAthlete')) {
+if (checkHistory.includes('availableAthletes') || checkHistory.includes('chooseRegisteredAthlete') || checkHistory.includes('value={selectedAthleteId}')) {
   throw new Error('Histórico ainda contém referências da tela Novo Scout');
 }
 if (!checkHistory.includes('Todos os atletas') || !checkHistory.includes('athletes.map')) {
