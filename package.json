@@ -4,8 +4,8 @@
   "version": "2.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "prebuild": "node scripts/fix-current-end-plays.cjs",
+    "dev": "node scripts/patch-heatmap-tb.cjs && vite",
+    "prebuild": "node scripts/fix-current-end-plays.cjs && node scripts/patch-heatmap-tb.cjs",
     "build": "vite build",
     "preview": "vite preview"
   },
