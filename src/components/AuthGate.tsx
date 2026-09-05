@@ -3,8 +3,15 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import AdminPanel from './AdminPanel';
 import AthleteRegistrationPanel from './AthleteRegistrationPanel';
+import ProfilePanel from './ProfilePanel';
 
 const PROFILE_TYPES = ['Técnico', 'Atleta', 'Professor', 'Outro'];
+const TERMS_VERSION = '2026-09-05';
+const TERMS_TEXT = `Ao criar uma conta no Bocha Scout, você concorda em usar a plataforma apenas para registro, acompanhamento e análise esportiva. As informações cadastradas devem ser verdadeiras e você é responsável por manter sua senha protegida.
+
+Os dados de perfil, atletas e scouts serão armazenados para o funcionamento da plataforma. Eles não devem ser usados para constranger, discriminar ou expor atletas. Dados pessoais de crianças e adolescentes só podem ser cadastrados com autorização do responsável e para finalidade esportiva legítima.
+
+O administrador pode moderar cadastros, bloquear acessos que violem estas regras e excluir contas quando necessário. O usuário pode solicitar correção ou exclusão dos seus dados. Mudanças relevantes nestes termos serão apresentadas novamente para aceite.`;
 
 function fieldStyle(): React.CSSProperties {
   return {
@@ -27,6 +34,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [message, setMessage] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
   const [showAthleteRegistration, setShowAthleteRegistration] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [form, setForm] = useState({
     email: '', password: '', fullName: '', username: '', country: 'Brasil', club: '', roleType: 'Técnico',
   });
@@ -36,7 +46,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       setProfile(null);
       return;
     }
-    const { data, error } = await supabase.from('profiles').select('id,name,username,country,club,profile_type,role,is_blocked').eq('id', nextUser.id).maybeSingle();
+    const { data, error } = await supabase.from('profiles').select('id,name,username,country,uf,club,profile_type,role,is_blocked').eq('id', nextUser.id).maybeSingle();
     if (!error) setProfile(data || null);
   }
 
@@ -67,6 +77,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         if (!form.fullName.trim() || !form.username.trim() || !form.country.trim()) {
           throw new Error('Preencha nome, usuário e país.');
         }
+        if (!acceptedTerms) throw new Error('Você precisa ler e aceitar os Termos de Uso.');
         const { data, error } = await supabase.auth.signUp({
           email: form.email.trim(),
           password: form.password,
@@ -77,6 +88,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               country: form.country.trim(),
               club: form.club.trim(),
               role_type: form.roleType,
+              terms_version: TERMS_VERSION,
+              terms_accepted_at: new Date().toISOString(),
             },
           },
         });
@@ -113,6 +126,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               <select style={fieldStyle()} value={form.roleType} onChange={e => setForm({ ...form, roleType: e.target.value })}>
                 {PROFILE_TYPES.map(x => <option key={x}>{x}</option>)}
               </select>
+              <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', color: '#334155', fontSize: 14 }}>
+                <input type="checkbox" checked={acceptedTerms} onChange={e => setAcceptedTerms(e.target.checked)} style={{ marginTop: 3 }} />
+                <span>Li e aceito os <button type="button" onClick={() => setShowTerms(true)} style={{ border: 0, padding: 0, background: 'transparent', color: '#15803d', textDecoration: 'underline', fontWeight: 700 }}>Termos de Uso</button>.</span>
+              </label>
             </>}
             <input style={fieldStyle()} type="email" placeholder="E-mail" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
             <input style={fieldStyle()} type="password" placeholder="Senha" minLength={6} required value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
@@ -123,6 +140,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           </form>
           <p style={{ color: '#64748b', fontSize: 12, marginTop: 15 }}>O acesso fica salvo neste aparelho até você sair da conta.</p>
         </div>
+        {showTerms && <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.7)', zIndex: 11000, padding: 18, overflowY: 'auto' }}>
+          <div style={{ maxWidth: 620, margin: '35px auto', background: '#fff', borderRadius: 16, padding: 22 }}>
+            <h2 style={{ marginTop: 0 }}>Termos de Uso do Bocha Scout</h2>
+            {TERMS_TEXT.split('\n\n').map((paragraph, index) => <p key={index} style={{ color: '#334155', lineHeight: 1.55 }}>{paragraph}</p>)}
+            <button type="button" onClick={() => setShowTerms(false)} style={{ width: '100%', padding: 12, border: 0, borderRadius: 10, background: '#0f172a', color: '#fff', fontWeight: 800 }}>Fechar termos</button>
+          </div>
+        </div>}
       </div>
     );
   }
@@ -145,12 +169,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           <button onClick={() => setShowAthleteRegistration(true)} style={{ border: '1px solid #16a34a', background: '#15803d', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar atleta</button>
           {isAdmin && <button onClick={() => setShowAdmin(true)} style={{ border: '1px solid #93c5fd', background: '#1d4ed8', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Painel Admin</button>}
+          <button onClick={() => setShowProfile(true)} style={{ border: '1px solid #94a3b8', background: '#334155', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Meu perfil</button>
           <button onClick={() => supabase.auth.signOut()} style={{ border: '1px solid #475569', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Sair</button>
         </div>
       </div>
       {children}
       {showAthleteRegistration && <AthleteRegistrationPanel user={user} onClose={() => setShowAthleteRegistration(false)} />}
       {showAdmin && isAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+      {showProfile && <ProfilePanel user={user} profile={profile} onSaved={loadProfile} onClose={() => setShowProfile(false)} />}
     </div>
   );
 }
