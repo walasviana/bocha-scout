@@ -13,12 +13,10 @@ if(src.includes('// PATCH: favorites-search-history-v25c')) {
   throw new Error('v26 marcador v25c não encontrado');
 }
 
-// Pesquisa passa a considerar somente nomes que COMEÇAM com o texto digitado.
 src=src.replaceAll('item.name.toLocaleLowerCase("pt-BR").includes(athleteNameSearch.trim().toLocaleLowerCase("pt-BR"))','item.name.toLocaleLowerCase("pt-BR").startsWith(athleteNameSearch.trim().toLocaleLowerCase("pt-BR"))');
 src=src.replaceAll('item.name.toLocaleLowerCase("pt-BR").includes(opponentNameSearch.trim().toLocaleLowerCase("pt-BR"))','item.name.toLocaleLowerCase("pt-BR").startsWith(opponentNameSearch.trim().toLocaleLowerCase("pt-BR"))');
 src=src.replaceAll('a.name.toLocaleLowerCase("pt-BR").includes(historyAthleteSearch.trim().toLocaleLowerCase("pt-BR"))','a.name.toLocaleLowerCase("pt-BR").startsWith(historyAthleteSearch.trim().toLocaleLowerCase("pt-BR"))');
 
-// Componente único: campo de digitação + lista rolável no mesmo lugar + estrela por nome.
 const picker=`function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds = [], onToggleFavorite, placeholder = "🔎 Digite ou role a lista", allowAll = false }) {
   const [open, setOpen] = useState(false);
   const selected = value && value !== "Todos" ? items.find((item) => item.id === value) : null;
@@ -63,7 +61,7 @@ const picker=`function AthleteCombobox({ items, value, onChange, query, setQuery
               <div key={item.id} style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #e2e8f0", background:value===item.id?"#f8fafc":"white" }}>
                 <button type="button" onMouseDown={(e)=>e.preventDefault()} onClick={()=>selectItem(item)} style={{ flex:1, border:0, background:"transparent", textAlign:"left", padding:"11px 10px 11px 12px", cursor:"pointer", minWidth:0 }}>
                   <div style={{ fontWeight:800, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.name}</div>
-                  {item.athleteClass && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{item.athleteClass}{item.gender ? ` · ${item.gender}` : ""}</div>}
+                  {item.athleteClass && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{item.athleteClass}{item.gender ? " · " + item.gender : ""}</div>}
                 </button>
                 <button type="button" aria-label={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"} title={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"} onMouseDown={(e)=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();onToggleFavorite?.(item.id);}} style={{ border:0, background:"transparent", fontSize:24, lineHeight:1, padding:"9px 12px", cursor:"pointer", color:fav?"#ca8a04":"#94a3b8" }}>
                   {fav ? "★" : "☆"}
@@ -80,7 +78,6 @@ const picker=`function AthleteCombobox({ items, value, onChange, query, setQuery
 `;
 replaceOnce(/function TopNav\(/,picker+'function TopNav(','componente AthleteCombobox');
 
-// Atleta Vermelho: remove input + select + botão de favorito e usa um único campo com rolagem.
 replaceOnce(/<input value=\{athleteNameSearch\}[\s\S]*?<button type="button" disabled=\{!selectedAthleteId\}[\s\S]*?<\/button>/,
 `<AthleteCombobox
                       items={filteredPrimaryAthletes}
@@ -93,7 +90,6 @@ replaceOnce(/<input value=\{athleteNameSearch\}[\s\S]*?<button type="button" dis
                       placeholder="🔎 Digite ou role os atletas"
                     />`,'seletor vermelho');
 
-// Atleta Azul.
 replaceOnce(/<input value=\{opponentNameSearch\}[\s\S]*?<button type="button" disabled=\{!selectedOpponentId\}[\s\S]*?<\/button>/,
 `<AthleteCombobox
                       items={eligibleOpponents}
@@ -106,7 +102,6 @@ replaceOnce(/<input value=\{opponentNameSearch\}[\s\S]*?<button type="button" di
                       placeholder="🔎 Digite ou role os atletas"
                     />`,'seletor azul');
 
-// Histórico: o mesmo campo único, com opção Todos quando nada foi digitado.
 replaceOnce(/<input value=\{historyAthleteSearch\}[\s\S]*?<button type="button" disabled=\{athleteFilter==="Todos"\}[\s\S]*?<\/button>/,
 `<AthleteCombobox
           items={historyAthletes}
