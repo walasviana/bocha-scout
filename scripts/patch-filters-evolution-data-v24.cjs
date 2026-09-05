@@ -1,0 +1,42 @@
+const fs = require('fs');
+const path = require('path');
+const file = path.join(process.cwd(), 'src/components/BochaScout.tsx');
+let src = fs.readFileSync(file, 'utf8');
+
+if (src.includes('// PATCH: filters-evolution-data-v24')) process.exit(0);
+function rep(a,b,label){ if(src.includes(b)) return; if(!src.includes(a)) throw new Error('v24 trecho não encontrado: '+label); src=src.replace(a,b); }
+
+src = src.replace('// PATCH: athlete-color-labels-v23', '// PATCH: athlete-color-labels-v23\n// PATCH: filters-evolution-data-v24');
+
+// Dados somente para Super Admin.
+rep('function TopNav({ view, setView }) {','function TopNav({ view, setView, isSuperAdmin = false }) {','TopNav signature');
+rep('    ["data", "Dados"],','    ...(isSuperAdmin ? [["data", "Dados"]] : []),','Dados menu');
+rep('<TopNav view={view} setView={setView} />','<TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />','TopNav props');
+src = src.replace('{view === "data" && (','{view === "data" && currentUserIsSuperAdmin && (');
+
+// Campeonato: um único filtro de classe/gênero para os dois atletas.
+rep('  const [opponentGenderFilter, setOpponentGenderFilter] = useState("Todos");','  const [opponentGenderFilter, setOpponentGenderFilter] = useState("Todos");\n  const [competitionClassFilter, setCompetitionClassFilter] = useState("Todos");\n  const [competitionGenderFilter, setCompetitionGenderFilter] = useState("Todos");','competition filters state');
+rep('    const classOk = athleteClassFilter === "Todos" || item.athleteClass === athleteClassFilter;\n    const genderOk = athleteGenderFilter === "Todos" || item.gender === athleteGenderFilter;','    const activeClass = sessionKind === "Campeonato" ? competitionClassFilter : athleteClassFilter;\n    const activeGender = sessionKind === "Campeonato" ? competitionGenderFilter : athleteGenderFilter;\n    const classOk = activeClass === "Todos" || item.athleteClass === activeClass;\n    const genderOk = activeGender === "Todos" || item.gender === activeGender;','primary filters');
+rep('    const classOk = opponentClassFilter === "Todos" || item.athleteClass === opponentClassFilter;\n    const genderOk = opponentGenderFilter === "Todos" || item.gender === opponentGenderFilter;','    const activeClass = sessionKind === "Campeonato" ? competitionClassFilter : opponentClassFilter;\n    const activeGender = sessionKind === "Campeonato" ? competitionGenderFilter : opponentGenderFilter;\n    const classOk = activeClass === "Todos" || item.athleteClass === activeClass;\n    const genderOk = activeGender === "Todos" || item.gender === activeGender;','opponent filters');
+
+const champAnchor = `                {gameType === "Individual" && sessionKind === "Treino" && (\n                  <>\n                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}>🔴 Atleta Vermelho</div>`;
+if(!src.includes(champAnchor)) throw new Error('v24 trecho não encontrado: treino filtros anchor');
+const champBlock = `                {gameType === "Individual" && sessionKind === "Campeonato" && (\n                  <>\n                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}>Filtros da partida</div>\n                    <Field label="Classe"><select value={competitionClassFilter} onChange={(e) => { setCompetitionClassFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todas as classes</option>{CLASSES.map((c)=><option key={c} value={c}>{c}</option>)}</select></Field>\n                    <Field label="Gênero"><select value={competitionGenderFilter} onChange={(e) => { setCompetitionGenderFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todos os gêneros</option>{GENDERS.map((g)=><option key={g} value={g}>{g}</option>)}</select></Field>\n                  </>\n                )}\n\n`;
+src = src.replace(champAnchor, champBlock + champAnchor);
+
+// Bolinha azul no campo do atleta azul.
+src = src.replace('<Field label="Atleta Azul">','<Field label="🔵 Atleta Azul">');
+
+// Gráfico de evolução abaixo do mapa. O mapa controla cor, modo e posição.
+rep('function HistoricalHeatmap({ plays }) {','function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {','heatmap signature');
+const detailAnchor = '  const detail = selectedPosition ? positionData[selectedPosition] : null;';
+const evolutionCode = `  const detail = selectedPosition ? positionData[selectedPosition] : null;\n  const evolution = useMemo(() => {\n    return [...sessions].sort((a,b) => String(a.date || a.createdAt || "").localeCompare(String(b.date || b.createdAt || ""))).map((session) => {\n      let pp = playsForSession ? playsForSession(session) : (session.plays || []);\n      if (mapColor !== "Todas") pp = pp.filter((p) => p.color === mapColor);\n      if (mode === "Saídas de jogo") pp = pp.filter((p) => p.play === "Saída de jogo");\n      if (selectedPosition) pp = pp.filter((p) => (p.whitePositionTo || p.whitePositionFrom) === selectedPosition);\n      const st = calcStats(pp);\n      let value = st.efficiency;\n      if (mode === "Acertos") value = st.accuracy;\n      if (mode === "Erros") value = st.errorRate;\n      if (mode === "Frequência") value = pp.length;\n      if (mode === "Saídas de jogo") value = pp.length;\n      return { id: session.id, label: formatDateBR(session.date), value, total: pp.length };\n    }).filter((x) => x.total > 0);\n  }, [sessions, playsForSession, mapColor, mode, selectedPosition]);\n  const maxEvolution = Math.max(1, ...evolution.map((x) => x.value));`;
+rep(detailAnchor,evolutionCode,'evolution data');
+
+const heatEnd = `      {detail && (mode === "Saídas de jogo" ? (\n        <div style={{ ...styles.info, marginTop: 12 }}>\n          <strong>Posição {selectedPosition}</strong> · {detail.saidas} saída(s) realizada(s) pelo atleta\n        </div>\n      ) : (\n        <div style={{ ...styles.info, marginTop: 12 }}>\n          <strong>Posição {selectedPosition}</strong> · {detail.total} jogadas · {detail.acertos} acertos · {detail.funcionais} funcionais · {detail.erros} erros · <strong>{detail.efficiency.toFixed(1)}% eficiência</strong>\n        </div>\n      ))}\n    </div>`;
+const heatWithChart = heatEnd.replace('    </div>', `      <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #e2e8f0" }}>\n        <h3 style={{ margin: "0 0 4px" }}>📈 Evolução ${'${selectedPosition ? `· Posição ${selectedPosition}` : "· Todas as posições"}'}</h3>\n        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>O gráfico acompanha automaticamente os filtros do mapa de calor.</div>\n        {evolution.length === 0 ? <p style={styles.empty}>Sem dados para os filtros selecionados.</p> : <div style={{ height: 190, display: "flex", alignItems: "flex-end", gap: 6, overflowX: "auto", padding: "8px 2px 22px", borderBottom: "1px solid #cbd5e1" }}>{evolution.map((point) => { const pct = mode === "Frequência" || mode === "Saídas de jogo" ? (point.value / maxEvolution) * 100 : point.value; return <div key={point.id} title={point.label + " · " + point.value.toFixed(1) + (mode === "Frequência" || mode === "Saídas de jogo" ? "x" : "%")} style={{ minWidth: 34, flex: "1 0 34px", maxWidth: 64, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center" }}><div style={{ fontSize: 10, fontWeight: 800, marginBottom: 4 }}>{mode === "Frequência" || mode === "Saídas de jogo" ? point.value.toFixed(0) + "x" : point.value.toFixed(0) + "%"}</div><div style={{ width: "70%", minHeight: 3, height: Math.max(3,pct) + "%", background: "#2563eb", borderRadius: "5px 5px 0 0" }} /><div style={{ fontSize: 9, color: "#64748b", marginTop: 4, whiteSpace: "nowrap" }}>{point.label.slice(0,5)}</div></div>;})}</div>}\n      </div>\n    </div>`);
+rep(heatEnd,heatWithChart,'evolution render');
+rep('<HistoricalHeatmap plays={plays}/>','<HistoricalHeatmap plays={plays} sessions={filtered} playsForSession={playsForSelectedAthlete}/>','history heatmap props');
+
+fs.writeFileSync(file, src, 'utf8');
+console.log('filters-evolution-data-v24 aplicado');
