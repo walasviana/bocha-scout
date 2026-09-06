@@ -747,12 +747,25 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
   const [historyClassFilter, setHistoryClassFilter] = useState("Todos");
   const [historyGenderFilter, setHistoryGenderFilter] = useState("Todos");
   const [historyLevelFilter, setHistoryLevelFilter] = useState("Todos");
+  const [showMoreHistoryFilters, setShowMoreHistoryFilters] = useState(false);
+  const athletesWithHistory = useMemo(() => {
+    const ids = new Set();
+    const names = new Set();
+    sessions.forEach((session) => {
+      if (session.athleteId) ids.add(session.athleteId);
+      if (session.opponentId) ids.add(session.opponentId);
+      if (session.athlete) names.add(String(session.athlete).trim().toLocaleLowerCase("pt-BR"));
+      if (session.opponent) names.add(String(session.opponent).trim().toLocaleLowerCase("pt-BR"));
+    });
+    return { ids, names };
+  }, [sessions]);
   const historyAthletes = useMemo(() => athletes.filter((a) => {
+    const hasHistory = athletesWithHistory.ids.has(a.id) || athletesWithHistory.names.has(String(a.name || "").trim().toLocaleLowerCase("pt-BR"));
     const classOk = historyClassFilter === "Todos" || a.athleteClass === historyClassFilter;
     const genderOk = historyGenderFilter === "Todos" || a.gender === historyGenderFilter;
     const nameOk = !historyAthleteSearch.trim() || a.name.toLocaleLowerCase("pt-BR").startsWith(historyAthleteSearch.trim().toLocaleLowerCase("pt-BR"));
-    return classOk && genderOk && nameOk;
-  }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR")), [athletes, historyClassFilter, historyGenderFilter, historyAthleteSearch, favoriteAthleteIds]);
+    return hasHistory && classOk && genderOk && nameOk;
+  }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR")), [athletes, athletesWithHistory, historyClassFilter, historyGenderFilter, historyAthleteSearch, favoriteAthleteIds]);
 
   async function deleteScout(item) {
     if (!isSuperAdmin) return;
@@ -853,6 +866,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
   }
 
   const filtered = sessions.filter((s) => {
+    const accountOk = !isAdmin || accountFilter === "Todos" || s.ownerUserId === accountFilter;
     const dateOk = !cutoff || new Date(`${s.date}T12:00:00`) >= cutoff;
     const athleteOk = athleteFilter === "Todos" || s.athleteId === athleteFilter || s.opponentId === athleteFilter;
     const selectedColor = colorForSelectedAthlete(s);
@@ -864,7 +878,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     const classOk = historyClassFilter === "Todos" || (athleteFilter === "Todos" ? s.athleteClass === historyClassFilter || s.opponentClass === historyClassFilter : roleClass === historyClassFilter);
     const genderOk = historyGenderFilter === "Todos" || (athleteFilter === "Todos" ? athleteGenderValue === historyGenderFilter || opponentGenderValue === historyGenderFilter : roleGender === historyGenderFilter);
     const levelOk = historyLevelFilter === "Todos" || (s.sessionKind === "Campeonato" && s.competitionLevel === historyLevelFilter);
-    return (kind === "Todos" || s.sessionKind === kind) && athleteOk && classOk && genderOk && levelOk && (gameFilter === "Todos" || s.gameType === gameFilter) && (colorFilter === "Todos" || selectedColor === colorFilter) && dateOk;
+    return accountOk && (kind === "Todos" || s.sessionKind === kind) && athleteOk && classOk && genderOk && levelOk && (gameFilter === "Todos" || s.gameType === gameFilter) && (colorFilter === "Todos" || selectedColor === colorFilter) && dateOk;
   });
   const selected = sessions.find((s) => s.id === selectedSessionId);
   // O mapa e as métricas analisam somente as jogadas do atleta selecionado, independentemente
@@ -917,14 +931,14 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
           placeholder="🔎 Digite ou role os atletas"
           allowAll
         /></Field>
-        <Field label="Classe"><select value={historyClassFilter} onChange={e=>{setHistoryClassFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></Field>
-        <Field label="Gênero"><select value={historyGenderFilter} onChange={e=>{setHistoryGenderFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option>Todos</option>{GENDERS.map(g=><option key={g}>{g}</option>)}</select></Field>
-        <Field label="Nível"><select value={historyLevelFilter} onChange={e=>setHistoryLevelFilter(e.target.value)} style={styles.input}><option>Todos</option><option>Nacional</option><option>Internacional</option></select></Field>
         <Field label="Período"><select value={period} onChange={e=>setPeriod(e.target.value)} style={styles.input}><option>Tudo</option><option>30 dias</option><option>3 meses</option><option>6 meses</option><option>12 meses</option></select></Field>
-        <Field label="Cor"><select value={colorFilter} onChange={e=>setColorFilter(e.target.value)} style={styles.input}><option>Todos</option><option>Vermelho</option><option>Azul</option></select></Field>
         <Field label="Tipo"><select value={kind} onChange={e=>setKind(e.target.value)} style={styles.input}><option>Todos</option><option>Treino</option><option>Campeonato</option></select></Field>
-        <Field label="Tipo de jogo"><select value={gameFilter} onChange={e=>setGameFilter(e.target.value)} style={styles.input}><option>Todos</option>{GAME_TYPES.map(g=><option key={g}>{g}</option>)}</select></Field>
       </div>
+      <button type="button" className="history-more-filters" onClick={() => setShowMoreHistoryFilters((value) => !value)}>{showMoreHistoryFilters ? "Ocultar filtros" : "Mais filtros"}</button>
+      {showMoreHistoryFilters && <div style={{ ...styles.grid, marginTop: 12 }}>
+        <Field label="Classe"><select value={historyClassFilter} onChange={e=>{setHistoryClassFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></Field>
+        <Field label="Tipo de jogo"><select value={gameFilter} onChange={e=>setGameFilter(e.target.value)} style={styles.input}><option>Todos</option>{GAME_TYPES.map(g=><option key={g}>{g}</option>)}</select></Field>
+      </div>}
     </div>
 
     <div style={styles.card}><div style={styles.miniStats}><MiniStat label="Partidas" value={filtered.length}/><MiniStat label="Vitórias" value={wins}/><MiniStat label="Derrotas" value={losses}/><MiniStat label="Aproveitamento" value={`${winRate.toFixed(1)}%`}/></div></div>
@@ -1935,16 +1949,8 @@ export default function BochaScout() {
   // =========================================================
 
   function saveEndScore(athleteScore, opponentScore) {
-    const a = Number(athleteScore);
-    const o = Number(opponentScore);
-
-    if (
-      athleteScore === "" ||
-      opponentScore === ""
-    ) {
-      alert("Digite o placar dos dois atletas.");
-      return;
-    }
+    const a = athleteScore === "" ? 0 : Number(athleteScore);
+    const o = opponentScore === "" ? 0 : Number(opponentScore);
 
     if (Number.isNaN(a) || Number.isNaN(o)) {
       alert("Digite um placar válido.");
@@ -4568,6 +4574,7 @@ function EndScore({
           <input
             type="number"
             min="0"
+            placeholder="0"
             value={
               athleteScore
             }
@@ -4588,6 +4595,7 @@ function EndScore({
           <input
             type="number"
             min="0"
+            placeholder="0"
             value={
               opponentScore
             }
