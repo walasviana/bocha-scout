@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+// PATCH: notification-bell-auth-v22
+// PATCH: auth-ui-review-v20
 import AdminPanel from './AdminPanel';
 import AthleteRegistrationPanel from './AthleteRegistrationPanel';
+import TeamRegistrationPanel from './TeamRegistrationPanel';
+// PATCH: super-admin-v17
+// PATCH: approval-workflow-v15
 import ProfilePanel from './ProfilePanel';
 
 const PROFILE_TYPES = ['Técnico', 'Atleta', 'Professor', 'Outro'];
@@ -33,7 +38,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'notifications'>('overview');
+  const [notificationCount, setNotificationCount] = useState(0);
   const [showAthleteRegistration, setShowAthleteRegistration] = useState(false);
+  const [showTeamRegistration, setShowTeamRegistration] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -50,6 +58,18 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     if (!error) setProfile(data || null);
   }
 
+  async function loadNotificationCount() {
+    if (profile?.role !== 'admin') {
+      setNotificationCount(0);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('admin_notifications')
+      .select('id')
+      .eq('status', 'pending');
+    if (!error) setNotificationCount((data || []).length);
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       const nextUser = data.session?.user ?? null;
@@ -64,6 +84,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     });
     return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    void loadNotificationCount();
+  }, [profile?.role, showAdmin]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,7 +132,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: 20, fontFamily: 'Arial, sans-serif' }}>
-        <div style={{ maxWidth: 480, margin: '30px auto', background: '#fff', borderRadius: 16, padding: 22, boxShadow: '0 10px 30px rgba(15,23,42,.08)' }}>
+        <div style={{ maxWidth: 480, margin: '30px auto', background: '#fff', borderRadius: 20, padding: 'clamp(20px,4vw,28px)', border: '1px solid #e2e8f0', boxShadow: '0 18px 50px rgba(15,23,42,.10)' }}>
           <div style={{ color: '#0f172a', fontWeight: 900, fontSize: 28 }}>BOCHA SCOUT</div>
           <div style={{ color: '#64748b', marginTop: 4, marginBottom: 20 }}>Scout técnico de Bocha Paralímpica</div>
 
@@ -156,26 +180,38 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   const meta = user.user_metadata || {};
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const isSuperAdmin = profile?.role === 'super_admin';
 
   return (
     <div>
-      <div style={{ background: '#0f172a', color: '#fff', padding: '8px 14px', fontFamily: 'Arial, sans-serif', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+      <div style={{ background: '#0f172a', color: '#fff', padding: '9px 14px', fontFamily: 'Inter, Arial, sans-serif', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 9997, boxShadow: '0 5px 18px rgba(15,23,42,.18)' }}>
         <div style={{ fontSize: 13 }}>
           <strong>{profile?.name || meta.full_name || meta.username || user.email}</strong>
           {(profile?.club || meta.club) ? ` · ${profile?.club || meta.club}` : ''} {(profile?.country || meta.country) ? ` · ${profile?.country || meta.country}` : ''}
-          {isAdmin ? ' · Administrador' : ''}
+          {isSuperAdmin ? ' · Super Admin' : isAdmin ? ' · Administrador' : ''}
         </div>
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           <button onClick={() => setShowAthleteRegistration(true)} style={{ border: '1px solid #16a34a', background: '#15803d', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar atleta</button>
-          {isAdmin && <button onClick={() => setShowAdmin(true)} style={{ border: '1px solid #93c5fd', background: '#1d4ed8', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Painel Admin</button>}
+          <button onClick={() => setShowTeamRegistration(true)} style={{ border: '1px solid #60a5fa', background: '#2563eb', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar Pares/Equipes</button>
+          {isAdmin && <button
+            onClick={() => { setAdminInitialTab('notifications'); setShowAdmin(true); }}
+            title="Notificações"
+            aria-label={notificationCount > 0 ? `Notificações: ${notificationCount} pendente(s)` : 'Notificações'}
+            style={{ position: 'relative', border: '1px solid #64748b', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 11px', minWidth: 42, fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
+          >
+            🔔
+            {notificationCount > 0 && <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 999, background: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 900, display: 'grid', placeItems: 'center', boxSizing: 'border-box' }}>{notificationCount > 99 ? '99+' : notificationCount}</span>}
+          </button>}
+          {isAdmin && <button onClick={() => { setAdminInitialTab('overview'); setShowAdmin(true); }} style={{ border: '1px solid #93c5fd', background: '#1d4ed8', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Painel Admin</button>}
           <button onClick={() => setShowProfile(true)} style={{ border: '1px solid #94a3b8', background: '#334155', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Meu perfil</button>
           <button onClick={() => supabase.auth.signOut()} style={{ border: '1px solid #475569', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Sair</button>
         </div>
       </div>
       {children}
       {showAthleteRegistration && <AthleteRegistrationPanel user={user} onClose={() => setShowAthleteRegistration(false)} />}
-      {showAdmin && isAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+      {showTeamRegistration && <TeamRegistrationPanel user={user} onClose={() => setShowTeamRegistration(false)} />}
+      {showAdmin && isAdmin && <AdminPanel initialTab={adminInitialTab} onClose={() => setShowAdmin(false)} />}
       {showProfile && <ProfilePanel user={user} profile={profile} onSaved={loadProfile} onClose={() => setShowProfile(false)} />}
     </div>
   );
