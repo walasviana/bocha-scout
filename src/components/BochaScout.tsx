@@ -733,7 +733,7 @@ function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
           const raw = positionData[position];
           const d = mode === "Saídas de jogo" && (position === "TB" || !raw || raw.saidas === 0) ? null : raw;
           const pct = !d ? 0 : mode === "Volume" ? (d.total/maxFreq)*100 : mode === "Saídas de jogo" ? (d.saidas/maxSaidas)*100 : d.efficiency;
-          return <button key={position} onClick={() => d && setSelectedPosition(position)} style={{ minHeight: 58, border: selectedPosition === position ? "3px solid #0f172a" : "1px solid rgba(15,23,42,.12)", borderRadius: 8, background: d ? heatColor(d) : "#f8fafc", color: d && pct >= 80 ? "white" : "#0f172a", fontWeight: 800, cursor: d ? "pointer" : "default", position: "relative", gridColumn: position === "TB" ? "1 / -1" : undefined }}>
+          return <button key={position} onClick={() => d && setSelectedPosition((current) => current === position ? "" : position)} style={{ minHeight: 58, border: selectedPosition === position ? "3px solid #0f172a" : "1px solid rgba(15,23,42,.12)", borderRadius: 8, background: d ? heatColor(d) : "#f8fafc", color: d && pct >= 80 ? "white" : "#0f172a", fontWeight: 800, cursor: d ? "pointer" : "default", position: "relative", gridColumn: position === "TB" ? "1 / -1" : undefined }}>
             <div>{position}{mode === "Saídas de jogo" && d?.saidas ? " S" : ""}</div><div style={{ fontSize: 11 }}>{d ? (mode === "Saídas de jogo" ? `${d.saidas}x` : `${pct.toFixed(0)}%`) : "—"}</div>
           </button>;
         })())}
@@ -823,6 +823,50 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
   const [accountFilter, setAccountFilter] = useState("Todos");
 
   async function exportSavedSessionReport(item) {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const navy = [6,45,84], yellow = [250,204,21], red = [239,65,72], blue = [22,128,244], muted = [96,116,142];
+    const accountName = item.ownerDisplay || ownerAccounts.find((account) => account.id === item.ownerUserId)?.name || ownerAccounts.find((account) => account.id === item.ownerUserId)?.username || "Conta responsável";
+    const redName = item.athleteColor === "Vermelho" ? item.athlete : item.opponent;
+    const blueName = item.athleteColor === "Azul" ? item.athlete : item.opponent;
+    const redPlays = (item.plays || []).filter((p) => p.color === "Vermelho");
+    const bluePlays = (item.plays || []).filter((p) => p.color === "Azul");
+    const colorFundaments = buildPlayStats(item.plays || []);
+    const text = (value,x,y,size=9,style="normal",color=navy,options={}) => { doc.setFont("helvetica",style); doc.setFontSize(size); doc.setTextColor(...color); doc.text(String(value ?? ""),x,y,options); };
+    const box = (x,y,w,h,fill,r=8) => { doc.setFillColor(...fill); doc.roundedRect(x,y,w,h,r,r,"F"); };
+    const section = (label,x,y,w,tone=navy) => { box(x,y,w,22,tone,6); text(label.toUpperCase(),x+9,y+15,8,"bold",[255,255,255]); };
+
+    doc.setFillColor(...navy); doc.rect(0,0,W,78,"F");
+    text("BOCHA",26,31,23,"bold",[255,255,255]); text("SCOUT",112,31,23,"bold",yellow);
+    text("RELATÓRIO TÉCNICO DA PARTIDA",W-26,27,13,"bold",[255,255,255],{align:"right"});
+    text(`${formatDateBR(item.date)} · ${item.sessionKind || "Sessão"} · ${item.gameType || "Jogo"} · ${item.athleteClass || "-"}`,W-26,45,8,"normal",[184,200,218],{align:"right"});
+    text(`Análise realizada pela conta: ${accountName}`,W-26,62,8,"normal",[184,200,218],{align:"right"});
+
+    box(26,90,W-52,72,[244,247,250],12);
+    text(redName,48,113,10,"bold",red); text("VERMELHO",48,130,7,"bold",muted);
+    const redScore = item.athleteColor === "Vermelho" ? item.totalAthlete : item.totalOpponent;
+    const blueScore = item.athleteColor === "Azul" ? item.totalAthlete : item.totalOpponent;
+    text(redScore,W/2-30,140,40,"bold",red,{align:"right"}); text("×",W/2,137,23,"bold",muted,{align:"center"}); text(blueScore,W/2+30,140,40,"bold",blue);
+    text(blueName,W-48,113,10,"bold",blue,{align:"right"}); text("AZUL",W-48,130,7,"bold",muted,{align:"right"});
+    Object.entries(item.scores || {}).forEach(([name,score],index)=>{ const x=190+index*82; const a=Number(score.athlete||0),o=Number(score.opponent||0); const tone=a===o?yellow:a>o?(item.athleteColor==="Vermelho"?red:blue):(item.athleteColor==="Vermelho"?blue:red); text(name.replace("End ","E"),x,104,7,"bold",muted,{align:"center"}); text(`${a}-${o}`,x,122,12,"bold",tone,{align:"center"}); });
+
+    const gap=12,colW=(W-52-gap)/2,left=26,right=left+colW+gap;
+    [["Vermelho",redName,red,redPlays,left],["Azul",blueName,blue,bluePlays,right]].forEach(([color,name,tone,plays,x])=>{
+      section(`${name} · ${color}`,x,177,colW,tone); const st=calcStats(plays);
+      [["Eficiência",`${st.efficiency.toFixed(1)}%`],["Jogadas",st.total],["Acertos",st.acertos],["Erros",st.erros]].forEach(([label,value],i)=>{const mx=x+12+i*((colW-24)/4);text(label,mx,215,7,"normal",muted);text(value,mx,234,15,"bold",navy);});
+      section("Fundamentos",x,250,colW,tone);
+      Object.entries(colorFundaments[color] || {}).sort((a,b)=>b[1].efficiency-a[1].efficiency||b[1].total-a[1].total).slice(0,8).forEach(([foundation,data],i)=>{const y=285+i*16;text(foundation,x+10,y,7.2,i===0?"bold":"normal",navy);text(`${data.total}x · ${data.acertos}A · ${data.funcionais}F · ${data.erros}E · ${data.efficiency.toFixed(0)}%`,x+colW-10,y,7.2,"bold",muted,{align:"right"});});
+    });
+    section("Histórico de jogadas",left,424,W-52);
+    const allPlays=item.plays||[],half=Math.ceil(allPlays.length/2),histCol=(W-72)/2;
+    allPlays.forEach((p,i)=>{const local=i<half?i:i-half,x=i<half?left+8:left+histCol+18,y=459+local*10;if(y>H-17)return;const tone=p.result==="Acerto"?[22,163,74]:p.result==="Funcional"?[234,88,12]:red;text(`${i+1}. ${String(p.end).replace("End ","E")} · ${p.ball} · ${p.play} · branca ${p.whitePositionTo||p.whitePositionFrom}`,x,y,5.8,"normal",navy);text(p.result,x+histCol-12,y,5.8,"bold",tone,{align:"right"});});
+    text(`BochaScout · conta: ${accountName}`,W-26,H-10,6,"normal",[145,160,178],{align:"right"});
+    doc.save(`BochaScout_${item.athlete}_vs_${item.opponent}_${item.date || todayISO()}.pdf`);
+  }
+
+  async function exportSavedSessionReportLegacy(item) {
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const M = 40;
@@ -2321,6 +2365,7 @@ export default function BochaScout() {
     const playStats = buildPlayStats(playsHistory);
     const redName = athleteColor === "Vermelho" ? athlete : opponent;
     const blueName = athleteColor === "Azul" ? athlete : opponent;
+    const reportAccountName = ownerAccounts.find((account) => account.id === currentUserId)?.name || ownerAccounts.find((account) => account.id === currentUserId)?.username || "Conta responsável";
     const sideScore = (color) => color === athleteColor ? totalAthlete : totalOpponent;
 
     const txt = (value, x, y, size = 9, style = "normal", color = navy, options = {}) => {
@@ -2344,6 +2389,7 @@ export default function BochaScout() {
     txt("DADOS QUE INCLUEM", 27, 49, 7, "bold", [184,200,218]);
     txt("RELATÓRIO TÉCNICO DA PARTIDA", W - 26, 29, 13, "bold", [255,255,255], { align: "right" });
     txt(`${sessionKind} · ${gameType} · ${sessionDate ? formatDateBR(sessionDate) : new Date().toLocaleDateString("pt-BR")} · ${athleteClass || "-"}`, W - 26, 48, 8, "normal", [184,200,218], { align: "right" });
+    txt(`Análise realizada pela conta: ${reportAccountName}`, W - 26, 63, 7, "normal", [184,200,218], { align: "right" });
 
     box(26, 90, W - 52, 72, [244,247,250], 12);
     txt(redName, 48, 112, 10, "bold", red);
