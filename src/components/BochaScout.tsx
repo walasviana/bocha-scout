@@ -1379,6 +1379,7 @@ export default function BochaScout() {
   const [tieBreakRound, setTieBreakRound] = useState(1);
 
   const [showFinalDetails, setShowFinalDetails] = useState(false);
+  const [finalDetailPanel, setFinalDetailPanel] = useState("");
   const [showMoreFundamentals, setShowMoreFundamentals] = useState(false);
   const [finalSelectedSide, setFinalSelectedSide] = useState("athlete");
 
@@ -1435,6 +1436,11 @@ export default function BochaScout() {
   const [commandHistory, setCommandHistory] = useState([]);
   const [discardedBalls, setDiscardedBalls] = useState({});
   const [undoStack, setUndoStack] = useState([]);
+
+  useEffect(() => {
+    document.body.classList.toggle("bocha-scout-live-mode", started);
+    return () => document.body.classList.remove("bocha-scout-live-mode");
+  }, [started]);
 
   function pushUndoSnapshot() {
     const snapshot = {
@@ -3390,6 +3396,14 @@ export default function BochaScout() {
   const finalStats = finalShowingAthlete ? athleteMatchStats : opponentMatchStats;
   const finalPlays = finalShowingAthlete ? athleteMatchPlays : opponentMatchPlays;
   const finalBest = finalColor === "Vermelho" ? redBest : blueBest;
+  const finalRanking = finalColor === "Vermelho" ? redRanking : blueRanking;
+  const colorHex = (color) => color === "Vermelho" ? "#ef4148" : "#1680f4";
+  const endTone = (score) => {
+    const a = Number(score.athlete || 0);
+    const o = Number(score.opponent || 0);
+    if (a === o) return "#facc15";
+    return a > o ? colorHex(athleteColor) : colorHex(opponentColor);
+  };
   const tieBreakWinner = getTieBreakWinnerFromScores(scores);
   const winnerName = totalAthlete > totalOpponent
     ? athlete
@@ -3411,12 +3425,12 @@ export default function BochaScout() {
           <small>ANÁLISE · INCLUSÃO · MAIS JOGO</small>
         </div>
         <div className="scout-final-scoreboard">
-          <div className="scout-final-player">
+          <div className="scout-final-player" style={{ color: colorHex(athleteColor) }}>
             <img src={athleteColor === "Vermelho" ? "/scout-assets/red-ball.png" : "/scout-assets/blue-ball.png"} alt="" />
             <strong>{athlete}</strong><span>{athleteColor.toUpperCase()}</span>
           </div>
           <div className="scout-final-score">{totalAthlete}<span>×</span>{totalOpponent}</div>
-          <div className="scout-final-player">
+          <div className="scout-final-player" style={{ color: colorHex(opponentColor) }}>
             <img src={opponentColor === "Vermelho" ? "/scout-assets/red-ball.png" : "/scout-assets/blue-ball.png"} alt="" />
             <strong>{opponent}</strong><span>{opponentColor.toUpperCase()}</span>
           </div>
@@ -3424,15 +3438,15 @@ export default function BochaScout() {
         <div className="scout-final-winner">{winnerName === "Empate" ? "Partida empatada" : `${winnerName} venceu${tieBreakWinner ? " no tie-break" : ""}`}</div>
         <div className="scout-final-ends">
           {Object.entries(scores).map(([name, score]) => (
-            <div key={name}><span>{name.replace("End ", "E")}</span><strong>{score.athlete} – {score.opponent}</strong></div>
+            <div key={name} style={{ borderColor: endTone(score) }}><span>{name.replace("End ", "E")}</span><strong style={{ color: endTone(score) }}>{score.athlete} – {score.opponent}</strong></div>
           ))}
         </div>
       </section>
 
       <main className="scout-final-content">
         <div className="scout-final-tabs">
-          <button className={finalShowingAthlete ? "is-active" : ""} onClick={() => setFinalSelectedSide("athlete")}>{athlete}</button>
-          <button className={!finalShowingAthlete ? "is-active" : ""} onClick={() => setFinalSelectedSide("opponent")}>{opponent}</button>
+          <button className={finalShowingAthlete ? "is-active" : ""} style={{ color: finalShowingAthlete ? "#fff" : colorHex(athleteColor), background: finalShowingAthlete ? colorHex(athleteColor) : "transparent" }} onClick={() => setFinalSelectedSide("athlete")}>{athlete}</button>
+          <button className={!finalShowingAthlete ? "is-active" : ""} style={{ color: !finalShowingAthlete ? "#fff" : colorHex(opponentColor), background: !finalShowingAthlete ? colorHex(opponentColor) : "transparent" }} onClick={() => setFinalSelectedSide("opponent")}>{opponent}</button>
         </div>
         <h2>Desempenho de {finalName}</h2>
         <div className="scout-final-metrics">
@@ -3440,15 +3454,22 @@ export default function BochaScout() {
           <div><span>Acertos</span><strong>{finalStats.acertos}</strong><small>bolas no alvo</small></div>
           <div><span>Erros</span><strong>{finalStats.erros}</strong><small>{finalStats.erros === 1 ? "bola fora" : "bolas fora"}</small></div>
         </div>
-        <button type="button" className="scout-final-row" onClick={() => setShowFinalDetails((value) => !value)}>
-          <div className="scout-final-row-icon"><img src="/scout-assets/approach.png" alt="" /></div>
+        <button type="button" className="scout-final-row" onClick={() => setFinalDetailPanel((value) => value === "heatmap" ? "" : "heatmap")}>
+          <div className="scout-final-row-icon"><img src="/scout-assets/zone.png" alt="" /></div>
           <div><strong>Mapa de calor</strong><span>{finalColor} · {finalName}</span><small>Veja onde as bolas foram jogadas durante a partida.</small></div><b>›</b>
         </button>
-        {showFinalDetails && <div className="scout-final-expanded"><HistoricalHeatmap plays={finalPlays} /></div>}
-        <div className="scout-final-row">
-          <div className="scout-final-row-icon"><img src="/scout-assets/defense.png" alt="" /></div>
+        {finalDetailPanel === "heatmap" && <div className="scout-final-expanded"><HistoricalHeatmap plays={finalPlays} /></div>}
+        <button type="button" className="scout-final-row" onClick={() => setFinalDetailPanel((value) => value === "fundamentals" ? "" : "fundamentals")}>
+          <div className="scout-final-row-icon"><img src="/scout-assets/approach.png" alt="" /></div>
           <div><strong>Fundamentos</strong><span>{finalBest ? `${finalBest[0]} · melhor desempenho` : "Sem jogadas registradas"}</span><small>Análise completa por fundamento.</small></div><b>›</b>
-        </div>
+        </button>
+        {finalDetailPanel === "fundamentals" && (
+          <div className="scout-final-expanded scout-final-foundation-list">
+            {finalRanking.length === 0 ? <p>Nenhuma jogada registrada.</p> : finalRanking.map(([play, data]) => (
+              <div key={play}><img src={playAsset(play)} alt="" /><span><strong>{play}</strong><small>{data.total} jogada(s) · {data.acertos} acerto(s) · {data.erros} erro(s)</small></span><b>{data.efficiency.toFixed(1)}%</b></div>
+            ))}
+          </div>
+        )}
         <button type="button" className="scout-final-pdf" onClick={exportMatchReport}>Gerar PDF <span>Relatório completo da partida</span></button>
         <button type="button" className="scout-final-new" onClick={newGame}>Nova partida</button>
       </main>

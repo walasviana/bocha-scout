@@ -185,7 +185,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      <div style={{ background: '#0f172a', color: '#fff', padding: '9px 14px', fontFamily: 'Inter, Arial, sans-serif', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 9997, boxShadow: '0 5px 18px rgba(15,23,42,.18)' }}>
+      <div className="account-toolbar" style={{ background: '#0f172a', color: '#fff', padding: '9px 14px', fontFamily: 'Inter, Arial, sans-serif', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 9997, boxShadow: '0 5px 18px rgba(15,23,42,.18)' }}>
         <div style={{ fontSize: 13 }}>
           <strong>{profile?.name || meta.full_name || meta.username || user.email}</strong>
           {(profile?.club || meta.club) ? ` · ${profile?.club || meta.club}` : ''} {(profile?.country || meta.country) ? ` · ${profile?.country || meta.country}` : ''}
