@@ -89,12 +89,20 @@ const PLAYS = [
 ];
 
 function playAsset(play) {
+  if (play === "Saída de jogo") return "/scout-assets/start.png";
   if (play === "Aproximação") return "/scout-assets/approach.png";
   if (play === "Batida") return "/scout-assets/hit.png";
   if (play === "Aérea") return "/scout-assets/aerial.png";
   if (play.includes("Tirar")) return "/scout-assets/remove.png";
-  if (play.includes("Dobrar") || play.includes("Sobrepor")) return "/scout-assets/overlap.png";
-  return "/scout-assets/defense.png";
+  if (play === "Mover branca") return "/scout-assets/move-white.png";
+  if (play === "Dobrar bola") return "/scout-assets/overlap.png";
+  if (play === "Pingo d'água") return "/scout-assets/water.png";
+  if (play === "Bola de defesa") return "/scout-assets/defense.png";
+  if (play === "Tabela") return "/scout-assets/bank.png";
+  if (play === "Sobrepor") return "/scout-assets/stack.png";
+  if (play.includes("Empurrar")) return "/scout-assets/push-zone.png";
+  if (play === "Falta") return "/scout-assets/foul.png";
+  return "/scout-assets/zone.png";
 }
 
 const RESULTS = ["Acerto", "Funcional", "Erro"];
@@ -2943,7 +2951,7 @@ export default function BochaScout() {
             <div className="scout-white-position">
               <img className="scout-white-ball" src="/scout-assets/white-ball.png" alt="Bola branca" />
               <strong>Branca: {whitePosition}</strong>
-              <button type="button" className="scout-move-white" onClick={() => setStage("moveWhite")}>Mover</button>
+              <span>Posição atual</span>
             </div>
           )}
 
@@ -3318,52 +3326,28 @@ export default function BochaScout() {
             />
           </div>
 
-          {/* PATCH: remove-end-history-v6 */}
-
-          {/* =================================================
-              SCOUT AO VIVO - APENAS POR COR (PARCIAL ATUAL)
-          ================================================= */}
-
-
-          {/* =================================================
-              SCOUT VERMELHO (PARCIAL)
-          ================================================= */}
-
-          <ColorScout
-            color="Vermelho"
-            stats={
-              endStats.vermelho
-            }
-            ranking={
-              endRedRanking
-            }
-            best={
-              endRedBest
-            }
-            worst={
-              endRedWorst
-            }
-          />
-
-          {/* =================================================
-              SCOUT AZUL (PARCIAL)
-          ================================================= */}
-
-          <ColorScout
-            color="Azul"
-            stats={
-              endStats.azul
-            }
-            ranking={
-              endBlueRanking
-            }
-            best={
-              endBlueBest
-            }
-            worst={
-              endBlueWorst
-            }
-          />
+          <section className="scout-partial-history" aria-label="Histórico de jogadas da parcial atual">
+            <div className="scout-partial-history-title">
+              <div><strong>Jogadas da parcial</strong><span>{currentEndName}</span></div>
+              <b>{currentEndPlays.length}</b>
+            </div>
+            {currentEndPlays.length === 0 ? (
+              <p>Nenhuma jogada registrada nesta parcial.</p>
+            ) : (
+              <div className="scout-partial-history-list">
+                {[...currentEndPlays].reverse().map((play) => (
+                  <div className="scout-partial-history-item" key={play.id}>
+                    <img src={playAsset(play.play)} alt="" />
+                    <div>
+                      <strong>{play.play}</strong>
+                      <span>{play.color} · {play.result} · Branca {play.whitePositionTo || play.whitePositionFrom}</span>
+                    </div>
+                    <button type="button" onClick={() => removePlay(play.id)} aria-label={`Excluir jogada ${play.play}`}>Excluir</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           <div className="scout-sticky-actions">
             <button
