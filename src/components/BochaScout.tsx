@@ -1,6 +1,31 @@
 // @ts-nocheck
 /* eslint-disable */
 import { useEffect, useMemo, useState } from "react";
+// PATCH: heatmap-v2
+import { supabase } from "../lib/supabase";
+// PATCH: super-admin-delete-scout-v19
+// PATCH: ui-review-v20
+// PATCH: dashboard-training-v21
+// PATCH: athlete-color-labels-v23
+// PATCH: filters-evolution-data-v24
+// PATCH: favorites-search-history-v25c
+// PATCH: single-athlete-picker-v26
+// PATCH: dashboard-training-compat-v20b
+// PATCH: history-tb-v13
+// PATCH: approved-only-selection-v15
+// PATCH: own-pending-usable-v16
+// PATCH: team-pairs-v12
+// PATCH: newscout-list-filters-v11
+// PATCH: shared-history-v10
+// PATCH: athlete-permissions-v10
+// PATCH: dashboard-gender-v9b
+// PATCH: account-scope-v9a
+// PATCH: tiebreak-v8
+// PATCH: live-final-v5
+// PATCH: live-names-history-v7
+// PATCH: remove-end-history-v6
+// PATCH: history-redblue-v4
+// PATCH: athlete-selection-v3
 
 /*
 ============================================================
@@ -40,11 +65,12 @@ Quando as 12 bolas do End forem utilizadas:
 - resultado automaticamente = ERRO.
 */
 
-const GAME_TYPES = ["Individual", "Pares", "Equipes"];
+const GAME_TYPES = ["Individual", "Par BC3", "Par BC4", "Equipe BC1/BC2"];
 
 const CLASSES = ["BC1", "BC2", "BC3", "BC4"];
 
 const COLORS = ["Vermelho", "Azul"];
+const GENDERS = ["Masculino", "Feminino"];
 
 const PLAYS = [
   "Saída de jogo",
@@ -78,7 +104,7 @@ const POSITIONS = [
 
 function getRegularEnds(gameType) {
   const total =
-    gameType === "Equipes" ? 6 : 4;
+    (gameType === "Equipes" || gameType === "Equipe BC1/BC2") ? 6 : 4;
 
   return Array.from(
     { length: total },
@@ -182,7 +208,7 @@ function buildPositionPerformance(plays) {
   const map = {};
   plays.forEach((p) => {
     const pos = p.whitePositionTo || p.whitePositionFrom;
-    if (!pos || pos === "TB") return;
+    if (!pos) return;
     if (!map[pos]) map[pos] = { total: 0, acertos: 0, funcionais: 0, erros: 0, saidas: 0 };
     const item = map[pos];
     item.total += 1;
@@ -236,17 +262,74 @@ function formatDateBR(iso) {
 }
 
 
-function TopNav({ view, setView }) {
+function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds = [], onToggleFavorite, placeholder = "🔎 Digite ou role a lista", allowAll = false }) {
+  const [open, setOpen] = useState(false);
+  const selected = value && value !== "Todos" ? items.find((item) => item.id === value) : null;
+
+  function handleInput(e) {
+    const next = e.target.value;
+    setQuery(next);
+    setOpen(true);
+    if (selected && next !== selected.name) onChange(allowAll ? "Todos" : "");
+    if (allowAll && !next.trim()) onChange("Todos");
+  }
+
+  function selectItem(item) {
+    setQuery(item.name);
+    onChange(item.id);
+    setOpen(false);
+  }
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        value={query}
+        onChange={handleInput}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 160)}
+        placeholder={placeholder}
+        autoComplete="off"
+        style={styles.input}
+      />
+      {open && (
+        <div style={{ position: "absolute", zIndex: 40, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: 250, overflowY: "auto", background: "white", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 12px 28px rgba(15,23,42,.18)" }}>
+          {allowAll && !query.trim() && (
+            <button type="button" onMouseDown={(e)=>e.preventDefault()} onClick={()=>{setQuery("");onChange("Todos");setOpen(false);}} style={{ width:"100%", textAlign:"left", padding:"11px 12px", border:0, borderBottom:"1px solid #e2e8f0", background:value==="Todos"?"#f1f5f9":"white", cursor:"pointer", fontWeight:800 }}>
+              Todos os atletas
+            </button>
+          )}
+          {items.length === 0 ? (
+            <div style={{ padding: 12, color: "#64748b", fontSize: 13 }}>Nenhum atleta encontrado.</div>
+          ) : items.map((item) => {
+            const fav = favoriteIds.includes(item.id);
+            return (
+              <div key={item.id} style={{ display:"flex", alignItems:"center", borderBottom:"1px solid #e2e8f0", background:value===item.id?"#f8fafc":"white" }}>
+                <button type="button" onMouseDown={(e)=>e.preventDefault()} onClick={()=>selectItem(item)} style={{ flex:1, border:0, background:"transparent", textAlign:"left", padding:"11px 10px 11px 12px", cursor:"pointer", minWidth:0 }}>
+                  <div style={{ fontWeight:800, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.name}</div>
+                  {item.athleteClass && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{item.athleteClass}{item.gender ? " · " + item.gender : ""}</div>}
+                </button>
+                <button type="button" aria-label={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"} title={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"} onMouseDown={(e)=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();onToggleFavorite?.(item.id);}} style={{ border:0, background:"transparent", fontSize:24, lineHeight:1, padding:"9px 12px", cursor:"pointer", color:fav?"#ca8a04":"#94a3b8" }}>
+                  {fav ? "★" : "☆"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopNav({ view, setView, isSuperAdmin = false }) {
   const items = [
     ["dashboard", "Início"],
-    ["new", "Novo Scout"],
     ["history", "Histórico"],
     ["athletes", "Atletas"],
-    ["data", "Dados"],
+    ...(isSuperAdmin ? [["data", "Dados"]] : []),
   ];
 
   return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 15 }}>
+    <div style={{ display: "flex", gap: 8, flexWrap: "nowrap", overflowX: "auto", marginBottom: 15, position: "sticky", top: 8, zIndex: 30, background: "rgba(255,255,255,.94)", backdropFilter: "blur(10px)", padding: 8, border: "1px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 24px rgba(15,23,42,.08)" }}>
       {items.map(([id, label]) => (
         <button
           key={id}
@@ -264,12 +347,39 @@ function TopNav({ view, setView }) {
   );
 }
 
+function getRegularScoreTotals(scores = {}) {
+  return Object.entries(scores || {}).reduce(
+    (acc, [name, score]) => {
+      if (String(name).startsWith("Tie-Break")) return acc;
+      acc.athlete += Number(score?.athlete || 0);
+      acc.opponent += Number(score?.opponent || 0);
+      return acc;
+    },
+    { athlete: 0, opponent: 0 }
+  );
+}
+
+function getTieBreakWinnerFromScores(scores = {}) {
+  const entries = Object.entries(scores || {})
+    .filter(([name]) => String(name).startsWith("Tie-Break"));
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const [, score] = entries[i];
+    const a = Number(score?.athlete || 0);
+    const o = Number(score?.opponent || 0);
+    if (a > o) return "athlete";
+    if (o > a) return "opponent";
+  }
+  return null;
+}
+
 function getSessionWinner(s) {
-  const a = Number(s.totalAthlete || 0);
-  const o = Number(s.totalOpponent || 0);
-  if (a > o) return "Vitória";
-  if (a < o) return "Derrota";
-  return "Empate";
+  const totals = getRegularScoreTotals(s?.scores || {});
+  if (totals.athlete > totals.opponent) return "Vitória";
+  if (totals.athlete < totals.opponent) return "Derrota";
+  const tbWinner = getTieBreakWinnerFromScores(s?.scores || {});
+  if (tbWinner === "athlete") return "Vitória";
+  if (tbWinner === "opponent") return "Derrota";
+  return "—";
 }
 
 function aggregateFundaments(sessions) {
@@ -304,55 +414,73 @@ function TinyBar({ value, suffix = "%", max = 100 }) {
   );
 }
 
-function DashboardScreen({ sessions, athletes, onNewScout, onHistory }) {
-  const totalPlays = sessions.reduce((sum, s) => sum + Number(s.stats?.total || (s.plays || []).length || 0), 0);
-  const training = sessions.filter((s) => s.sessionKind === "Treino");
-  const competition = sessions.filter((s) => s.sessionKind === "Campeonato");
-  const allPlays = sessions.flatMap((s) => s.plays || []);
-  const overall = calcStats(allPlays);
-  const fundamentMap = aggregateFundaments(sessions);
-  const ranking = Object.entries(fundamentMap).sort((a, b) => b[1].efficiency - a[1].efficiency);
-  const best = ranking[0];
-  const attention = Object.entries(fundamentMap).filter(([,d]) => d.total >= 2).sort((a,b) => b[1].errorRate - a[1].errorRate)[0];
+function DashboardScreen({ sessions, athletes, onNewTraining, onNewCompetition, onHistory }) {
+  const [classFilter, setClassFilter] = useState("Todos");
+  const [genderFilter, setGenderFilter] = useState("Todos");
 
-  const recent = [...sessions].sort((a,b) => String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date))).slice(0, 5);
+  const visibleSessions = sessions.filter((s) => {
+    const classOk = classFilter === "Todos" || s.athleteClass === classFilter || s.opponentClass === classFilter;
+    const genderOk = genderFilter === "Todos" || s.athleteGender === genderFilter || s.opponentGender === genderFilter;
+    return classOk && genderOk;
+  });
+
+  const performanceRows = visibleSessions.map((s) => ({
+    session: s,
+    efficiency: Number(s.stats?.efficiency ?? calcStats(getAthletePlays(s)).efficiency ?? 0),
+  }));
+  const best = [...performanceRows].sort((a, b) => b.efficiency - a.efficiency)[0];
+  const worst = [...performanceRows].sort((a, b) => a.efficiency - b.efficiency)[0];
+
+  const classCount = {};
+  visibleSessions.forEach((s) => {
+    if (!s.athleteClass) return;
+    classCount[s.athleteClass] = (classCount[s.athleteClass] || 0) + 1;
+  });
+  const mostAnalyzedClass = Object.entries(classCount).sort((a, b) => b[1] - a[1])[0];
+  const last = [...visibleSessions].sort((a, b) => String(b.createdAt || b.date || "").localeCompare(String(a.createdAt || a.date || "")))[0];
 
   return (
     <>
       <div style={styles.card}>
-        <h2>Visão geral</h2>
-        <div style={styles.miniStats}>
-          <MiniStat label="Atletas" value={athletes.length} />
-          <MiniStat label="Sessões" value={sessions.length} />
-          <MiniStat label="Jogadas" value={totalPlays} />
-          <MiniStat label="Eficiência" value={`${overall.efficiency.toFixed(1)}%`} />
-        </div>
-        <div style={{ ...styles.grid, marginTop: 14 }}>
-          <InfoBox title="Treinos" value={training.length} />
-          <InfoBox title="Campeonatos" value={competition.length} />
-          <InfoBox title="Melhor fundamento" value={best ? `${best[0]} · ${best[1].efficiency.toFixed(1)}%` : "-"} />
-          <InfoBox title="Ponto de atenção" value={attention ? `${attention[0]} · ${attention[1].errorRate.toFixed(1)}% de erro` : "-"} />
-        </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 15 }}>
-          <button onClick={onNewScout} style={{ ...styles.button, ...styles.green, flex: 1 }}>Novo Scout</button>
-          <button onClick={onHistory} style={{ ...styles.button, background: "#2563eb", flex: 1 }}>Ver Histórico</button>
-        </div>
-      </div>
+        <h2 style={{ marginBottom: 4 }}>Visão geral</h2>
+        <p style={{ ...styles.helpText, marginTop: 0 }}>Escolha o tipo de scout para iniciar. A seleção não será pedida novamente durante o cadastro da partida.</p>
 
-      <div style={styles.card}>
-        <h2>Últimas sessões</h2>
-        {recent.length === 0 ? <p style={styles.empty}>Nenhuma sessão registrada ainda.</p> : recent.map((s) => (
-          <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #e2e8f0" }}>
-            <div>
-              <strong>{s.athlete} × {s.opponent}</strong>
-              <div style={{ fontSize: 13, color: "#64748b" }}>{formatDateBR(s.date)} · {s.sessionKind} · {s.gameType}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <strong>{s.totalAthlete} × {s.totalOpponent}</strong>
-              <div style={{ fontSize: 12, color: "#64748b" }}>{Number(s.stats?.efficiency || 0).toFixed(1)}%</div>
-            </div>
+        <div style={{ ...styles.grid, marginBottom: 14 }}>
+          <Field label="Classe">
+            <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} style={styles.input}>
+              <option>Todos</option>
+              {CLASSES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </Field>
+          <Field label="Gênero">
+            <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)} style={styles.input}>
+              <option>Todos</option>
+              {GENDERS.map((g) => <option key={g}>{g}</option>)}
+            </select>
+          </Field>
+        </div>
+
+        <div style={styles.miniStats}>
+          <MiniStat label="Total de scouts" value={visibleSessions.length} />
+          <MiniStat label="Melhor desempenho" value={best ? best.efficiency.toFixed(1) + "%" : "—"} />
+          <MiniStat label="Pior desempenho" value={worst ? worst.efficiency.toFixed(1) + "%" : "—"} />
+          <MiniStat label="Classe mais analisada" value={mostAnalyzedClass ? mostAnalyzedClass[0] + " · " + mostAnalyzedClass[1] : "—"} />
+          <MiniStat label="Último scout" value={last ? formatDateBR(last.date) : "—"} />
+        </div>
+
+        {(best || worst || last) && (
+          <div style={{ ...styles.grid, marginTop: 14 }}>
+            <InfoBox title="Melhor" value={best ? best.session.athlete + " · " + best.efficiency.toFixed(1) + "%" : "—"} />
+            <InfoBox title="Ponto de atenção" value={worst ? worst.session.athlete + " · " + worst.efficiency.toFixed(1) + "%" : "—"} />
+            <InfoBox title="Última análise" value={last ? last.athlete + " × " + last.opponent : "—"} />
           </div>
-        ))}
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10, marginTop: 16 }}>
+          <button onClick={onNewTraining} style={{ ...styles.button, ...styles.green }}>Novo Scout · Treino</button>
+          <button onClick={onNewCompetition} style={{ ...styles.button, background: "#2563eb" }}>Novo Scout · Campeonato</button>
+          <button onClick={onHistory} style={{ ...styles.button, background: "#475569" }}>Ver Histórico</button>
+        </div>
       </div>
     </>
   );
@@ -385,24 +513,7 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
     <>
       <div style={styles.card}>
         <h2>Cadastro de atleta</h2>
-        <p style={{ color: "#64748b" }}>O mesmo cadastro pode ser usado como atleta principal ou adversário. No Individual, o adversário é selecionado entre atletas cadastrados da mesma classe.</p>
-        <form onSubmit={submit}>
-          <div style={styles.grid}>
-            <Field label="Nome do atleta">
-              <input value={name} onChange={(e) => setName(e.target.value)} style={styles.input} placeholder="Ex.: João Marcelo" />
-            </Field>
-            <Field label="Classe">
-              <select value={athleteClass} onChange={(e) => setAthleteClass(e.target.value)} style={styles.input}>
-                <option value="">Selecione</option>
-                {CLASSES.map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </Field>
-            <Field label="Observações">
-              <textarea value={observations} onChange={(e) => setObservations(e.target.value)} style={{ ...styles.input, minHeight: 82, resize: "vertical" }} placeholder="Informações técnicas ou observações do atleta" />
-            </Field>
-          </div>
-          <button type="submit" style={{ ...styles.button, ...styles.green, width: "100%", marginTop: 15 }}>+ Salvar atleta</button>
-        </form>
+        <p style={{ color: "#64748b", marginBottom: 0 }}>Use o botão <strong>Cadastrar atleta</strong> no topo do sistema. Contas comuns podem cadastrar atletas; edição e exclusão são exclusivas do administrador.</p>
       </div>
 
       <div style={styles.card}>
@@ -420,7 +531,6 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
                   <div style={{ fontSize: 13, color: "#64748b" }}>{a.athleteClass} · {athleteSessions.length} partidas · {stats.total} jogadas analisadas</div>
                   {a.observations && <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{a.observations}</div>}
                 </div>
-                <button onClick={() => onDelete(a.id)} style={{ ...styles.button, background: "#dc2626", padding: "8px 11px" }}>Excluir</button>
               </div>
               {stats.total > 0 && <div style={{ marginTop: 8 }}><TinyBar value={stats.efficiency} /></div>}
             </div>
@@ -466,7 +576,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
       <div style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>Analisando: {analyzedName}</div>
       <p style={{ color: "#64748b" }}>
         {formatDateBR(item.date)} · {item.sessionKind} · {item.gameType}
-        {item.competitionName ? ` · ${item.competitionName}` : ""}
+        {item.competitionName ? ` · ${item.competitionName}` : ""}{item.competitionPhase ? ` · ${item.competitionPhase}` : ""}
       </p>
       <div style={styles.miniStats}>
         <MiniStat label="Placar" value={`${item.totalAthlete} × ${item.totalOpponent}`} />
@@ -506,29 +616,45 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
   );
 }
 
-function HistoricalHeatmap({ plays }) {
+function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
   const [mode, setMode] = useState("Desempenho");
   const [selectedPosition, setSelectedPosition] = useState("");
   const [mapColor, setMapColor] = useState("Todas");
 
   const filteredPlays = useMemo(() => mapColor === "Todas" ? plays : plays.filter((p) => p.color === mapColor), [plays, mapColor]);
-  const positionData = useMemo(() => buildPositionPerformance(filteredPlays), [filteredPlays]);
+  const modePlays = useMemo(() => {
+    if (mode === "Aproximação") return filteredPlays.filter((p) => p.play === "Aproximação");
+    if (mode === "Batida") return filteredPlays.filter((p) => p.play === "Batida");
+    return filteredPlays;
+  }, [filteredPlays, mode]);
+  const positionData = useMemo(() => buildPositionPerformance(modePlays), [modePlays]);
 
   const maxFreq = Math.max(1, ...Object.values(positionData).map((d) => d.total));
   const maxSaidas = Math.max(1, ...Object.values(positionData).map((d) => d.saidas));
   const heatColor = (d) => {
     if (!d) return "#f8fafc";
     let value = d.efficiency;
-    if (mode === "Acertos") value = d.accuracy;
-    if (mode === "Erros") value = d.errorRate;
-    if (mode === "Frequência") value = (d.total / maxFreq) * 100;
+    if (mode === "Volume") value = (d.total / maxFreq) * 100;
     if (mode === "Saídas de jogo") value = (d.saidas / maxSaidas) * 100;
-    if (mode === "Erros") {
-      if (value >= 80) return "#dc2626"; if (value >= 60) return "#f97316"; if (value >= 40) return "#facc15"; if (value >= 20) return "#a3e635"; return "#16a34a";
-    }
     if (value >= 80) return "#15803d"; if (value >= 60) return "#84cc16"; if (value >= 40) return "#facc15"; if (value >= 20) return "#fb923c"; return "#ef4444";
   };
   const detail = selectedPosition ? positionData[selectedPosition] : null;
+  const evolution = useMemo(() => {
+    return [...sessions].sort((a,b) => String(a.date || a.createdAt || "").localeCompare(String(b.date || b.createdAt || ""))).map((session) => {
+      let pp = playsForSession ? playsForSession(session) : (session.plays || []);
+      if (mapColor !== "Todas") pp = pp.filter((p) => p.color === mapColor);
+      if (mode === "Saídas de jogo") pp = pp.filter((p) => p.play === "Saída de jogo");
+      if (selectedPosition) pp = pp.filter((p) => (p.whitePositionTo || p.whitePositionFrom) === selectedPosition);
+      const st = calcStats(pp);
+      let value = st.efficiency;
+      if (mode === "Acertos") value = st.accuracy;
+      if (mode === "Erros") value = st.errorRate;
+      if (mode === "Frequência") value = pp.length;
+      if (mode === "Saídas de jogo") value = pp.length;
+      return { id: session.id, label: formatDateBR(session.date), value, total: pp.length };
+    }).filter((x) => x.total > 0);
+  }, [sessions, playsForSession, mapColor, mode, selectedPosition]);
+  const maxEvolution = Math.max(1, ...evolution.map((x) => x.value));
 
   return (
     <div>
@@ -542,7 +668,7 @@ function HistoricalHeatmap({ plays }) {
       </div>
       <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 7, textTransform: "uppercase", letterSpacing: ".04em" }}>Modo do mapa</div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-        {["Desempenho", "Saídas de jogo", "Acertos", "Erros", "Frequência"].map((item) => (
+        {["Desempenho", "Saídas de jogo", "Volume", "Aproximação", "Batida"].map((item) => (
           <button key={item} onClick={() => setMode(item)} style={{ ...styles.button, padding: "9px 11px", background: mode === item ? "#0f172a" : "#64748b", fontSize: 12 }}>{item}</button>
         ))}
       </div>
@@ -566,11 +692,11 @@ function HistoricalHeatmap({ plays }) {
         </span>
       </div>
       <div style={{ ...styles.map, gap: 4 }}>
-        {POSITIONS.map((position, index) => position === null ? <div key={`hm-empty-${index}`} style={styles.positionEmpty} /> : position === "TB" ? null : (() => {
+        {POSITIONS.map((position, index) => position === null ? <div key={`hm-empty-${index}`} style={styles.positionEmpty} /> : (() => {
           const raw = positionData[position];
-          const d = mode === "Saídas de jogo" && (!raw || raw.saidas === 0) ? null : raw;
-          const pct = !d ? 0 : mode === "Erros" ? d.errorRate : mode === "Acertos" ? d.accuracy : mode === "Frequência" ? (d.total/maxFreq)*100 : mode === "Saídas de jogo" ? (d.saidas/maxSaidas)*100 : d.efficiency;
-          return <button key={position} onClick={() => d && setSelectedPosition(position)} style={{ minHeight: 58, border: selectedPosition === position ? "3px solid #0f172a" : "1px solid rgba(15,23,42,.12)", borderRadius: 8, background: d ? heatColor(d) : "#f8fafc", color: d && pct >= 80 ? "white" : "#0f172a", fontWeight: 800, cursor: d ? "pointer" : "default", position: "relative" }}>
+          const d = mode === "Saídas de jogo" && (position === "TB" || !raw || raw.saidas === 0) ? null : raw;
+          const pct = !d ? 0 : mode === "Volume" ? (d.total/maxFreq)*100 : mode === "Saídas de jogo" ? (d.saidas/maxSaidas)*100 : d.efficiency;
+          return <button key={position} onClick={() => d && setSelectedPosition(position)} style={{ minHeight: 58, border: selectedPosition === position ? "3px solid #0f172a" : "1px solid rgba(15,23,42,.12)", borderRadius: 8, background: d ? heatColor(d) : "#f8fafc", color: d && pct >= 80 ? "white" : "#0f172a", fontWeight: 800, cursor: d ? "pointer" : "default", position: "relative", gridColumn: position === "TB" ? "1 / -1" : undefined }}>
             <div>{position}{mode === "Saídas de jogo" && d?.saidas ? " S" : ""}</div><div style={{ fontSize: 11 }}>{d ? (mode === "Saídas de jogo" ? `${d.saidas}x` : `${pct.toFixed(0)}%`) : "—"}</div>
           </button>;
         })())}
@@ -578,7 +704,12 @@ function HistoricalHeatmap({ plays }) {
       {detail && (mode === "Saídas de jogo" ? (
         <div style={{ ...styles.info, marginTop: 12 }}>
           <strong>Posição {selectedPosition}</strong> · {detail.saidas} saída(s) realizada(s) pelo atleta
-        </div>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #e2e8f0" }}>
+        <h3 style={{ margin: "0 0 4px" }}>📈 Evolução ${selectedPosition ? `· Posição ${selectedPosition}` : "· Todas as posições"}</h3>
+        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>O gráfico acompanha automaticamente os filtros do mapa de calor.</div>
+        {evolution.length === 0 ? <p style={styles.empty}>Sem dados para os filtros selecionados.</p> : <div style={{ height: 190, display: "flex", alignItems: "flex-end", gap: 6, overflowX: "auto", padding: "8px 2px 22px", borderBottom: "1px solid #cbd5e1" }}>{evolution.map((point) => { const pct = mode === "Frequência" || mode === "Saídas de jogo" ? (point.value / maxEvolution) * 100 : point.value; return <div key={point.id} title={point.label + " · " + point.value.toFixed(1) + (mode === "Frequência" || mode === "Saídas de jogo" ? "x" : "%")} style={{ minWidth: 34, flex: "1 0 34px", maxWidth: 64, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center" }}><div style={{ fontSize: 10, fontWeight: 800, marginBottom: 4 }}>{mode === "Frequência" || mode === "Saídas de jogo" ? point.value.toFixed(0) + "x" : point.value.toFixed(0) + "%"}</div><div style={{ width: "70%", minHeight: 3, height: Math.max(3,pct) + "%", background: "#2563eb", borderRadius: "5px 5px 0 0" }} /><div style={{ fontSize: 9, color: "#64748b", marginTop: 4, whiteSpace: "nowrap" }}>{point.label.slice(0,5)}</div></div>;})}</div>}
+      </div>
+    </div>
       ) : (
         <div style={{ ...styles.info, marginTop: 12 }}>
           <strong>Posição {selectedPosition}</strong> · {detail.total} jogadas · {detail.acertos} acertos · {detail.funcionais} funcionais · {detail.erros} erros · <strong>{detail.efficiency.toFixed(1)}% eficiência</strong>
@@ -588,13 +719,36 @@ function HistoricalHeatmap({ plays }) {
   );
 }
 
-function HistoryScreen({ sessions, athletes, onBack }) {
+function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdmin = false, ownerAccounts = [], favoriteAthleteIds = [], onToggleFavorite }) {
   const [kind, setKind] = useState("Todos");
   const [athleteFilter, setAthleteFilter] = useState("Todos");
   const [gameFilter, setGameFilter] = useState("Todos");
   const [period, setPeriod] = useState("Tudo");
   const [colorFilter, setColorFilter] = useState("Todos");
   const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [historyAthleteSearch, setHistoryAthleteSearch] = useState("");
+  const [historyClassFilter, setHistoryClassFilter] = useState("Todos");
+  const [historyGenderFilter, setHistoryGenderFilter] = useState("Todos");
+  const [historyLevelFilter, setHistoryLevelFilter] = useState("Todos");
+  const historyAthletes = useMemo(() => athletes.filter((a) => {
+    const classOk = historyClassFilter === "Todos" || a.athleteClass === historyClassFilter;
+    const genderOk = historyGenderFilter === "Todos" || a.gender === historyGenderFilter;
+    const nameOk = !historyAthleteSearch.trim() || a.name.toLocaleLowerCase("pt-BR").startsWith(historyAthleteSearch.trim().toLocaleLowerCase("pt-BR"));
+    return classOk && genderOk && nameOk;
+  }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR")), [athletes, historyClassFilter, historyGenderFilter, historyAthleteSearch, favoriteAthleteIds]);
+
+  async function deleteScout(item) {
+    if (!isSuperAdmin) return;
+    if (!window.confirm(`Excluir definitivamente o Scout de ${item.athlete} × ${item.opponent}? Esta ação remove o Scout do banco de dados.`)) return;
+    const { error } = await supabase.rpc('super_admin_delete_scout', { target_scout_id: item.id });
+    if (error) {
+      alert(error.message || 'Não foi possível excluir o Scout.');
+      return;
+    }
+    if (selectedSessionId === item.id) setSelectedSessionId("");
+    window.location.reload();
+  }
+  const [accountFilter, setAccountFilter] = useState("Todos");
 
   async function exportSavedSessionReport(item) {
     const { jsPDF } = await import("jspdf");
@@ -621,6 +775,7 @@ function HistoryScreen({ sessions, athletes, onBack }) {
     line(`${item.athlete} (${item.athleteColor}) x ${item.opponent}` , true);
     line(`${formatDateBR(item.date)} · ${item.sessionKind} · ${item.gameType}`);
     if(item.competitionName) line(`Campeonato: ${item.competitionName}`);
+    if(item.competitionPhase) line(`Fase: ${item.competitionPhase}`);
     if(item.athleteClass) line(`Classe: ${item.athleteClass}`);
     line(`Placar final: ${item.totalAthlete} x ${item.totalOpponent} · ${getSessionWinner(item)}`, true); y+=6;
 
@@ -684,7 +839,15 @@ function HistoryScreen({ sessions, athletes, onBack }) {
     const dateOk = !cutoff || new Date(`${s.date}T12:00:00`) >= cutoff;
     const athleteOk = athleteFilter === "Todos" || s.athleteId === athleteFilter || s.opponentId === athleteFilter;
     const selectedColor = colorForSelectedAthlete(s);
-    return (kind === "Todos" || s.sessionKind === kind) && athleteOk && (gameFilter === "Todos" || s.gameType === gameFilter) && (colorFilter === "Todos" || selectedColor === colorFilter) && dateOk;
+    const role = athleteRole(s);
+    const roleClass = role === "adversario" ? s.opponentClass : s.athleteClass;
+    const athleteGenderValue = s.athleteGender || athletes.find((a)=>a.id===s.athleteId)?.gender || "";
+    const opponentGenderValue = s.opponentGender || athletes.find((a)=>a.id===s.opponentId)?.gender || "";
+    const roleGender = role === "adversario" ? opponentGenderValue : athleteGenderValue;
+    const classOk = historyClassFilter === "Todos" || (athleteFilter === "Todos" ? s.athleteClass === historyClassFilter || s.opponentClass === historyClassFilter : roleClass === historyClassFilter);
+    const genderOk = historyGenderFilter === "Todos" || (athleteFilter === "Todos" ? athleteGenderValue === historyGenderFilter || opponentGenderValue === historyGenderFilter : roleGender === historyGenderFilter);
+    const levelOk = historyLevelFilter === "Todos" || (s.sessionKind === "Campeonato" && s.competitionLevel === historyLevelFilter);
+    return (kind === "Todos" || s.sessionKind === kind) && athleteOk && classOk && genderOk && levelOk && (gameFilter === "Todos" || s.gameType === gameFilter) && (colorFilter === "Todos" || selectedColor === colorFilter) && dateOk;
   });
   const selected = sessions.find((s) => s.id === selectedSessionId);
   // O mapa e as métricas analisam somente as jogadas do atleta selecionado, independentemente
@@ -725,7 +888,21 @@ function HistoryScreen({ sessions, athletes, onBack }) {
     <div style={{ ...styles.card, borderTop: "6px solid #0f172a" }}>
       <h2 style={{ marginBottom: 4 }}>Histórico do atleta</h2><div style={{ color: "#65a30d", fontWeight: 700, marginBottom: 16 }}>Análise completa de desempenho</div>
       <div style={styles.grid}>
-        <Field label="Atleta"><select value={athleteFilter} onChange={e=>setAthleteFilter(e.target.value)} style={styles.input}><option value="Todos">Todos</option>{athletes.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+        {isAdmin && <Field label="Conta"><select value={accountFilter} onChange={e=>setAccountFilter(e.target.value)} style={styles.input}><option value="Todos">Todas as contas</option>{ownerAccounts.map(a=><option key={a.id} value={a.id}>{a.name || a.username || a.id}</option>)}</select></Field>}
+        <Field label="🔎 Atleta"><AthleteCombobox
+          items={historyAthletes}
+          value={athleteFilter}
+          onChange={setAthleteFilter}
+          query={historyAthleteSearch}
+          setQuery={setHistoryAthleteSearch}
+          favoriteIds={favoriteAthleteIds}
+          onToggleFavorite={onToggleFavorite}
+          placeholder="🔎 Digite ou role os atletas"
+          allowAll
+        /></Field>
+        <Field label="Classe"><select value={historyClassFilter} onChange={e=>{setHistoryClassFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></Field>
+        <Field label="Gênero"><select value={historyGenderFilter} onChange={e=>{setHistoryGenderFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option>Todos</option>{GENDERS.map(g=><option key={g}>{g}</option>)}</select></Field>
+        <Field label="Nível"><select value={historyLevelFilter} onChange={e=>setHistoryLevelFilter(e.target.value)} style={styles.input}><option>Todos</option><option>Nacional</option><option>Internacional</option></select></Field>
         <Field label="Período"><select value={period} onChange={e=>setPeriod(e.target.value)} style={styles.input}><option>Tudo</option><option>30 dias</option><option>3 meses</option><option>6 meses</option><option>12 meses</option></select></Field>
         <Field label="Cor"><select value={colorFilter} onChange={e=>setColorFilter(e.target.value)} style={styles.input}><option>Todos</option><option>Vermelho</option><option>Azul</option></select></Field>
         <Field label="Tipo"><select value={kind} onChange={e=>setKind(e.target.value)} style={styles.input}><option>Todos</option><option>Treino</option><option>Campeonato</option></select></Field>
@@ -735,7 +912,17 @@ function HistoryScreen({ sessions, athletes, onBack }) {
 
     <div style={styles.card}><div style={styles.miniStats}><MiniStat label="Partidas" value={filtered.length}/><MiniStat label="Vitórias" value={wins}/><MiniStat label="Derrotas" value={losses}/><MiniStat label="Aproveitamento" value={`${winRate.toFixed(1)}%`}/></div></div>
 
-    <div style={styles.card}><h2>Mapa de calor</h2><p style={styles.helpText}>Este mapa analisa somente as jogadas do atleta selecionado, em todas as partidas em que ele participou. Toque em uma posição para ver os detalhes.</p><HistoricalHeatmap plays={plays}/></div>
+    <div style={styles.card}><h2>Mapa de calor</h2><p style={styles.helpText}>Este mapa analisa somente as jogadas do atleta selecionado, em todas as partidas em que ele participou. Toque em uma posição para ver os detalhes.</p><HistoricalHeatmap plays={plays} sessions={filtered} playsForSession={playsForSelectedAthlete}/>
+      {(() => {
+        const tbPlays = plays.filter((p) => (p.whitePositionTo || p.whitePositionFrom) === "TB");
+        if (tbPlays.length === 0) return null;
+        const tbStats = calcStats(tbPlays);
+        return (
+          <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: "#f1f5f9", border: "1px solid #cbd5e1" }}>
+            <strong>Ponto TB</strong> · {tbPlays.length} jogada(s) · {tbStats.efficiency.toFixed(1)}% eficiência
+          </div>
+        );
+      })()}</div>
 
     <div style={styles.grid2}>
       <div style={styles.card}><h3>Desempenho por cor</h3>{colorStats.map(c=><div key={c.color} style={{padding:"10px 0",borderBottom:"1px solid #e2e8f0"}}><strong>{c.color}</strong><div>{c.stats.efficiency.toFixed(1)}% eficiência · {c.wins}/{c.sessions} vitórias</div></div>)}</div>
@@ -746,7 +933,7 @@ function HistoryScreen({ sessions, athletes, onBack }) {
     </div>
 
     {selected && <SessionDetail item={selected} selectedAthleteId={athleteFilter} onClose={()=>setSelectedSessionId("")} onExportPdf={exportSavedSessionReport}/>} 
-    <div style={styles.card}><h2>Histórico de partidas</h2>{filtered.length===0?<p style={styles.empty}>Nenhuma sessão registrada com esse filtro.</p>:filtered.map(item=><div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{item.athlete} × {item.opponent}</strong><div style={{fontSize:13,color:"#64748b"}}>{formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {item.athleteColor}</div></div><strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong></div><button onClick={()=>setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",marginTop:8,padding:"9px 12px"}}>Ver análise completa</button></div>)}</div>
+    <div style={styles.card}><h2>Histórico de partidas</h2>{filtered.length===0?<p style={styles.empty}>Nenhuma sessão registrada com esse filtro.</p>:filtered.map(item=><div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{item.athlete} × {item.opponent}</strong><div style={{fontSize:13,color:"#64748b"}}>{formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {item.athleteColor}{isAdmin && <span> · Criado por: {item.ownerDisplay || ownerAccounts.find(a => a.id === item.ownerUserId)?.name || ownerAccounts.find(a => a.id === item.ownerUserId)?.username || "Conta"}</span>}</div></div><strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong></div><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}><button onClick={()=>setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>{isSuperAdmin && <button onClick={()=>deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}</div></div>)}</div>
     <button onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }
@@ -819,12 +1006,58 @@ export default function BochaScout() {
   const [view, setView] = useState("dashboard");
   const [sessionKind, setSessionKind] = useState("Treino");
   const [competitionName, setCompetitionName] = useState("");
+  const [competitionPhase, setCompetitionPhase] = useState("");
+  const [competitionLevel, setCompetitionLevel] = useState("Nacional");
+  const [competitionScope, setCompetitionScope] = useState("Nacional");
   const [sessionDate, setSessionDate] = useState(todayISO());
 
   const [athletes, setAthletes] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState("");
   const [selectedOpponentId, setSelectedOpponentId] = useState("");
+  const [favoriteAthleteIds, setFavoriteAthleteIds] = useState([]);
+  const [athleteNameSearch, setAthleteNameSearch] = useState("");
+  const [opponentNameSearch, setOpponentNameSearch] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase.from("user_favorite_athletes").select("athlete_id").eq("user_id", user.id);
+      if (!error && active) setFavoriteAthleteIds((data || []).map((row) => row.athlete_id));
+    })();
+    return () => { active = false; };
+  }, []);
+
+  async function toggleFavoriteAthlete(athleteId) {
+    if (!athleteId) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const isFavorite = favoriteAthleteIds.includes(athleteId);
+    if (isFavorite) {
+      const { error } = await supabase.from("user_favorite_athletes").delete().eq("user_id", user.id).eq("athlete_id", athleteId);
+      if (error) { alert(error.message || "Não foi possível remover o favorito."); return; }
+      setFavoriteAthleteIds((prev) => prev.filter((id) => id !== athleteId));
+    } else {
+      const { error } = await supabase.from("user_favorite_athletes").insert({ user_id: user.id, athlete_id: athleteId });
+      if (error && error.code !== "23505") { alert(error.message || "Não foi possível salvar o favorito."); return; }
+      setFavoriteAthleteIds((prev) => prev.includes(athleteId) ? prev : [...prev, athleteId]);
+    }
+  }
+  const [teamEntries, setTeamEntries] = useState([]);
+  const [selectedRedTeamEntryId, setSelectedRedTeamEntryId] = useState("");
+  const [selectedBlueTeamEntryId, setSelectedBlueTeamEntryId] = useState("");
+  const [athleteClassFilter, setAthleteClassFilter] = useState("Todos");
+  const [athleteGenderFilter, setAthleteGenderFilter] = useState("Todos");
+  const [opponentClassFilter, setOpponentClassFilter] = useState("Todos");
+  const [opponentGenderFilter, setOpponentGenderFilter] = useState("Todos");
+  const [competitionClassFilter, setCompetitionClassFilter] = useState("Todos");
+  const [competitionGenderFilter, setCompetitionGenderFilter] = useState("Todos");
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
+  const [currentUserIsSuperAdmin, setCurrentUserIsSuperAdmin] = useState(false);
+  const [ownerAccounts, setOwnerAccounts] = useState([]);
 
   const [gameType, setGameType] = useState("Individual");
 
@@ -835,11 +1068,65 @@ export default function BochaScout() {
   const [opponentClass, setOpponentClass] = useState("");
   const [gender, setGender] = useState("");
 
-  const [athleteColor, setAthleteColor] = useState("");
+  const [athleteColor, setAthleteColor] = useState("Vermelho");
 
   useEffect(() => {
-    setAthletes(safeLoad(STORAGE_KEYS.athletes, []));
+    let active = true;
     setSessions(safeLoad(STORAGE_KEYS.sessions, []));
+
+    async function loadAthletesFromDatabase() {
+      const localAthletes = safeLoad(STORAGE_KEYS.athletes, []);
+      const { data, error } = await supabase
+        .from("athletes")
+        .select("id,name,class,country,uf,gender,approval_status,created_by")
+        .order("name");
+
+      if (!active) return;
+      if (error) {
+        console.error("Erro ao carregar atletas do banco:", error);
+        setAthletes(localAthletes);
+        return;
+      }
+
+      const { data: authData } = await supabase.auth.getUser();
+      const viewerId = authData.user?.id || "";
+      const selectableAthletes = (data || []).filter((item) => item.approval_status === "approved" || (item.approval_status === "pending" && item.created_by === viewerId));
+      const databaseAthletes = selectableAthletes.map((item) => ({
+        id: item.id,
+        name: item.name,
+        athleteClass: item.class,
+        country: item.country,
+        uf: item.uf,
+        gender: item.gender || "",
+        observations: [item.country, item.uf].filter(Boolean).join(" · "),
+        source: "database",
+      }));
+
+      const databaseIds = new Set(databaseAthletes.map((item) => item.id));
+      const localOnly = localAthletes.filter((item) => !databaseIds.has(item.id));
+      setAthletes([...databaseAthletes, ...localOnly].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
+    }
+
+    async function loadTeamEntriesFromDatabase() {
+      const { data, error } = await supabase
+        .from("boccia_team_entries")
+        .select("id,name,entity_type,division,country,approval_status,created_by")
+        .order("entity_type")
+        .order("name");
+      if (!active) return;
+      if (error) {
+        console.error("Erro ao carregar equipes/pares do banco:", error);
+        setTeamEntries([]);
+        return;
+      }
+      const { data: authData } = await supabase.auth.getUser();
+      const viewerId = authData.user?.id || "";
+      setTeamEntries((data || []).filter((item) => item.approval_status === "approved" || (item.approval_status === "pending" && item.created_by === viewerId)));
+    }
+
+    loadAthletesFromDatabase();
+    loadTeamEntriesFromDatabase();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -849,6 +1136,99 @@ export default function BochaScout() {
   useEffect(() => {
     safeSave(STORAGE_KEYS.sessions, sessions);
   }, [sessions]);
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) setCurrentUserId(data?.user?.id || "");
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setCurrentUserId(session?.user?.id || "");
+    });
+    return () => { active = false; listener?.subscription?.unsubscribe?.(); };
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    setSessions((prev) => prev.map((s) => s.ownerUserId ? s : { ...s, ownerUserId: currentUserId }));
+  }, [currentUserId]);
+
+  const accountSessions = useMemo(() => currentUserId ? sessions.filter((s) => s.ownerUserId === currentUserId) : [], [sessions, currentUserId]);
+  const historySessions = currentUserIsAdmin ? sessions : accountSessions;
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    let active = true;
+    async function loadSharedHistory() {
+      const profileResult = await supabase.from("profiles").select("id,name,username,role").order("name");
+      const sessionResult = await supabase.from("scout_sessions").select("id,owner_id,session_date,session_kind,game_type,athlete_id,opponent_id,athlete_name,opponent_name,payload,approval_status,created_at,updated_at").order("created_at", { ascending: false });
+      if (!active) return;
+      const profiles = profileResult.data || [];
+      if (!profileResult.error) {
+        setOwnerAccounts(profiles);
+        setCurrentUserIsAdmin(profiles.some((p) => p.id === currentUserId && (p.role === "admin" || p.role === "super_admin")));
+        setCurrentUserIsSuperAdmin(profiles.some((p) => p.id === currentUserId && p.role === "super_admin"));
+      }
+      if (!sessionResult.error) {
+        const names = Object.fromEntries(profiles.map((p) => [p.id, p.name || p.username || "Conta"]));
+        const dbSessions = (sessionResult.data || []).map((row) => {
+          const p = row.payload || {};
+          return {
+            ...p,
+            id: row.id,
+            ownerUserId: row.owner_id,
+            ownerDisplay: names[row.owner_id] || p.ownerDisplay || "Conta",
+            date: p.date || row.session_date,
+            sessionKind: p.sessionKind || row.session_kind,
+            gameType: p.gameType || row.game_type,
+            athleteId: p.athleteId || row.athlete_id,
+            opponentId: p.opponentId || row.opponent_id,
+            athlete: p.athlete || row.athlete_name,
+            opponent: p.opponent || row.opponent_name,
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            createdAt: p.createdAt || row.created_at,
+          };
+        });
+        const dbIds = new Set(dbSessions.map((s) => s.id));
+        const localLegacy = safeLoad(STORAGE_KEYS.sessions, []).filter((s) => !dbIds.has(s.id)).map((s) => ({ ...s, ownerUserId: s.ownerUserId || currentUserId }));
+        setSessions([...dbSessions, ...localLegacy]);
+      }
+    }
+    loadSharedHistory();
+    return () => { active = false; };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    const mine = sessions.filter((s) => s.ownerUserId === currentUserId);
+    if (!mine.length) return;
+    const owner = ownerAccounts.find((p) => p.id === currentUserId);
+    const ownerDisplay = owner?.name || owner?.username || "Conta";
+    const timer = setTimeout(() => {
+      mine.forEach(async (s) => {
+        const row = {
+          id: s.id,
+          owner_id: currentUserId,
+          session_date: s.date || todayISO(),
+          session_kind: s.sessionKind || "Treino",
+          game_type: s.gameType || "Individual",
+          athlete_id: s.athleteId || null,
+          opponent_id: s.opponentId || null,
+          athlete_name: s.athlete || "",
+          opponent_name: s.opponent || "",
+          payload: { ...s, ownerUserId: currentUserId, ownerDisplay },
+        };
+        const result = await supabase.from("scout_sessions").upsert(row, { onConflict: "id" });
+        if (result.error) console.error("Erro ao salvar scout no histórico da conta:", result.error);
+      });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [sessions, currentUserId, ownerAccounts]);
 
   function addAthlete(item) {
     const normalizedName = item.name.trim().toLocaleLowerCase("pt-BR");
@@ -902,10 +1282,12 @@ export default function BochaScout() {
     setAthlete(found?.name || "");
     setAthleteClass(found?.athleteClass || "");
 
-    // Ao trocar o atleta principal, limpa o adversário para evitar seleção incompatível.
-    setSelectedOpponentId("");
-    setOpponent("");
-    setOpponentClass("");
+    // Vermelho e azul podem ser escolhidos em qualquer ordem.
+    if (selectedOpponentId === id) {
+      setSelectedOpponentId("");
+      setOpponent("");
+      setOpponentClass("");
+    }
   }
 
   function chooseRegisteredOpponent(id) {
@@ -915,13 +1297,50 @@ export default function BochaScout() {
     setOpponentClass(found?.athleteClass || "");
   }
 
-  const eligibleOpponents = athletes.filter((item) => {
-    if (item.id === selectedAthleteId) return false;
-    // Em treino, qualquer atleta cadastrado pode ser adversário, mesmo de outra classe.
-    // Em campeonato, mantém a regra de confronto entre atletas da mesma classe.
-    if (sessionKind === "Treino") return true;
-    return !athleteClass || item.athleteClass === athleteClass;
+  const isInternationalCompetition = sessionKind === "Campeonato" && competitionScope === "Internacional";
+  const availableAthletes = athletes.filter((item) => {
+    if (isInternationalCompetition) return true;
+    const country = String(item.country || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    return country === "brasil";
   });
+
+  const filteredPrimaryAthletes = availableAthletes.filter((item) => {
+    const activeClass = sessionKind === "Campeonato" ? competitionClassFilter : athleteClassFilter;
+    const activeGender = sessionKind === "Campeonato" ? competitionGenderFilter : athleteGenderFilter;
+    const classOk = activeClass === "Todos" || item.athleteClass === activeClass;
+    const genderOk = activeGender === "Todos" || item.gender === activeGender;
+    const nameOk = !athleteNameSearch.trim() || item.name.toLocaleLowerCase("pt-BR").startsWith(athleteNameSearch.trim().toLocaleLowerCase("pt-BR"));
+    return classOk && genderOk && nameOk;
+  }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR"));
+  const selectedAthleteRecord = athletes.find((item) => item.id === selectedAthleteId);
+  const filteredOpponentAthletes = availableAthletes.filter((item) => {
+    const activeClass = sessionKind === "Campeonato" ? competitionClassFilter : opponentClassFilter;
+    const activeGender = sessionKind === "Campeonato" ? competitionGenderFilter : opponentGenderFilter;
+    const classOk = activeClass === "Todos" || item.athleteClass === activeClass;
+    const genderOk = activeGender === "Todos" || item.gender === activeGender;
+    const nameOk = !opponentNameSearch.trim() || item.name.toLocaleLowerCase("pt-BR").startsWith(opponentNameSearch.trim().toLocaleLowerCase("pt-BR"));
+    return classOk && genderOk && nameOk;
+  }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR"));
+  const eligibleOpponents = filteredOpponentAthletes.filter((item) => {
+    if (item.id === selectedAthleteId) return false;
+    if (sessionKind === "Treino") return true;
+    if (!selectedAthleteRecord) return true;
+    return item.athleteClass === selectedAthleteRecord.athleteClass && item.gender === selectedAthleteRecord.gender;
+  });
+
+  const teamDivision = gameType === "Equipe BC1/BC2" ? "Equipe BC1/BC2" : gameType === "Par BC3" ? "Par BC3" : gameType === "Par BC4" ? "Par BC4" : "";
+  const availableTeamEntries = teamEntries.filter((item) => item.division === teamDivision);
+  function chooseRedTeamEntry(id) {
+    setSelectedRedTeamEntryId(id);
+    const found = availableTeamEntries.find((item) => item.id === id);
+    setAthlete(found?.name || "");
+    if (selectedBlueTeamEntryId === id) { setSelectedBlueTeamEntryId(""); setOpponent(""); }
+  }
+  function chooseBlueTeamEntry(id) {
+    setSelectedBlueTeamEntryId(id);
+    const found = availableTeamEntries.find((item) => item.id === id);
+    setOpponent(found?.name || "");
+  }
 
   const opponentColor =
     athleteColor === "Vermelho"
@@ -939,6 +1358,7 @@ export default function BochaScout() {
 
   const [tieBreak, setTieBreak] =
     useState(false);
+  const [tieBreakRound, setTieBreakRound] = useState(1);
 
   const [showFinalDetails, setShowFinalDetails] = useState(false);
 
@@ -952,7 +1372,9 @@ export default function BochaScout() {
 
   const [currentEnd, setCurrentEnd] = useState(0);
 
-  const currentEndName = ends[currentEnd];
+  const currentEndName = tieBreak && currentEnd >= regularEnds.length
+    ? (tieBreakRound === 1 ? "Tie-Break" : `Tie-Break ${tieBreakRound}`)
+    : ends[currentEnd];
 
   // =========================================================
   // ETAPA DA TELA
@@ -1006,6 +1428,7 @@ export default function BochaScout() {
       selectedResult,
       currentEnd,
       tieBreak,
+      tieBreakRound,
       stage,
       started,
       finished,
@@ -1030,6 +1453,7 @@ export default function BochaScout() {
     setSelectedResult(snapshot.selectedResult);
     setCurrentEnd(snapshot.currentEnd);
     setTieBreak(snapshot.tieBreak);
+    setTieBreakRound(snapshot.tieBreakRound || 1);
     setStage(snapshot.stage);
     setStarted(snapshot.started);
     setFinished(snapshot.finished);
@@ -1046,35 +1470,40 @@ export default function BochaScout() {
   // =========================================================
 
   function startGame() {
+    if (sessionKind === "Campeonato" && !competitionName.trim()) {
+      alert("Informe o nome do campeonato.");
+      return;
+    }
+    if (sessionKind === "Campeonato" && !competitionPhase.trim()) {
+      alert("Informe a fase do campeonato.");
+      return;
+    }
     if (!athlete.trim()) {
-      alert(gameType === "Individual" ? "Selecione um atleta cadastrado." : "Digite o nome da equipe/país.");
+      alert(gameType === "Individual" ? "Selecione o Atleta Vermelho." : "Selecione o país ou clube do lado Vermelho.");
       return;
     }
 
     if (!opponent.trim()) {
-      alert(gameType === "Individual" ? "Selecione um adversário cadastrado." : "Digite o nome da equipe/país adversária.");
+      alert(gameType === "Individual" ? "Selecione o Atleta Azul." : "Selecione o país ou clube do lado Azul.");
       return;
     }
 
     if (gameType === "Individual" && !selectedAthleteId) {
-      alert("Selecione um atleta cadastrado.");
+      alert("Selecione o Atleta Vermelho.");
       return;
     }
 
     if (gameType === "Individual" && !selectedOpponentId) {
-      alert("Selecione um adversário cadastrado.");
+      alert("Selecione o Atleta Azul.");
       return;
     }
 
     if (gameType === "Individual" && selectedAthleteId === selectedOpponentId) {
-      alert("O atleta e o adversário precisam ser pessoas diferentes.");
+      alert("O Atleta Vermelho e o Atleta Azul precisam ser pessoas diferentes.");
       return;
     }
 
-    if (!athleteColor) {
-      alert(gameType === "Individual" ? "Selecione a cor do atleta." : "Selecione a cor da equipe.");
-      return;
-    }
+    if (athleteColor !== "Vermelho") setAthleteColor("Vermelho");
 
     setSessionDate(todayISO());
     setStarted(true);
@@ -1082,6 +1511,7 @@ export default function BochaScout() {
 
     setCurrentEnd(0);
     setTieBreak(false);
+    setTieBreakRound(1);
 
     setWhitePosition("");
     setNewWhitePosition("");
@@ -1515,44 +1945,34 @@ export default function BochaScout() {
 
     setScores(updatedScores);
 
-    /*
-      Se ainda existem Ends
-    */
+    const isTieBreakEnd = String(currentEndName).startsWith("Tie-Break");
 
-    if (currentEnd < ends.length - 1) {
+    // Ends regulares: segue normalmente até o último.
+    if (!isTieBreakEnd && currentEnd < regularEnds.length - 1) {
       startNewEnd(currentEnd + 1);
-
       return;
     }
 
-    /*
-      Último End regular:
-      empate na soma abre o Tie-Break
-      (branca fixa na posição TB)
-    */
-
-    if (currentEndName !== "Tie-Break") {
-      const totals = Object.values(
-        updatedScores
-      ).reduce(
-        (acc, s) => ({
-          athlete:
-            acc.athlete + Number(s.athlete),
-          opponent:
-            acc.opponent +
-            Number(s.opponent),
-        }),
-        { athlete: 0, opponent: 0 }
-      );
-
-      if (
-        totals.athlete === totals.opponent
-      ) {
+    // Último End regular: se o placar regular empatar, abre o Tie-Break.
+    if (!isTieBreakEnd) {
+      const totals = getRegularScoreTotals(updatedScores);
+      if (totals.athlete === totals.opponent) {
         setTieBreak(true);
-        startNewEnd(currentEnd + 1, "TB");
-
+        setTieBreakRound(1);
+        startNewEnd(regularEnds.length, "TB");
         return;
       }
+      setFinished(true);
+      setStarted(false);
+      return;
+    }
+
+    // Tie-Break nunca pode encerrar empatado. Se empatar, abre outro TB.
+    if (a === o) {
+      setTieBreak(true);
+      setTieBreakRound((round) => round + 1);
+      startNewEnd(regularEnds.length, "TB");
+      return;
     }
 
     setFinished(true);
@@ -1687,25 +2107,9 @@ export default function BochaScout() {
   // PLACAR TOTAL
   // =========================================================
 
-  const totalAthlete =
-    Object.values(scores).reduce(
-      (sum, score) =>
-        sum +
-        Number(
-          score?.athlete || 0
-        ),
-      0
-    );
-
-  const totalOpponent =
-    Object.values(scores).reduce(
-      (sum, score) =>
-        sum +
-        Number(
-          score?.opponent || 0
-        ),
-      0
-    );
+  const regularScoreTotals = getRegularScoreTotals(scores);
+  const totalAthlete = regularScoreTotals.athlete;
+  const totalOpponent = regularScoreTotals.opponent;
 
   // =========================================================
   // MELHOR END
@@ -1716,6 +2120,7 @@ export default function BochaScout() {
     let o = null;
 
     Object.entries(scores).forEach(([name, s]) => {
+      if (String(name).startsWith("Tie-Break")) return;
       const diffA = Number(s.athlete) - Number(s.opponent);
       const diffO = Number(s.opponent) - Number(s.athlete);
 
@@ -1743,18 +2148,28 @@ export default function BochaScout() {
     setOpponent("");
     setSelectedAthleteId("");
     setSelectedOpponentId("");
+    setSelectedRedTeamEntryId("");
+    setSelectedBlueTeamEntryId("");
 
     setAthleteClass("");
     setOpponentClass("");
     setGender("");
-    setAthleteColor("");
+    setAthleteColor("Vermelho");
     setSessionKind("Treino");
+    setCompetitionScope("Nacional");
+    setAthleteClassFilter("Todos");
+    setAthleteGenderFilter("Todos");
+    setOpponentClassFilter("Todos");
+    setOpponentGenderFilter("Todos");
     setCompetitionName("");
+    setCompetitionPhase("");
+    setCompetitionLevel("Nacional");
     setSessionDate(todayISO());
     setView("new");
 
     setCurrentEnd(0);
     setTieBreak(false);
+    setTieBreakRound(1);
     setShowFinalDetails(false);
 
     setStage("white");
@@ -1777,13 +2192,7 @@ export default function BochaScout() {
     if (!finished || playsHistory.length === 0) return;
 
     const statsSnapshot = calcStats(playsHistory.filter((p) => p.color === athleteColor));
-    const totals = Object.values(scores).reduce(
-      (acc, value) => ({
-        athlete: acc.athlete + Number(value.athlete || 0),
-        opponent: acc.opponent + Number(value.opponent || 0),
-      }),
-      { athlete: 0, opponent: 0 }
-    );
+    const totals = getRegularScoreTotals(scores);
 
     const id = `session-${sessionDate}-${athlete}-${opponent}-${playsHistory[0]?.id || Date.now()}`;
 
@@ -1792,17 +2201,22 @@ export default function BochaScout() {
       return [
         {
           id,
+          ownerUserId: currentUserId || null,
           date: sessionDate,
           createdAt: new Date().toISOString(),
           sessionKind,
           competitionName: sessionKind === "Campeonato" ? competitionName.trim() : "",
+          competitionPhase: sessionKind === "Campeonato" ? competitionPhase.trim() : "",
+          competitionLevel: sessionKind === "Campeonato" ? competitionLevel : "",
+          athleteGender: gameType === "Individual" ? (athletes.find((x) => x.id === selectedAthleteId)?.gender || "") : "",
+          opponentGender: gameType === "Individual" ? (athletes.find((x) => x.id === selectedOpponentId)?.gender || "") : "",
           gameType,
           athleteId: gameType === "Individual" ? selectedAthleteId : null,
           opponentId: gameType === "Individual" ? selectedOpponentId : null,
           athlete,
           opponent,
-          athleteClass: gameType === "Individual" ? athleteClass : "",
-          opponentClass: gameType === "Individual" ? opponentClass : "",
+          athleteClass: gameType === "Individual" ? athleteClass : teamDivision,
+          opponentClass: gameType === "Individual" ? opponentClass : teamDivision,
           athleteColor,
           totalAthlete: totals.athlete,
           totalOpponent: totals.opponent,
@@ -1877,11 +2291,12 @@ export default function BochaScout() {
 
     sectionTitle("DADOS DA PARTIDA");
     line(`Tipo de jogo: ${gameType}`);
-    line(`Atleta: ${athlete} (${athleteColor})`);
-    line(`Adversário: ${opponent} (${opponentColor})`);
+    line(`Atleta Vermelho: ${athlete}`);
+    line(`Atleta Azul: ${opponent}`);
     line(`Sessão: ${sessionKind}   |   Data: ${formatDateBR(sessionDate)}`);
     if (sessionKind === "Campeonato" && competitionName.trim()) {
       line(`Campeonato: ${competitionName.trim()}`);
+      if (competitionPhase.trim()) line(`Fase: ${competitionPhase.trim()}`);
     }
     if (gameType === "Individual") {
       line(`Classe: ${athleteClass}`);
@@ -2248,13 +2663,14 @@ export default function BochaScout() {
             <div style={styles.brandTag}>SCOUT & PERFORMANCE</div>
           </div>
 
-          <TopNav view={view} setView={setView} />
+          <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />
 
           {view === "dashboard" && (
             <DashboardScreen
-              sessions={sessions}
+              sessions={accountSessions}
               athletes={athletes}
-              onNewScout={() => setView("new")}
+              onNewTraining={() => { setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
+              onNewCompetition={() => { setSessionKind("Campeonato"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
               onHistory={() => setView("history")}
             />
           )}
@@ -2262,7 +2678,7 @@ export default function BochaScout() {
           {view === "athletes" && (
             <AthletesScreen
               athletes={athletes}
-              sessions={sessions}
+              sessions={accountSessions}
               onAdd={addAthlete}
               onDelete={deleteAthlete}
               onBack={() => setView("dashboard")}
@@ -2271,13 +2687,18 @@ export default function BochaScout() {
 
           {view === "history" && (
             <HistoryScreen
-              sessions={sessions}
+              sessions={historySessions}
               athletes={athletes}
+              isAdmin={currentUserIsAdmin}
+              isSuperAdmin={currentUserIsSuperAdmin}
+              ownerAccounts={ownerAccounts}
+              favoriteAthleteIds={favoriteAthleteIds}
+              onToggleFavorite={toggleFavoriteAthlete}
               onBack={() => setView("dashboard")}
             />
           )}
 
-          {view === "data" && (
+          {view === "data" && currentUserIsSuperAdmin && (
             <DataScreen
               athletes={athletes}
               sessions={sessions}
@@ -2289,18 +2710,20 @@ export default function BochaScout() {
 
           {view === "new" && (
             <div style={styles.card}>
-              <h2>Novo Scout</h2>
+              <h2>Novo Scout · {sessionKind}</h2>
               <p style={{ color: "#64748b", marginTop: -4 }}>
                 Data automática: <strong>{formatDateBR(todayISO())}</strong>
               </p>
 
               <div style={styles.grid}>
-                <Field label="Sessão">
-                  <select value={sessionKind} onChange={(e) => setSessionKind(e.target.value)} style={styles.input}>
-                    <option>Treino</option>
-                    <option>Campeonato</option>
-                  </select>
-                </Field>
+                {sessionKind === "Campeonato" && (
+                  <Field label="Abrangência do campeonato">
+                    <select value={competitionScope} onChange={(e) => { setCompetitionScope(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}>
+                      <option value="Nacional">Campeonato Nacional · Brasil</option>
+                      <option value="Internacional">Campeonato Internacional · Todos os países</option>
+                    </select>
+                  </Field>
+                )}
 
                 <Field label="Tipo de jogo">
                   <select
@@ -2314,6 +2737,8 @@ export default function BochaScout() {
                       setSelectedOpponentId("");
                       setAthleteClass("");
                       setOpponentClass("");
+                      setSelectedRedTeamEntryId("");
+                      setSelectedBlueTeamEntryId("");
                     }}
                     style={styles.input}
                   >
@@ -2322,70 +2747,119 @@ export default function BochaScout() {
                 </Field>
 
                 {sessionKind === "Campeonato" && (
-                  <Field label="Nome do campeonato (opcional)">
-                    <input value={competitionName} onChange={(e) => setCompetitionName(e.target.value)} placeholder="Ex.: Brasileiro de Jovens" style={styles.input} />
-                  </Field>
+                  <>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <Field label="Nome do campeonato">
+                        <input value={competitionName} onChange={(e) => setCompetitionName(e.target.value)} placeholder="Ex.: Brasileiro de Jovens" style={styles.input} />
+                      </Field>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <Field label="Fase do campeonato">
+                        <input value={competitionPhase} onChange={(e) => setCompetitionPhase(e.target.value)} placeholder="Ex.: Fase classificatória, semifinal, final" style={styles.input} />
+                      </Field>
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <Field label="Nível do campeonato">
+                        <select value={competitionLevel} onChange={(e) => setCompetitionLevel(e.target.value)} style={styles.input}>
+                          <option>Nacional</option>
+                          <option>Internacional</option>
+                        </select>
+                      </Field>
+                    </div>
+                  </>
+                )}
+
+                {gameType === "Individual" && sessionKind === "Campeonato" && (
+                  <>
+                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}>Filtros da partida</div>
+                    <Field label="Classe"><select value={competitionClassFilter} onChange={(e) => { setCompetitionClassFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todas as classes</option>{CLASSES.map((c)=><option key={c} value={c}>{c}</option>)}</select></Field>
+                    <Field label="Gênero"><select value={competitionGenderFilter} onChange={(e) => { setCompetitionGenderFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todos os gêneros</option>{GENDERS.map((g)=><option key={g} value={g}>{g}</option>)}</select></Field>
+                  </>
+                )}
+
+                {gameType === "Individual" && sessionKind === "Treino" && (
+                  <>
+                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}><span style={{width:12,height:12,borderRadius:"50%",background:"#dc2626",display:"inline-block",marginRight:7,verticalAlign:"-1px"}} />Atleta Vermelho</div>
+                    <Field label="Classe do atleta">
+                      <select value={athleteClassFilter} onChange={(e) => { setAthleteClassFilter(e.target.value); setSelectedAthleteId(""); setAthlete(""); setAthleteClass(""); }} style={styles.input}>
+                        <option value="Todos">Todas as classes</option>
+                        {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Gênero do atleta">
+                      <select value={athleteGenderFilter} onChange={(e) => { setAthleteGenderFilter(e.target.value); setSelectedAthleteId(""); setAthlete(""); setAthleteClass(""); }} style={styles.input}>
+                        <option value="Todos">Todos os gêneros</option>
+                        {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </Field>
+                  </>
                 )}
 
                 {gameType === "Individual" ? (
-                  <Field label="Atleta">
-                    <select value={selectedAthleteId} onChange={(e) => chooseRegisteredAthlete(e.target.value)} style={styles.input}>
-                      <option value="">Selecione o atleta</option>
-                      {athletes.map((item) => (
-                        <option key={item.id} value={item.id}>{item.name} · {item.athleteClass}</option>
-                      ))}
-                    </select>
-                    {athletes.length === 0 && (
-                      <button onClick={() => setView("athletes")} style={{ ...styles.button, background: "#475569", marginTop: 8, width: "100%" }}>
-                        + Cadastrar primeiro atleta
-                      </button>
-                    )}
-                  </Field>
-                ) : (
-                  <Field label="Equipe / País">
-                    <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder="Ex.: Brasil" style={styles.input} />
-                  </Field>
-                )}
-
-                {gameType === "Individual" ? (
-                  <Field label="Adversário cadastrado">
-                    <select
-                      value={selectedOpponentId}
-                      onChange={(e) => chooseRegisteredOpponent(e.target.value)}
-                      style={styles.input}
-                      disabled={!selectedAthleteId}
-                    >
-                      <option value="">{selectedAthleteId ? "Selecione o adversário" : "Selecione primeiro o atleta"}</option>
-                      {eligibleOpponents.map((item) => (
-                        <option key={item.id} value={item.id}>{item.name} · {item.athleteClass}</option>
-                      ))}
-                    </select>
-                    {selectedAthleteId && eligibleOpponents.length === 0 && (
-                      <div style={{ marginTop: 7, fontSize: 12, color: "#b45309" }}>
-                        {sessionKind === "Treino"
-                          ? "Nenhum outro atleta está cadastrado. Cadastre o adversário na aba Atletas."
-                          : `Nenhum outro atleta da classe ${athleteClass} está cadastrado. Cadastre o adversário na aba Atletas.`}
-                      </div>
-                    )}
-                  </Field>
-                ) : (
-                  <Field label="Equipe / País adversária">
-                    <input
-                      value={opponent}
-                      onChange={(e) => setOpponent(e.target.value)}
-                      placeholder="Ex.: México"
-                      style={styles.input}
+                  <Field label={<span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "#dc2626", display: "inline-block", flex: "0 0 12px" }} />Atleta Vermelho</span>}>
+                    <AthleteCombobox
+                      items={filteredPrimaryAthletes}
+                      value={selectedAthleteId}
+                      onChange={chooseRegisteredAthlete}
+                      query={athleteNameSearch}
+                      setQuery={setAthleteNameSearch}
+                      favoriteIds={favoriteAthleteIds}
+                      onToggleFavorite={toggleFavoriteAthlete}
+                      placeholder="🔎 Digite ou role os atletas"
                     />
                   </Field>
+                ) : (
+                  <Field label={<span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "#dc2626", display: "inline-block", flex: "0 0 12px" }} />{teamDivision} · Vermelho</span>}>
+                    <select value={selectedRedTeamEntryId} onChange={(e) => chooseRedTeamEntry(e.target.value)} style={styles.input}>
+                      <option value="">Selecione país ou clube</option>
+                      {availableTeamEntries.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name} · {item.entity_type}</option>
+                      ))}
+                    </select>
+                  </Field>
                 )}
 
-                <Field label={gameType === "Individual" ? "Cor do atleta" : "Cor da equipe"}>
-                  <select value={athleteColor} onChange={(e) => setAthleteColor(e.target.value)} style={styles.input}>
-                    <option value="">Selecione</option>
-                    <option value="Vermelho">Vermelho</option>
-                    <option value="Azul">Azul</option>
-                  </select>
-                </Field>
+                {gameType === "Individual" && sessionKind === "Treino" && (
+                  <>
+                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}><span style={{width:12,height:12,borderRadius:"50%",background:"#2563eb",display:"inline-block",marginRight:7,verticalAlign:"-1px"}} />Atleta Azul</div>
+                    <Field label="Classe do atleta azul">
+                      <select value={opponentClassFilter} onChange={(e) => { setOpponentClassFilter(e.target.value); setSelectedOpponentId(""); setOpponent(""); setOpponentClass(""); }} style={styles.input}>
+                        <option value="Todos">Todas as classes</option>
+                        {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Gênero do atleta azul">
+                      <select value={opponentGenderFilter} onChange={(e) => { setOpponentGenderFilter(e.target.value); setSelectedOpponentId(""); setOpponent(""); setOpponentClass(""); }} style={styles.input}>
+                        <option value="Todos">Todos os gêneros</option>
+                        {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </Field>
+                  </>
+                )}
+
+                {gameType === "Individual" ? (
+                  <Field label="🔵 Atleta Azul">
+                    <AthleteCombobox
+                      items={eligibleOpponents}
+                      value={selectedOpponentId}
+                      onChange={chooseRegisteredOpponent}
+                      query={opponentNameSearch}
+                      setQuery={setOpponentNameSearch}
+                      favoriteIds={favoriteAthleteIds}
+                      onToggleFavorite={toggleFavoriteAthlete}
+                      placeholder="🔎 Digite ou role os atletas"
+                    />
+                  </Field>
+                ) : (
+                  <Field label={<span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "#2563eb", display: "inline-block", flex: "0 0 12px" }} />{teamDivision} · Azul</span>}>
+                    <select value={selectedBlueTeamEntryId} onChange={(e) => chooseBlueTeamEntry(e.target.value)} style={styles.input}>
+                      <option value="">Selecione país ou clube</option>
+                      {availableTeamEntries.filter((item) => item.id !== selectedRedTeamEntryId).map((item) => (
+                        <option key={item.id} value={item.id}>{item.name} · {item.entity_type}</option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
               </div>
 
               {gameType === "Individual" && athlete && (
@@ -2398,7 +2872,7 @@ export default function BochaScout() {
 
               {gameType !== "Individual" && (
                 <div style={styles.info}>
-                  Em <strong>{gameType}</strong>, basta registrar o nome da equipe/país. Não é necessário cadastrar os atletas da formação.
+                  Em <strong>{gameType}</strong>, selecione o país ou clube para o lado vermelho e para o lado azul. A classe já é definida pelo tipo de jogo e não precisa de filtro de gênero ou classe.
                 </div>
               )}
 
@@ -2416,77 +2890,53 @@ export default function BochaScout() {
   // PARTIDA
   // =========================================================
 
-  const currentEndPlays = playsHistory.filter((p) => p.end === currentEndName);
+
   const liveAthleteEndStats = calcStats(currentEndPlays.filter((p) => p.color === athleteColor));
   const liveOpponentEndStats = calcStats(currentEndPlays.filter((p) => p.color === opponentColor));
   const liveAthleteMatchStats = calcStats(playsHistory.filter((p) => p.color === athleteColor));
   const liveOpponentMatchStats = calcStats(playsHistory.filter((p) => p.color === opponentColor));
 
   if (started) {
+    const lastRecordedPlay = currentEndPlays[currentEndPlays.length - 1];
+    const redName = athleteColor === "Vermelho" ? athlete : opponent;
+    const blueName = athleteColor === "Azul" ? athlete : opponent;
+    const redScore = athleteColor === "Vermelho" ? totalAthlete : totalOpponent;
+    const blueScore = athleteColor === "Azul" ? totalAthlete : totalOpponent;
+
     return (
-      <div style={styles.page}>
-        <div style={styles.container}>
-          <Header
-            athlete={athlete}
-            opponent={opponent}
-            athleteColor={athleteColor}
-            opponentColor={opponentColor}
-            currentEnd={currentEndName}
-          />
-
-          <button
-            onClick={undoLastAction}
-            disabled={undoStack.length === 0}
-            style={{ ...styles.button, background: undoStack.length ? "#475569" : "#cbd5e1", width: "100%", marginBottom: 15 }}
-          >
-            Desfazer última ação
-          </button>
-
-          {/* PLACAR */}
-
-          <div style={styles.scoreCard}>
-            <div>
-              <div>
-                {athleteColor === "Vermelho" ? "Vermelho" : "Azul"}
-              </div>
-
-              <strong>
-                {athlete}
-              </strong>
-
-              <div
-                style={
-                  styles.bigScore
-                }
-              >
-                {totalAthlete}
+      <div style={styles.page} className="scout-live-page">
+        <div style={styles.container} className="scout-live-container">
+          <section className="scout-scoreboard" aria-label="Placar da partida">
+            <div className="scout-brand">
+              <img src="/bocha-scout-emblem.png" alt="" className="scout-brand-emblem" />
+              <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
+            </div>
+            <div className="scout-end-pill">{currentEndName}</div>
+            <div className="scout-player scout-player-red">
+              <strong title={redName}>{redName}</strong><span>VERMELHO</span>
+              <div className="scout-ball-dots" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
+                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < redBallsAvailable ? "is-active" : ""} />)}
               </div>
             </div>
-
-            <div style={styles.vs}>
-              ×
-            </div>
-
-            <div>
-              <div>
-                {opponentColor === "Vermelho" ? "Vermelho" : "Azul"}
-              </div>
-
-              <strong>
-                {opponent}
-              </strong>
-
-              <div
-                style={
-                  styles.bigScore
-                }
-              >
-                {totalOpponent}
+            <div className="scout-score"><b>{redScore}</b><span>×</span><b>{blueScore}</b></div>
+            <div className="scout-player scout-player-blue">
+              <strong title={blueName}>{blueName}</strong><span>AZUL</span>
+              <div className="scout-ball-dots" aria-label={`${blueBallsAvailable} bolas azuis restantes`}>
+                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < blueBallsAvailable ? "is-active" : ""} />)}
               </div>
             </div>
-          </div>
+          </section>
 
-          <LivePerformancePanel
+          {whitePosition && (
+            <div className="scout-white-position">
+              <span className="scout-white-ball" aria-hidden="true" />
+              <strong>Branca: {whitePosition}</strong>
+              <span>Posição atual</span>
+            </div>
+          )}
+
+          <div className="scout-live-performance">
+            <LivePerformancePanel
             endName={currentEndName}
             athlete={athlete}
             opponent={opponent}
@@ -2496,50 +2946,7 @@ export default function BochaScout() {
             opponentEnd={liveOpponentEndStats}
             athleteMatch={liveAthleteMatchStats}
             opponentMatch={liveOpponentMatchStats}
-          />
-
-          {/* CONTADOR DE BOLAS */}
-
-          <div style={styles.card}>
-            <h2>
-              Bolas do {currentEndName}
-            </h2>
-
-            <div
-              style={styles.ballCounter}
-            >
-              <div
-                style={{
-                  ...styles.counter,
-                  background:
-                    "#fee2e2",
-                }}
-              >
-                
-                <strong>
-                  {redBallsAvailable}
-                </strong>
-                <small>
-                  restantes{deliveredThisEnd.Vermelho ? ` · ${deliveredThisEnd.Vermelho} entregues` : ""}
-                </small>
-              </div>
-
-              <div
-                style={{
-                  ...styles.counter,
-                  background:
-                    "#dbeafe",
-                }}
-              >
-                
-                <strong>
-                  {blueBallsAvailable}
-                </strong>
-                <small>
-                  restantes{deliveredThisEnd.Azul ? ` · ${deliveredThisEnd.Azul} entregues` : ""}
-                </small>
-              </div>
-            </div>
+            />
           </div>
 
           {/* =================================================
@@ -2547,7 +2954,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage === "white" && (
-            <div style={styles.card}>
+            <div style={styles.card} className="scout-action-card scout-position-card">
               <StepHeader
                 number="1"
                 title="Posição inicial da branca"
@@ -2575,7 +2982,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage === "color" && (
-            <div style={styles.card}>
+            <div style={styles.card} className="scout-action-card scout-color-card">
               <StepHeader
                 number="2"
                 title="Quem vai jogar?"
@@ -2587,6 +2994,7 @@ export default function BochaScout() {
               </p>
 
               <div
+                className="scout-color-grid"
                 style={
                   styles.colorGrid
                 }
@@ -2657,7 +3065,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage === "result" && (
-            <div style={styles.card}>
+            <div style={styles.card} className="scout-action-card scout-result-card">
               <StepHeader
                 number="3"
                 title="Resultado da jogada"
@@ -2687,6 +3095,7 @@ export default function BochaScout() {
               <p style={{ ...styles.helpText, marginTop: 0 }}>As bolas entregues vão a zero, ficam registradas no End e não contam como erro técnico.</p>
 
               <div
+                className="scout-result-grid"
                 style={
                   styles.resultGrid
                 }
@@ -2753,7 +3162,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage === "play" && (
-            <div style={styles.card}>
+            <div style={styles.card} className="scout-action-card scout-play-card">
               <StepHeader
                 number="4"
                 title="Qual foi o fundamento?"
@@ -2769,6 +3178,7 @@ export default function BochaScout() {
               </div>
 
               <div
+                className="scout-play-grid"
                 style={
                   styles.playGrid
                 }
@@ -2900,167 +3310,7 @@ export default function BochaScout() {
             />
           )}
 
-          {/* =================================================
-              HISTÓRICO DO END
-          ================================================= */}
-
-          <div style={styles.card}>
-            <h2>
-              Jogadas do{" "}
-              {currentEndName}
-            </h2>
-
-            <div
-              style={
-                styles.miniStats
-              }
-            >
-              <MiniStat
-                label="Vermelho"
-                value={
-                  ballsUsed.Vermelho
-                }
-              />
-
-              <MiniStat
-                label="Azul"
-                value={
-                  ballsUsed.Azul
-                }
-              />
-
-              <MiniStat label="Jogadas" value={totalBallsUsed} />
-              <MiniStat label="Entregues" value={Number(deliveredThisEnd.Vermelho || 0) + Number(deliveredThisEnd.Azul || 0)} />
-            </div>
-
-            {commandHistory.filter((e) => e.end === currentEndName).map((e) => (
-              <div key={e.id} style={{ ...styles.warning, marginBottom: 10 }}>
-                <strong>Entregar Bola</strong> · {e.color} · {e.discarded} bola(s) restante(s) entregues
-              </div>
-            ))}
-
-            {playsHistory.filter(
-              (p) =>
-                p.end ===
-                currentEndName
-            ).length === 0 ? (
-              <p
-                style={
-                  styles.empty
-                }
-              >
-                Nenhuma jogada registrada.
-              </p>
-            ) : (
-              <div
-                style={{
-                  overflowX:
-                    "auto",
-                }}
-              >
-                <table
-                  style={
-                    styles.table
-                  }
-                >
-                  <thead>
-                    <tr>
-                      <th>
-                        Cor
-                      </th>
-                      <th>
-                        Bola
-                      </th>
-                      <th>
-                        Branca
-                      </th>
-                      <th>
-                        Fundamento
-                      </th>
-                      <th>
-                        Resultado
-                      </th>
-                      <th>
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {playsHistory
-                      .filter(
-                        (p) =>
-                          p.end ===
-                          currentEndName
-                      )
-                      .map(
-                        (play) => (
-                          <tr
-                            key={
-                              play.id
-                            }
-                          >
-                            <td>
-                              {play.color}
-                            </td>
-
-                            <td>
-                              {
-                                play.ball
-                              }
-                            </td>
-
-                            <td>
-                              {
-                                play.whitePositionFrom
-                              }
-
-                              {play.play ===
-                                "Mover branca" && (
-                                <>
-                                  {" para "}
-                                  {
-                                    play.whitePositionTo
-                                  }
-                                </>
-                              )}
-                            </td>
-
-                            <td>
-                              {
-                                play.play
-                              }
-                            </td>
-
-                            <td>
-                              <ResultBadge
-                                result={
-                                  play.result
-                                }
-                              />
-                            </td>
-
-                            <td>
-                              <button
-                                onClick={() =>
-                                  removePlay(
-                                    play.id
-                                  )
-                                }
-                                style={
-                                  styles.delete
-                                }
-                              >
-                                ×
-                              </button>
-                            </td>
-                          </tr>
-                        )
-                      )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          {/* PATCH: remove-end-history-v6 */}
 
           {/* =================================================
               SCOUT AO VIVO - APENAS POR COR (PARCIAL ATUAL)
@@ -3106,6 +3356,20 @@ export default function BochaScout() {
               endBlueWorst
             }
           />
+
+          <div className="scout-sticky-actions">
+            <button
+              onClick={undoLastAction}
+              disabled={undoStack.length === 0}
+              className="scout-undo-button"
+            >
+              <span aria-hidden="true">↶</span> Desfazer
+            </button>
+            <div className="scout-last-action">
+              <small>Última ação</small>
+              <strong>{lastRecordedPlay ? `${lastRecordedPlay.play} · ${lastRecordedPlay.result}` : "Nenhuma jogada"}</strong>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -4152,7 +4416,7 @@ function EndScore({
           marginTop: 15,
         }}
       >
-        Salvar End e iniciar próximo
+        {String(endName).startsWith("Tie-Break") ? "Salvar Tie-Break" : "Salvar End e iniciar próximo"}
       </button>
     </div>
   );
@@ -4192,14 +4456,14 @@ const styles = {
     minHeight:
       "100vh",
     background:
-      "#eef2f6",
+      "linear-gradient(180deg,#f8fafc 0%,#eef2f6 100%)",
     padding: 12,
     fontFamily:
       "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
   },
 
   container: {
-    maxWidth: 980,
+    maxWidth: 1180,
     margin:
       "0 auto",
   },
@@ -4221,8 +4485,8 @@ const styles = {
   brandHeader: {
     background: "#0f172a",
     color: "white",
-    borderRadius: 12,
-    padding: "18px 20px",
+    borderRadius: 16,
+    padding: "18px clamp(16px,3vw,26px)",
     marginBottom: 14,
     display: "flex",
     alignItems: "center",
@@ -4242,11 +4506,11 @@ const styles = {
   card: {
     background:
       "white",
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: 16,
+    padding: "clamp(14px,2.4vw,22px)",
     marginBottom: 15,
     boxShadow:
-      "0 2px 10px rgba(15,23,42,0.06)",
+      "0 8px 24px rgba(15,23,42,0.06)",
     border: "1px solid #e2e8f0",
   },
 
@@ -4254,7 +4518,7 @@ const styles = {
     display:
       "grid",
     gridTemplateColumns:
-      "repeat(auto-fit,minmax(220px,1fr))",
+      "repeat(auto-fit,minmax(190px,1fr))",
     gap: 12,
   },
 
@@ -4262,7 +4526,7 @@ const styles = {
     display:
       "grid",
     gridTemplateColumns:
-      "repeat(auto-fit,minmax(240px,1fr))",
+      "repeat(auto-fit,minmax(210px,1fr))",
     gap: 12,
   },
 
@@ -4271,10 +4535,11 @@ const styles = {
       "100%",
     boxSizing:
       "border-box",
-    padding: 12,
+    padding: "12px 13px",
     border:
       "1px solid #cbd5e1",
-    borderRadius: 10,
+    borderRadius: 12,
+    minHeight: 46,
     fontSize: 16,
     background:
       "white",
@@ -4283,9 +4548,10 @@ const styles = {
   button: {
     border:
       "none",
-    borderRadius: 8,
+    borderRadius: 10,
     padding:
-      "12px 16px",
+      "11px 15px",
+    minHeight: 44,
     color:
       "white",
     fontWeight:
@@ -4314,14 +4580,15 @@ const styles = {
       "center",
     alignItems:
       "center",
-    gap: 35,
+    gap: 24,
+    flexWrap: "wrap",
     textAlign:
       "center",
     marginBottom: 15,
   },
 
   bigScore: {
-    fontSize: 42,
+    fontSize: "clamp(34px,7vw,48px)",
     fontWeight:
       "bold",
   },
@@ -4396,7 +4663,7 @@ const styles = {
     display:
       "grid",
     gridTemplateColumns:
-      "repeat(2,1fr)",
+      "repeat(auto-fit,minmax(140px,1fr))",
     gap: 12,
     marginTop: 15,
   },
@@ -4437,7 +4704,7 @@ const styles = {
     display:
       "grid",
     gridTemplateColumns:
-      "repeat(3,1fr)",
+      "repeat(auto-fit,minmax(105px,1fr))",
     gap: 10,
   },
 
@@ -4466,7 +4733,7 @@ const styles = {
     display:
       "grid",
     gridTemplateColumns:
-      "repeat(auto-fit,minmax(180px,1fr))",
+      "repeat(auto-fit,minmax(145px,1fr))",
     gap: 8,
   },
 
@@ -4640,4 +4907,3 @@ const styles = {
     padding: 15,
   },
 };
-
