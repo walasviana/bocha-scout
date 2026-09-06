@@ -579,6 +579,24 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
   } : item;
   const fundamentals = aggregateAthleteFundaments([analysisItem]);
   const ranking = Object.entries(fundamentals).sort((a,b) => b[1].total - a[1].total);
+  const redName = item.athleteColor === "Vermelho" ? item.athlete : item.opponent;
+  const blueName = item.athleteColor === "Azul" ? item.athlete : item.opponent;
+  const matchSides = [
+    { color: "Vermelho", name: redName, plays: (item.plays || []).filter((p) => p.color === "Vermelho") },
+    { color: "Azul", name: blueName, plays: (item.plays || []).filter((p) => p.color === "Azul") },
+  ].map((side) => {
+    const stats = calcStats(side.plays);
+    const map = {};
+    side.plays.forEach((p) => {
+      if (!map[p.play]) map[p.play] = { total: 0, acertos: 0, funcionais: 0, erros: 0 };
+      map[p.play].total += 1;
+      if (p.result === "Acerto") map[p.play].acertos += 1;
+      if (p.result === "Funcional") map[p.play].funcionais += 1;
+      if (p.result === "Erro") map[p.play].erros += 1;
+    });
+    Object.values(map).forEach((d) => { d.efficiency = d.total ? ((d.acertos + d.funcionais * .5) / d.total) * 100 : 0; });
+    return { ...side, stats, ranking: Object.entries(map).sort((a,b) => b[1].total - a[1].total) };
+  });
 
   return (
     <div style={styles.card}>
@@ -602,16 +620,19 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
         <MiniStat label="Resultado" value={getSessionWinner(item)} />
       </div>
 
-      <h3 style={{ marginTop: 20 }}>Fundamentos</h3>
-      {ranking.length === 0 ? <p style={styles.empty}>Sem jogadas.</p> : ranking.map(([name, d]) => (
-        <div key={name} style={{ padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-            <strong>{name}</strong>
-            <span>{d.total}x · {d.acertos} acertos · {d.erros} erros</span>
-          </div>
-          <TinyBar value={d.efficiency} />
-        </div>
-      ))}
+      <h3 style={{ marginTop: 20 }}>Análise dos dois atletas</h3>
+      <div className="session-athlete-comparison">
+        {matchSides.map((side) => (
+          <section key={side.color} className={`session-athlete-side is-${side.color.toLowerCase()}`}>
+            <div className="session-athlete-heading"><span>{side.color}</span><strong>{side.name}</strong></div>
+            <div className="session-athlete-metrics"><MiniStat label="Jogadas" value={side.stats.total}/><MiniStat label="Eficiência" value={`${side.stats.efficiency.toFixed(1)}%`}/><MiniStat label="Erros" value={side.stats.erros}/></div>
+            <h4>Fundamentos</h4>
+            {side.ranking.length === 0 ? <p style={styles.empty}>Sem jogadas.</p> : side.ranking.map(([name,d]) => <div className="session-foundation-row" key={name}><span>{name}</span><strong>{d.total}x · {d.efficiency.toFixed(0)}%</strong></div>)}
+            <h4>Mapa de calor</h4>
+            <HistoricalHeatmap plays={side.plays}/>
+          </section>
+        ))}
+      </div>
 
       <h3 style={{ marginTop: 20 }}>Placar por End</h3>
       {Object.keys(item.scores || {}).length === 0 ? <p style={styles.empty}>Sem placar por End salvo.</p> : Object.entries(item.scores || {}).map(([name, s]) => (
@@ -619,9 +640,6 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
           <span>{name}</span><strong>{s.athlete} × {s.opponent}</strong>
         </div>
       ))}
-
-      <h3 style={{ marginTop: 20 }}>Mapa de calor do atleta nesta partida</h3>
-      <HistoricalHeatmap plays={athletePlays} />
 
       <h3 style={{ marginTop: 20 }}>Jogadas da partida</h3>
       {(item.plays || []).map((p, idx) => (
@@ -661,6 +679,8 @@ function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
       let pp = playsForSession ? playsForSession(session) : (session.plays || []);
       if (mapColor !== "Todas") pp = pp.filter((p) => p.color === mapColor);
       if (mode === "Saídas de jogo") pp = pp.filter((p) => p.play === "Saída de jogo");
+      if (mode === "Aproximação") pp = pp.filter((p) => p.play === "Aproximação");
+      if (mode === "Batida") pp = pp.filter((p) => p.play === "Batida");
       if (selectedPosition) pp = pp.filter((p) => (p.whitePositionTo || p.whitePositionFrom) === selectedPosition);
       const st = calcStats(pp);
       let value = st.efficiency;
@@ -718,22 +738,44 @@ function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
           </button>;
         })())}
       </div>
-      {detail && (mode === "Saídas de jogo" ? (
-        <div style={{ ...styles.info, marginTop: 12 }}>
-          <strong>Posição {selectedPosition}</strong> · {detail.saidas} saída(s) realizada(s) pelo atleta
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #e2e8f0" }}>
-        <h3 style={{ margin: "0 0 4px" }}>📈 Evolução ${selectedPosition ? `· Posição ${selectedPosition}` : "· Todas as posições"}</h3>
-        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>O gráfico acompanha automaticamente os filtros do mapa de calor.</div>
-        {evolution.length === 0 ? <p style={styles.empty}>Sem dados para os filtros selecionados.</p> : <div style={{ height: 190, display: "flex", alignItems: "flex-end", gap: 6, overflowX: "auto", padding: "8px 2px 22px", borderBottom: "1px solid #cbd5e1" }}>{evolution.map((point) => { const pct = mode === "Frequência" || mode === "Saídas de jogo" ? (point.value / maxEvolution) * 100 : point.value; return <div key={point.id} title={point.label + " · " + point.value.toFixed(1) + (mode === "Frequência" || mode === "Saídas de jogo" ? "x" : "%")} style={{ minWidth: 34, flex: "1 0 34px", maxWidth: 64, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center" }}><div style={{ fontSize: 10, fontWeight: 800, marginBottom: 4 }}>{mode === "Frequência" || mode === "Saídas de jogo" ? point.value.toFixed(0) + "x" : point.value.toFixed(0) + "%"}</div><div style={{ width: "70%", minHeight: 3, height: Math.max(3,pct) + "%", background: "#2563eb", borderRadius: "5px 5px 0 0" }} /><div style={{ fontSize: 9, color: "#64748b", marginTop: 4, whiteSpace: "nowrap" }}>{point.label.slice(0,5)}</div></div>;})}</div>}
-      </div>
-    </div>
-      ) : (
-        <div style={{ ...styles.info, marginTop: 12 }}>
-          <strong>Posição {selectedPosition}</strong> · {detail.total} jogadas · {detail.acertos} acertos · {detail.funcionais} funcionais · {detail.erros} erros · <strong>{detail.efficiency.toFixed(1)}% eficiência</strong>
-        </div>
-      ))}
+      {detail && <div style={{ ...styles.info, marginTop: 12 }}>
+        <strong>Posição {selectedPosition}</strong> · {mode === "Saídas de jogo" ? `${detail.saidas} saída(s)` : `${detail.total} jogadas · ${detail.acertos} acertos · ${detail.funcionais} funcionais · ${detail.erros} erros · ${detail.efficiency.toFixed(1)}% eficiência`}
+      </div>}
+      <EvolutionLineChart
+        data={evolution}
+        title={`Evolução · ${selectedPosition ? `Posição ${selectedPosition}` : "Todas as posições"}`}
+        countMode={mode === "Volume" || mode === "Saídas de jogo"}
+        maxValue={maxEvolution}
+      />
     </div>
   );
+}
+
+function EvolutionLineChart({ data, title, countMode, maxValue }) {
+  const width = Math.max(520, data.length * 84);
+  const height = 230;
+  const pad = { left: 42, right: 24, top: 30, bottom: 42 };
+  const ceiling = countMode ? Math.max(1, maxValue) : 100;
+  const points = data.map((point, index) => {
+    const x = data.length === 1 ? width / 2 : pad.left + index * ((width - pad.left - pad.right) / Math.max(1, data.length - 1));
+    const y = pad.top + (1 - Math.min(ceiling, point.value) / ceiling) * (height - pad.top - pad.bottom);
+    return { ...point, x, y };
+  });
+  return <div className="history-evolution-chart">
+    <h3>{title}</h3>
+    <p>O gráfico acompanha a cor, o modo e a posição escolhidos no mapa de calor.</p>
+    {data.length === 0 ? <div style={styles.empty}>Sem partidas com dados para esta seleção.</div> : <div className="history-evolution-scroll">
+      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label={title}>
+        {[0, .25, .5, .75, 1].map((ratio) => {
+          const y = pad.top + ratio * (height - pad.top - pad.bottom);
+          const value = ceiling * (1 - ratio);
+          return <g key={ratio}><line x1={pad.left} x2={width-pad.right} y1={y} y2={y} stroke="#dbe4ee" strokeWidth="1"/><text x={pad.left-8} y={y+4} textAnchor="end" fontSize="10" fill="#64748b">{countMode ? value.toFixed(0) : `${value.toFixed(0)}%`}</text></g>;
+        })}
+        <polyline points={points.map((p)=>`${p.x},${p.y}`).join(" ")} fill="none" stroke="#1673e8" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+        {points.map((p)=><g key={p.id}><circle cx={p.x} cy={p.y} r="6" fill="#fff" stroke="#1673e8" strokeWidth="4"/><text x={p.x} y={p.y-13} textAnchor="middle" fontSize="10" fontWeight="800" fill="#09264b">{countMode ? p.value.toFixed(0) : `${p.value.toFixed(0)}%`}</text><text x={p.x} y={height-14} textAnchor="middle" fontSize="10" fill="#64748b">{p.label}</text></g>)}
+      </svg>
+    </div>}
+  </div>;
 }
 
 function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdmin = false, ownerAccounts = [], favoriteAthleteIds = [], onToggleFavorite }) {
