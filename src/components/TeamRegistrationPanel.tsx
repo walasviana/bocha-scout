@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+// PATCH: team-own-pending-v16
 
 const DIVISIONS = ['Equipe BC1/BC2', 'Par BC3', 'Par BC4'];
 const ENTITY_TYPES = ['Pais', 'Clube'];
@@ -29,22 +30,22 @@ export default function TeamRegistrationPanel({ user, onClose }: { user: User; o
       if (error.code === '23505') return setMessage('Esse país ou clube já está cadastrado nessa categoria.');
       return setMessage(error.message);
     }
-    setMessage('Cadastro enviado para aprovação do administrador.');
+    setMessage('Cadastro salvo. Você já pode usar este país/clube no seu Novo Scout. Ele só entra na base geral após aprovação do administrador.');
     setForm({ name: '', entityType: 'Clube', division: 'Equipe BC1/BC2', country: 'Brasil' });
   }
 
   return <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(15,23,42,.55)', display: 'grid', placeItems: 'center', padding: 16, fontFamily: 'Arial, sans-serif' }}>
     <div style={{ background: '#fff', borderRadius: 15, padding: 18, width: 'min(560px,100%)', maxHeight: '90vh', overflowY: 'auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-        <div><h2 style={{ margin: 0 }}>Cadastrar Pares / Equipes</h2><div style={{ color: '#64748b', marginTop: 4 }}>O cadastro fica pendente até aprovação do administrador.</div></div>
-        <button onClick={onClose} style={{ ...button, background: '#e2e8f0', color: '#0f172a' }}>Fechar</button>
+        <div><h2 style={{ margin: 0 }}>Cadastrar Pares / Equipes</h2><div style={{ color: '#64748b', marginTop: 4 }}>Você pode usar o cadastro imediatamente na sua conta. Para entrar na base geral, precisa de aprovação do administrador.</div></div>
+        <button onClick={() => { onClose(); if (message.includes('Cadastro salvo')) window.location.reload(); }} style={{ ...button, background: '#e2e8f0', color: '#0f172a' }}>Fechar</button>
       </div>
       <form onSubmit={submit} style={{ display: 'grid', gap: 10, marginTop: 16 }}>
         <input style={input} placeholder="Nome do país ou clube" value={form.name} onChange={e => setForm({ ...form, name: e.target.value.toLocaleUpperCase('pt-BR') })} />
         <select style={input} value={form.entityType} onChange={e => setForm({ ...form, entityType: e.target.value })}>{ENTITY_TYPES.map(x => <option key={x}>{x}</option>)}</select>
         <select style={input} value={form.division} onChange={e => setForm({ ...form, division: e.target.value })}>{DIVISIONS.map(x => <option key={x}>{x}</option>)}</select>
         <input style={input} placeholder="País" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} />
-        {message && <div style={{ padding: 10, borderRadius: 8, background: message.includes('aprovação') ? '#ecfdf5' : '#fef2f2', color: message.includes('aprovação') ? '#166534' : '#991b1b' }}>{message}</div>}
+        {message && <div style={{ padding: 10, borderRadius: 8, background: message.includes('Cadastro salvo') ? '#ecfdf5' : '#fef2f2', color: message.includes('aprovação') ? '#166534' : '#991b1b' }}>{message}</div>}
         <button disabled={busy} style={{ ...button, background: '#2563eb', color: '#fff', fontSize: 15 }}>{busy ? 'Enviando...' : 'Enviar para aprovação'}</button>
       </form>
     </div>
