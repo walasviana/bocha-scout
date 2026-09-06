@@ -3507,11 +3507,12 @@ export default function BochaScout() {
             ) : (
               <div className="scout-partial-history-list">
                 {[...currentEndPlays].reverse().map((play) => (
-                  <div className="scout-partial-history-item" key={play.id}>
+                  <div className={`scout-partial-history-item is-${play.color.toLowerCase()}`} key={play.id}>
                     <img src={playAsset(play.play)} alt="" />
                     <div>
                       <strong>{play.play}</strong>
-                      <span>{play.color} · {play.result} · Branca {play.whitePositionTo || play.whitePositionFrom}</span>
+                      <span className="scout-history-player">{play.color === "Vermelho" ? redName : blueName} · {play.color}</span>
+                      <span>{play.result} · Branca {play.whitePositionTo || play.whitePositionFrom}</span>
                     </div>
                     <button type="button" onClick={() => removePlay(play.id)} aria-label={`Excluir jogada ${play.play}`}>Excluir</button>
                   </div>
