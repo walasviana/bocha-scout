@@ -88,6 +88,15 @@ const PLAYS = [
   "Falta",
 ];
 
+function playAsset(play) {
+  if (play === "Aproximação") return "/scout-assets/approach.png";
+  if (play === "Batida") return "/scout-assets/hit.png";
+  if (play === "Aérea") return "/scout-assets/aerial.png";
+  if (play.includes("Tirar")) return "/scout-assets/remove.png";
+  if (play.includes("Dobrar") || play.includes("Sobrepor")) return "/scout-assets/overlap.png";
+  return "/scout-assets/defense.png";
+}
+
 const RESULTS = ["Acerto", "Funcional", "Erro"];
 
 const POSITIONS = [
@@ -1362,6 +1371,8 @@ export default function BochaScout() {
   const [tieBreakRound, setTieBreakRound] = useState(1);
 
   const [showFinalDetails, setShowFinalDetails] = useState(false);
+  const [showMoreFundamentals, setShowMoreFundamentals] = useState(false);
+  const [finalSelectedSide, setFinalSelectedSide] = useState("athlete");
 
   const regularEnds =
     getRegularEnds(gameType);
@@ -2916,23 +2927,23 @@ export default function BochaScout() {
             <div className="scout-player scout-player-red">
               <strong title={redName}>{redName}</strong><span>VERMELHO</span>
               <div className="scout-ball-dots" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
-                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < redBallsAvailable ? "is-active" : "is-used"} />)}
+                {Array.from({ length: 6 }, (_, i) => <img key={i} src="/scout-assets/red-ball.png" alt="" className={i < redBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
             <div className="scout-score"><b>{redScore}</b><span>×</span><b>{blueScore}</b></div>
             <div className="scout-player scout-player-blue">
               <strong title={blueName}>{blueName}</strong><span>AZUL</span>
               <div className="scout-ball-dots" aria-label={`${blueBallsAvailable} bolas azuis restantes`}>
-                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < blueBallsAvailable ? "is-active" : "is-used"} />)}
+                {Array.from({ length: 6 }, (_, i) => <img key={i} src="/scout-assets/blue-ball.png" alt="" className={i < blueBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
           </section>
 
           {whitePosition && (
             <div className="scout-white-position">
-              <span className="scout-white-ball" aria-hidden="true" />
+              <img className="scout-white-ball" src="/scout-assets/white-ball.png" alt="Bola branca" />
               <strong>Branca: {whitePosition}</strong>
-              <span>Posição atual</span>
+              <button type="button" className="scout-move-white" onClick={() => setStage("moveWhite")}>Mover</button>
             </div>
           )}
 
@@ -3005,15 +3016,9 @@ export default function BochaScout() {
                         : "#94a3b8",
                   }}
                 >
-                  
-                  <strong>
-                    Vermelho
-                  </strong>
-
-                  <span>
-                    {redBallsAvailable}{" "}
-                    bolas
-                  </span>
+                  <img src="/scout-assets/red-ball.png" alt="" />
+                  <strong>{redName}</strong>
+                  <span>VERMELHO</span>
                 </button>
 
                 <button
@@ -3033,15 +3038,9 @@ export default function BochaScout() {
                         : "#94a3b8",
                   }}
                 >
-                  
-                  <strong>
-                    Azul
-                  </strong>
-
-                  <span>
-                    {blueBallsAvailable}{" "}
-                    bolas
-                  </span>
+                  <img src="/scout-assets/blue-ball.png" alt="" />
+                  <strong>{blueName}</strong>
+                  <span>AZUL</span>
                 </button>
               </div>
             </div>
@@ -3171,6 +3170,7 @@ export default function BochaScout() {
                 }
               >
                 {PLAYS.map((play, playIndex) => {
+                  if (!showMoreFundamentals && playIndex >= 6) return null;
                   const unavailable =
                     play ===
                       "Saída de jogo" &&
@@ -3203,14 +3203,18 @@ export default function BochaScout() {
                         ? ""
                         : ""}
 
-                      <span className="scout-play-number" aria-hidden="true">
-                        {String(playIndex + 1).padStart(2, "0")}
-                      </span>
+                      <img className="scout-play-icon" src={playAsset(play)} alt="" />
                       <span className="scout-play-label">{play}</span>
                     </button>
                   );
                 })}
               </div>
+              {PLAYS.length > 6 && (
+                <button type="button" className="scout-more-fundamentals" onClick={() => setShowMoreFundamentals((value) => !value)}>
+                  {showMoreFundamentals ? "Menos fundamentos" : "Mais fundamentos"}
+                  <span aria-hidden="true">⌄</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -3395,6 +3399,77 @@ export default function BochaScout() {
   const opponentPositionEntries = Object.entries(opponentMatchHeat);
   const opponentBestPosition = [...opponentPositionEntries].sort((a,b) => b[1].efficiency - a[1].efficiency || b[1].total - a[1].total)[0];
   const opponentAttentionPosition = [...opponentPositionEntries].sort((a,b) => b[1].errorRate - a[1].errorRate || b[1].total - a[1].total)[0];
+
+  const finalShowingAthlete = finalSelectedSide === "athlete";
+  const finalName = finalShowingAthlete ? athlete : opponent;
+  const finalColor = finalShowingAthlete ? athleteColor : opponentColor;
+  const finalStats = finalShowingAthlete ? athleteMatchStats : opponentMatchStats;
+  const finalPlays = finalShowingAthlete ? athleteMatchPlays : opponentMatchPlays;
+  const finalBest = finalColor === "Vermelho" ? redBest : blueBest;
+  const tieBreakWinner = getTieBreakWinnerFromScores(scores);
+  const winnerName = totalAthlete > totalOpponent
+    ? athlete
+    : totalOpponent > totalAthlete
+      ? opponent
+      : tieBreakWinner === "athlete" ? athlete : tieBreakWinner === "opponent" ? opponent : "Empate";
+
+  return (
+    <div className="scout-final-page">
+      <section className="scout-final-hero">
+        <div className="scout-final-topbar">
+          <button type="button" onClick={newGame} aria-label="Voltar">←</button>
+          <strong>Detalhes da partida</strong>
+          <span aria-hidden="true">⋮</span>
+        </div>
+        <div className="scout-final-brand">
+          <img src="/bocha-scout-emblem.png" alt="" />
+          <strong>BOCHA <span>SCOUT</span></strong>
+          <small>ANÁLISE · INCLUSÃO · MAIS JOGO</small>
+        </div>
+        <div className="scout-final-scoreboard">
+          <div className="scout-final-player">
+            <img src={athleteColor === "Vermelho" ? "/scout-assets/red-ball.png" : "/scout-assets/blue-ball.png"} alt="" />
+            <strong>{athlete}</strong><span>{athleteColor.toUpperCase()}</span>
+          </div>
+          <div className="scout-final-score">{totalAthlete}<span>×</span>{totalOpponent}</div>
+          <div className="scout-final-player">
+            <img src={opponentColor === "Vermelho" ? "/scout-assets/red-ball.png" : "/scout-assets/blue-ball.png"} alt="" />
+            <strong>{opponent}</strong><span>{opponentColor.toUpperCase()}</span>
+          </div>
+        </div>
+        <div className="scout-final-winner">{winnerName === "Empate" ? "Partida empatada" : `${winnerName} venceu${tieBreakWinner ? " no tie-break" : ""}`}</div>
+        <div className="scout-final-ends">
+          {Object.entries(scores).map(([name, score]) => (
+            <div key={name}><span>{name.replace("End ", "E")}</span><strong>{score.athlete} – {score.opponent}</strong></div>
+          ))}
+        </div>
+      </section>
+
+      <main className="scout-final-content">
+        <div className="scout-final-tabs">
+          <button className={finalShowingAthlete ? "is-active" : ""} onClick={() => setFinalSelectedSide("athlete")}>{athlete}</button>
+          <button className={!finalShowingAthlete ? "is-active" : ""} onClick={() => setFinalSelectedSide("opponent")}>{opponent}</button>
+        </div>
+        <h2>Desempenho de {finalName}</h2>
+        <div className="scout-final-metrics">
+          <div><span>Eficiência</span><strong>{finalStats.efficiency.toFixed(1)}%</strong><small>{finalStats.acertos} de {finalStats.total} bolas</small></div>
+          <div><span>Acertos</span><strong>{finalStats.acertos}</strong><small>bolas no alvo</small></div>
+          <div><span>Erros</span><strong>{finalStats.erros}</strong><small>{finalStats.erros === 1 ? "bola fora" : "bolas fora"}</small></div>
+        </div>
+        <button type="button" className="scout-final-row" onClick={() => setShowFinalDetails((value) => !value)}>
+          <div className="scout-final-row-icon"><img src="/scout-assets/approach.png" alt="" /></div>
+          <div><strong>Mapa de calor</strong><span>{finalColor} · {finalName}</span><small>Veja onde as bolas foram jogadas durante a partida.</small></div><b>›</b>
+        </button>
+        {showFinalDetails && <div className="scout-final-expanded"><HistoricalHeatmap plays={finalPlays} /></div>}
+        <div className="scout-final-row">
+          <div className="scout-final-row-icon"><img src="/scout-assets/defense.png" alt="" /></div>
+          <div><strong>Fundamentos</strong><span>{finalBest ? `${finalBest[0]} · melhor desempenho` : "Sem jogadas registradas"}</span><small>Análise completa por fundamento.</small></div><b>›</b>
+        </div>
+        <button type="button" className="scout-final-pdf" onClick={exportMatchReport}>Gerar PDF <span>Relatório completo da partida</span></button>
+        <button type="button" className="scout-final-new" onClick={newGame}>Nova partida</button>
+      </main>
+    </div>
+  );
 
   return (
     <div style={styles.page}>
