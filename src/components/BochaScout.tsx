@@ -2258,6 +2258,123 @@ export default function BochaScout() {
 
   async function exportMatchReport() {
     const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const navy = [6, 45, 84];
+    const yellow = [250, 204, 21];
+    const red = [239, 65, 72];
+    const blue = [22, 128, 244];
+    const muted = [96, 116, 142];
+    const allStats = {
+      Vermelho: calcStats(playsHistory.filter((p) => p.color === "Vermelho")),
+      Azul: calcStats(playsHistory.filter((p) => p.color === "Azul")),
+    };
+    const playStats = buildPlayStats(playsHistory);
+    const redName = athleteColor === "Vermelho" ? athlete : opponent;
+    const blueName = athleteColor === "Azul" ? athlete : opponent;
+    const sideScore = (color) => color === athleteColor ? totalAthlete : totalOpponent;
+
+    const txt = (value, x, y, size = 9, style = "normal", color = navy, options = {}) => {
+      doc.setFont("helvetica", style);
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      doc.text(String(value ?? ""), x, y, options);
+    };
+    const box = (x, y, w, h, fill, radius = 9) => {
+      doc.setFillColor(...fill);
+      doc.roundedRect(x, y, w, h, radius, radius, "F");
+    };
+    const section = (title, x, y, w, tone = navy) => {
+      box(x, y, w, 22, tone, 6);
+      txt(title.toUpperCase(), x + 10, y + 15, 9, "bold", [255,255,255]);
+    };
+
+    doc.setFillColor(...navy); doc.rect(0, 0, W, 78, "F");
+    txt("BOCHA", 26, 31, 23, "bold", [255,255,255]);
+    txt("SCOUT", 112, 31, 23, "bold", yellow);
+    txt("DADOS QUE INCLUEM", 27, 49, 7, "bold", [184,200,218]);
+    txt("RELATÓRIO TÉCNICO DA PARTIDA", W - 26, 29, 13, "bold", [255,255,255], { align: "right" });
+    txt(`${sessionKind} · ${gameType} · ${sessionDate ? formatDateBR(sessionDate) : new Date().toLocaleDateString("pt-BR")} · ${athleteClass || "-"}`, W - 26, 48, 8, "normal", [184,200,218], { align: "right" });
+
+    box(26, 90, W - 52, 72, [244,247,250], 12);
+    txt(redName, 48, 112, 10, "bold", red);
+    txt("VERMELHO", 48, 128, 7, "bold", muted);
+    txt(sideScore("Vermelho"), W / 2 - 30, 139, 39, "bold", red, { align: "right" });
+    txt("×", W / 2, 136, 22, "bold", muted, { align: "center" });
+    txt(sideScore("Azul"), W / 2 + 30, 139, 39, "bold", blue);
+    txt(blueName, W - 48, 112, 10, "bold", blue, { align: "right" });
+    txt("AZUL", W - 48, 128, 7, "bold", muted, { align: "right" });
+    const entries = Object.entries(scores);
+    const endW = Math.min(88, (W - 330) / Math.max(1, entries.length));
+    entries.forEach(([name, score], index) => {
+      const a = Number(score.athlete || 0), o = Number(score.opponent || 0);
+      const tone = a === o ? yellow : a > o ? (athleteColor === "Vermelho" ? red : blue) : (opponentColor === "Vermelho" ? red : blue);
+      const x = 188 + index * endW;
+      txt(name.replace("End ", "E"), x + endW/2, 105, 7, "bold", muted, {align:"center"});
+      txt(`${a}-${o}`, x + endW/2, 122, 12, "bold", tone, {align:"center"});
+    });
+
+    const colGap = 12;
+    const colW = (W - 52 - colGap) / 2;
+    const left = 26, right = left + colW + colGap;
+    section("Desempenho", left, 176, colW);
+    [["Vermelho", redName, red], ["Azul", blueName, blue]].forEach(([color, name, tone], i) => {
+      const x = i === 0 ? left : right;
+      const st = allStats[color];
+      section(`${name} · ${color}`, x, 176, colW, tone);
+      const metrics = [["Eficiência", `${st.efficiency.toFixed(1)}%`], ["Acertos", st.acertos], ["Funcionais", st.funcionais], ["Erros", st.erros]];
+      metrics.forEach(([label,value], j) => {
+        const mx = x + 12 + j * ((colW - 24)/4);
+        txt(label, mx, 216, 7, "normal", muted);
+        txt(value, mx, 234, 15, "bold", navy);
+      });
+    });
+
+    section("Fundamentos", left, 252, colW);
+    section("Fundamentos", right, 252, colW);
+    [["Vermelho",left],["Azul",right]].forEach(([color,x]) => {
+      const rows = Object.entries(playStats[color]).sort((a,b)=>b[1].efficiency-a[1].efficiency || b[1].total-a[1].total).slice(0,8);
+      rows.forEach(([name,data], i) => {
+        const y = 288 + i * 16;
+        txt(name, x + 10, y, 7.2, i === 0 ? "bold" : "normal", navy);
+        txt(`${data.total}x · ${data.acertos}A · ${data.funcionais}F · ${data.erros}E · ${data.efficiency.toFixed(0)}%`, x + colW - 10, y, 7.2, "bold", data.erros > data.acertos ? red : muted, {align:"right"});
+      });
+    });
+
+    const bottomY = 426;
+    section("Histórico de jogadas", left, bottomY, colW * 1.35 + colGap);
+    const histW = colW * 1.35 + colGap;
+    const half = Math.ceil(playsHistory.length / 2);
+    playsHistory.forEach((p, i) => {
+      const local = i < half ? i : i - half;
+      const x = i < half ? left + 8 : left + histW/2 + 4;
+      const y = bottomY + 36 + local * 10;
+      if (y > H - 18) return;
+      const resultColor = p.result === "Acerto" ? [22,163,74] : p.result === "Funcional" ? [234,88,12] : red;
+      txt(`${i+1}. ${p.end.replace("End ","E")} · ${p.ball} · ${p.play} · ${p.whitePositionTo || p.whitePositionFrom}`, x, y, 5.8, "normal", navy);
+      txt(p.result, x + histW/2 - 10, y, 5.8, "bold", resultColor, {align:"right"});
+    });
+
+    const mapX = left + histW + colGap;
+    const mapW = W - 26 - mapX;
+    section("Posições da branca", mapX, bottomY, mapW);
+    const positionData = buildPositionPerformance(playsHistory.filter((p)=>p.color===athleteColor));
+    POSITIONS.forEach((position,index) => {
+      if (!position) return;
+      const row = Math.floor(index/6), col = index%6;
+      const cw = (mapW - 20)/6, ch = 10;
+      const x = mapX + 8 + col*cw, y = bottomY + 32 + row*ch;
+      const count = positionData[position]?.total || 0;
+      if (count) { doc.setFillColor(...(athleteColor === "Vermelho" ? red : blue)); doc.circle(x+cw/2,y-2,4,"F"); txt(count,x+cw/2,y,5,"bold",[255,255,255],{align:"center"}); }
+      else txt(position,x+cw/2,y,5,"normal",[150,164,181],{align:"center"});
+    });
+    txt(`Gerado pelo BochaScout · ${new Date().toLocaleString("pt-BR")}`, W - 26, H - 10, 6, "normal", [145,160,178], {align:"right"});
+    doc.save(`BochaScout_${athlete}_vs_${opponent}_${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+
+  async function exportMatchReportLegacy() {
+    const { jsPDF } = await import("jspdf");
 
     const doc = new jsPDF({ unit: "pt", format: "a4" });
 
