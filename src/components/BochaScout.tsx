@@ -1191,6 +1191,7 @@ export default function BochaScout() {
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
             createdAt: p.createdAt || row.created_at,
           };
         });
@@ -2915,14 +2916,14 @@ export default function BochaScout() {
             <div className="scout-player scout-player-red">
               <strong title={redName}>{redName}</strong><span>VERMELHO</span>
               <div className="scout-ball-dots" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
-                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < redBallsAvailable ? "is-active" : ""} />)}
+                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < redBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
             <div className="scout-score"><b>{redScore}</b><span>×</span><b>{blueScore}</b></div>
             <div className="scout-player scout-player-blue">
               <strong title={blueName}>{blueName}</strong><span>AZUL</span>
               <div className="scout-ball-dots" aria-label={`${blueBallsAvailable} bolas azuis restantes`}>
-                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < blueBallsAvailable ? "is-active" : ""} />)}
+                {Array.from({ length: 6 }, (_, i) => <i key={i} className={i < blueBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
           </section>
@@ -2934,20 +2935,6 @@ export default function BochaScout() {
               <span>Posição atual</span>
             </div>
           )}
-
-          <div className="scout-live-performance">
-            <LivePerformancePanel
-            endName={currentEndName}
-            athlete={athlete}
-            opponent={opponent}
-            athleteColor={athleteColor}
-            opponentColor={opponentColor}
-            athleteEnd={liveAthleteEndStats}
-            opponentEnd={liveOpponentEndStats}
-            athleteMatch={liveAthleteMatchStats}
-            opponentMatch={liveOpponentMatchStats}
-            />
-          </div>
 
           {/* =================================================
               ETAPA 1 - POSIÇÃO INICIAL
@@ -3183,7 +3170,7 @@ export default function BochaScout() {
                   styles.playGrid
                 }
               >
-                {PLAYS.map((play) => {
+                {PLAYS.map((play, playIndex) => {
                   const unavailable =
                     play ===
                       "Saída de jogo" &&
@@ -3216,7 +3203,10 @@ export default function BochaScout() {
                         ? ""
                         : ""}
 
-                      {play}
+                      <span className="scout-play-number" aria-hidden="true">
+                        {String(playIndex + 1).padStart(2, "0")}
+                      </span>
+                      <span className="scout-play-label">{play}</span>
                     </button>
                   );
                 })}
@@ -3309,6 +3299,20 @@ export default function BochaScout() {
               }
             />
           )}
+
+          <div className="scout-live-performance">
+            <LivePerformancePanel
+              endName={currentEndName}
+              athlete={athlete}
+              opponent={opponent}
+              athleteColor={athleteColor}
+              opponentColor={opponentColor}
+              athleteEnd={liveAthleteEndStats}
+              opponentEnd={liveOpponentEndStats}
+              athleteMatch={liveAthleteMatchStats}
+              opponentMatch={liveOpponentMatchStats}
+            />
+          </div>
 
           {/* PATCH: remove-end-history-v6 */}
 
