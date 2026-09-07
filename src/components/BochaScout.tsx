@@ -530,6 +530,12 @@ function HistoricalHeatmap({ plays }) {
   };
   const detail = selectedPosition ? positionData[selectedPosition] : null;
 
+  const courtCells = POSITIONS.filter((position) => position && position !== "TB").map((position) => {
+    const metre = Number(position[0]);
+    const lane = Number(position[1]);
+    return { position, x: (6 - lane) * 100, y: (metre - 1) * 100 };
+  });
+
   return (
     <div>
       <div style={{ marginBottom: 14 }}>
@@ -565,15 +571,31 @@ function HistoricalHeatmap({ plays }) {
           saída de jogo
         </span>
       </div>
-      <div style={{ ...styles.map, gap: 4 }}>
-        {POSITIONS.map((position, index) => position === null ? <div key={`hm-empty-${index}`} style={styles.positionEmpty} /> : position === "TB" ? null : (() => {
-          const raw = positionData[position];
-          const d = mode === "Saídas de jogo" && (!raw || raw.saidas === 0) ? null : raw;
-          const pct = !d ? 0 : mode === "Erros" ? d.errorRate : mode === "Acertos" ? d.accuracy : mode === "Frequência" ? (d.total/maxFreq)*100 : mode === "Saídas de jogo" ? (d.saidas/maxSaidas)*100 : d.efficiency;
-          return <button key={position} onClick={() => d && setSelectedPosition(position)} style={{ minHeight: 58, border: selectedPosition === position ? "3px solid #0f172a" : "1px solid rgba(15,23,42,.12)", borderRadius: 8, background: d ? heatColor(d) : "#f8fafc", color: d && pct >= 80 ? "white" : "#0f172a", fontWeight: 800, cursor: d ? "pointer" : "default", position: "relative" }}>
-            <div>{position}{mode === "Saídas de jogo" && d?.saidas ? " S" : ""}</div><div style={{ fontSize: 11 }}>{d ? (mode === "Saídas de jogo" ? `${d.saidas}x` : `${pct.toFixed(0)}%`) : "—"}</div>
-          </button>;
-        })())}
+      <div style={{ width: "100%", maxWidth: 620, margin: "0 auto", background: "#dbeafe", borderRadius: 14, padding: 10, boxSizing: "border-box" }}>
+        <svg viewBox="0 0 600 1000" role="img" aria-label="Mapa de calor da quadra de bocha" style={{ display: "block", width: "100%", height: "auto", background: "#fff", borderRadius: 8, boxShadow: "0 2px 10px rgba(15,23,42,.16)" }}>
+          <rect x="2" y="2" width="596" height="996" fill="#fff" stroke="#1d4ed8" strokeWidth="4" />
+          {courtCells.map(({ position, x, y }) => {
+            const raw = positionData[position];
+            const d = mode === "Saídas de jogo" && (!raw || raw.saidas === 0) ? null : raw;
+            const pct = !d ? 0 : mode === "Erros" ? d.errorRate : mode === "Acertos" ? d.accuracy : mode === "Frequência" ? (d.total / maxFreq) * 100 : mode === "Saídas de jogo" ? (d.saidas / maxSaidas) * 100 : d.efficiency;
+            const active = selectedPosition === position;
+            return (
+              <g key={position} role={d ? "button" : undefined} tabIndex={d ? 0 : undefined} aria-label={d ? `Posição ${position}, ${pct.toFixed(0)} por cento` : `Posição ${position}, sem dados`} onClick={() => d && setSelectedPosition(position)} onKeyDown={(event) => { if (d && (event.key === "Enter" || event.key === " ")) setSelectedPosition(position); }} style={{ cursor: d ? "pointer" : "default" }}>
+                <rect x={x + 2} y={y + 2} width="96" height="96" rx="5" fill={d ? heatColor(d) : "#fff"} stroke={active ? "#0f172a" : "#bfdbfe"} strokeWidth={active ? 6 : 2} />
+                <text x={x + 50} y={y + 43} textAnchor="middle" fontSize="23" fontWeight="900" fill={d && pct >= 80 ? "#fff" : "#0f172a"}>{position}{mode === "Saídas de jogo" && d?.saidas ? " S" : ""}</text>
+                <text x={x + 50} y={y + 69} textAnchor="middle" fontSize="17" fontWeight="800" fill={d && pct >= 80 ? "#fff" : "#475569"}>{d ? (mode === "Saídas de jogo" ? `${d.saidas}x` : `${pct.toFixed(0)}%`) : "—"}</text>
+              </g>
+            );
+          })}
+          {/* Linha de lançamento e V: vértice a 1,5 m; pontas na linha das posições 31–36. */}
+          <line x1="0" y1="0" x2="600" y2="0" stroke="#1d4ed8" strokeWidth="6" />
+          <path d="M 0 300 L 300 150 L 600 300" fill="none" stroke="#1d4ed8" strokeWidth="6" strokeLinejoin="round" />
+          {/* Cruz universal do tie-break, no centro geométrico da quadra. */}
+          <g aria-label="Tie-break" pointerEvents="none">
+            <line x1="278" y1="500" x2="322" y2="500" stroke="#1d4ed8" strokeWidth="7" strokeLinecap="round" />
+            <line x1="300" y1="478" x2="300" y2="522" stroke="#1d4ed8" strokeWidth="7" strokeLinecap="round" />
+          </g>
+        </svg>
       </div>
       {detail && (mode === "Saídas de jogo" ? (
         <div style={{ ...styles.info, marginTop: 12 }}>
@@ -4640,4 +4662,3 @@ const styles = {
     padding: 15,
   },
 };
-
