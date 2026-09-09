@@ -1306,6 +1306,7 @@ export default function BochaScout() {
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
             createdAt: p.createdAt || row.created_at,
           };
         });
@@ -3182,8 +3183,19 @@ export default function BochaScout() {
     return (
       <div style={styles.page} className="scout-live-page">
         <div style={styles.container} className="scout-live-container">
-          <div style={{display:"flex",gap:8,justifyContent:"space-between",marginBottom:10}}><button style={styles.button} onClick={()=>{setView("dashboard");setMatchHome(true);}}>Início</button><button style={{...styles.button,background:"#b91c1c"}} onClick={abandonGame}>Abandonar partida</button></div>
           <section className="scout-scoreboard" aria-label="Placar da partida">
+            <nav className="scout-match-nav" aria-label="Navegação da partida">
+              <button type="button" className="scout-home-button" onClick={()=>{setView("dashboard");setMatchHome(true);}}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9" /></svg>
+                Início
+              </button>
+              <details className="scout-match-menu" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))event.currentTarget.open=false;}} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.currentTarget.open=false;event.currentTarget.querySelector("summary")?.focus();}}}>
+                <summary aria-label="Opções da partida" title="Opções da partida"><span aria-hidden="true">⋮</span></summary>
+                <div className="scout-match-menu-panel">
+                  <button type="button" onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");abandonGame();}}>Abandonar partida</button>
+                </div>
+              </details>
+            </nav>
             <div className="scout-brand">
               <img src="/bocha-scout-emblem.png" alt="" className="scout-brand-emblem" />
               <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
