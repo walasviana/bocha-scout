@@ -1,7 +1,15 @@
 // @ts-nocheck
+import {useContext} from 'react';
+import {createPortal} from 'react-dom';
+import {DataPanelContext} from './DataPanelContext';
+import {localUser,readDraft,saveDraft,queueSession,flushAutosave,listenAutosave} from '../lib/scoutAutosave';
 /* eslint-disable */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useMemo, useState } from "react";
 // PATCH: heatmap-v2
+import CourtHeatmap from "./CourtHeatmap";
+import CourtPositionMap from "./CourtPositionMap";
+import { drawScorePartials } from "../lib/pdfPartials";
+import { appendHeatmapReport } from "../lib/courtHeatmap";
 import { supabase } from "../lib/supabase";
 // PATCH: super-admin-delete-scout-v19
 // PATCH: ui-review-v20
@@ -109,7 +117,7 @@ const RESULTS = ["Acerto", "Funcional", "Erro"];
 
 const POSITIONS = [
   null, null, "14", "13", null, null,
-  null, "25", "24", "23", "22", null,
+  "26", "25", "24", "23", "22", "21",
   "36", "35", "34", "33", "32", "31",
   "46", "45", "44", "43", "42", "41",
   "56", "55", "54", "53", "52", "51",
@@ -342,7 +350,7 @@ function TopNav({ view, setView, isSuperAdmin = false }) {
     ["dashboard", "Início"],
     ["history", "Histórico"],
     ["athletes", "Atletas"],
-    ...(isSuperAdmin ? [["data", "Dados"]] : []),
+
   ];
 
   return (
@@ -504,6 +512,13 @@ function DashboardScreen({ sessions, athletes, onNewTraining, onNewCompetition, 
 }
 
 function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
+  const [search,setSearch]=useState('');
+  const [filterClass,setFilterClass]=useState('Todos');
+  const [filterGender,setFilterGender]=useState('Todos');
+  const [limit,setLimit]=useState(20);
+  const [expanded,setExpanded]=useState('');
+  const filteredAthletes=athletes.filter(a=>(search.trim() || filterClass!=='Todos' || filterGender!=='Todos') && (!search.trim() || a.name.toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR'))) && (filterClass==='Todos' || a.athleteClass===filterClass) && (filterGender==='Todos' || a.gender===filterGender));
+  useEffect(()=>{setLimit(20);setExpanded('');},[search,filterClass,filterGender]);
   const [name, setName] = useState("");
   const [athleteClass, setAthleteClass] = useState("");
   const [observations, setObservations] = useState("");
@@ -535,11 +550,14 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
 
       <div style={styles.card}>
         <h2>Atletas cadastrados ({athletes.length})</h2>
-        {athletes.length === 0 ? (
-          <p style={styles.empty}>Nenhum atleta cadastrado ainda.</p>
-        ) : athletes.map((a) => {
-          const athleteSessions = sessions.filter((s) => s.athleteId === a.id);
-          const stats = calcStats(athleteSessions.flatMap((s) => getAthletePlays(s)));
+        <p>Consulte um atleta para ver as partidas registradas por esta conta.</p>
+        <div style={styles.grid}><Field label="Buscar atleta"><input style={styles.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Digite o nome"/></Field><Field label="Classe"><select style={styles.input} value={filterClass} onChange={e=>setFilterClass(e.target.value)}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></Field><Field label="Gênero"><select style={styles.input} value={filterGender} onChange={e=>setFilterGender(e.target.value)}><option>Todos</option><option>Masculino</option><option>Feminino</option></select></Field></div>
+        {!search.trim() && filterClass==='Todos' && filterGender==='Todos' && <p>Use a busca ou um filtro para mostrar os atletas.</p>}
+        {filteredAthletes.length === 0 ? (
+          <p style={styles.empty}>Nenhum atleta para os filtros selecionados.</p>
+        ) : filteredAthletes.slice(0,limit).map((a) => {
+          const athleteSessions = sessions.filter((s) => s.athleteId === a.id || s.opponentId === a.id);
+          const stats = calcStats(athleteSessions.flatMap((s) => (s.plays || []).filter(p=>p.color === (s.athleteId===a.id ? s.athleteColor : s.athleteColor==="Vermelho" ? "Azul" : "Vermelho"))));
           return (
             <div key={a.id} style={{ padding: "12px 0", borderBottom: "1px solid #e2e8f0" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -550,11 +568,14 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
                 </div>
               </div>
               {stats.total > 0 && <div style={{ marginTop: 8 }}><TinyBar value={stats.efficiency} /></div>}
+              <button style={{...styles.button,marginTop:8,background:'#475569'}} onClick={()=>setExpanded(expanded===a.id?'':a.id)}>{expanded===a.id?'Ocultar partidas':'Ver minhas partidas'}</button>
+              {expanded===a.id && (athleteSessions.length ? athleteSessions.map(s=><div key={s.id} style={{padding:'8px 0'}}>{formatDateBR(s.date)} · {s.athlete} × {s.opponent} · {s.sessionKind || s.kind || 'Scout'} · {(s.plays || []).length} jogadas</div>):<p>Esta conta ainda não registrou partidas deste atleta.</p>)}
             </div>
           );
         })}
+        {filteredAthletes.length > limit && <button style={styles.button} onClick={()=>setLimit(limit+20)}>Mostrar mais atletas</button>}
       </div>
-      <button onClick={onBack} style={{ ...styles.button, background: "#475569", width: "100%" }}>Voltar</button>
+      {onBack && <button onClick={onBack} style={{ ...styles.button, background: "#475569", width: "100%" }}>Voltar</button>}
     </>
   );
 }
@@ -629,7 +650,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
             <h4>Fundamentos</h4>
             {side.ranking.length === 0 ? <p style={styles.empty}>Sem jogadas.</p> : side.ranking.map(([name,d]) => <div className="session-foundation-row" key={name}><span>{name}</span><strong>{d.total}x · {d.efficiency.toFixed(0)}%</strong></div>)}
             <h4>Mapa de calor</h4>
-            <HistoricalHeatmap plays={side.plays}/>
+            <HistoricalHeatmap plays={side.plays} name={side.name} color={side.color}/>
           </section>
         ))}
       </div>
@@ -651,10 +672,12 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
   );
 }
 
-function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
+export function HistoricalHeatmap({ plays, sessions = [], playsForSession, name = "", color = "" }) {
   const [mode, setMode] = useState("Desempenho");
   const [selectedPosition, setSelectedPosition] = useState("");
   const [mapColor, setMapColor] = useState("Todas");
+  const actualColors = [...new Set(plays.map(p => p.color))];
+  const displayColor = mapColor !== "Todas" ? mapColor : color || (actualColors.length === 1 ? actualColors[0] : "Todas");
 
   const filteredPlays = useMemo(() => mapColor === "Todas" ? plays : plays.filter((p) => p.color === mapColor), [plays, mapColor]);
   const modePlays = useMemo(() => {
@@ -664,15 +687,6 @@ function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
   }, [filteredPlays, mode]);
   const positionData = useMemo(() => buildPositionPerformance(modePlays), [modePlays]);
 
-  const maxFreq = Math.max(1, ...Object.values(positionData).map((d) => d.total));
-  const maxSaidas = Math.max(1, ...Object.values(positionData).map((d) => d.saidas));
-  const heatColor = (d) => {
-    if (!d) return "#f8fafc";
-    let value = d.efficiency;
-    if (mode === "Volume") value = (d.total / maxFreq) * 100;
-    if (mode === "Saídas de jogo") value = (d.saidas / maxSaidas) * 100;
-    if (value >= 80) return "#15803d"; if (value >= 60) return "#84cc16"; if (value >= 40) return "#facc15"; if (value >= 20) return "#fb923c"; return "#ef4444";
-  };
   const detail = selectedPosition ? positionData[selectedPosition] : null;
   const evolution = useMemo(() => {
     return [...sessions].sort((a,b) => String(a.date || a.createdAt || "").localeCompare(String(b.date || b.createdAt || ""))).map((session) => {
@@ -686,7 +700,7 @@ function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
       let value = st.efficiency;
       if (mode === "Acertos") value = st.accuracy;
       if (mode === "Erros") value = st.errorRate;
-      if (mode === "Frequência") value = pp.length;
+      if (mode === "Volume") value = pp.length;
       if (mode === "Saídas de jogo") value = pp.length;
       return { id: session.id, label: formatDateBR(session.date), value, total: pp.length };
     }).filter((x) => x.total > 0);
@@ -706,38 +720,10 @@ function HistoricalHeatmap({ plays, sessions = [], playsForSession }) {
       <div style={{ fontSize: 12, fontWeight: 800, color: "#475569", marginBottom: 7, textTransform: "uppercase", letterSpacing: ".04em" }}>Modo do mapa</div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
         {["Desempenho", "Saídas de jogo", "Volume", "Aproximação", "Batida"].map((item) => (
-          <button key={item} onClick={() => setMode(item)} style={{ ...styles.button, padding: "9px 11px", background: mode === item ? "#0f172a" : "#64748b", fontSize: 12 }}>{item}</button>
+          <button key={item} onClick={() => { setMode(item); setSelectedPosition(""); }} style={{ ...styles.button, padding: "9px 11px", background: mode === item ? "#0f172a" : "#64748b", fontSize: 12 }}>{item}</button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 12, marginBottom: 10 }}>
-        <strong>Escala:</strong>
-        {[
-          ["0–20%", "#ef4444"],
-          ["21–40%", "#fb923c"],
-          ["41–60%", "#facc15"],
-          ["61–80%", "#84cc16"],
-          ["81–100%", "#15803d"],
-        ].map(([label, color]) => (
-          <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 13, height: 13, borderRadius: 3, background: color, border: "1px solid rgba(15,23,42,.12)" }} />
-            {label}
-          </span>
-        ))}
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <span style={{ width: 20, height: 20, borderRadius: 4, background: "#0f172a", color: "white", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900 }}>S</span>
-          saída de jogo
-        </span>
-      </div>
-      <div style={{ ...styles.map, gap: 4 }}>
-        {POSITIONS.map((position, index) => position === null ? <div key={`hm-empty-${index}`} style={styles.positionEmpty} /> : (() => {
-          const raw = positionData[position];
-          const d = mode === "Saídas de jogo" && (position === "TB" || !raw || raw.saidas === 0) ? null : raw;
-          const pct = !d ? 0 : mode === "Volume" ? (d.total/maxFreq)*100 : mode === "Saídas de jogo" ? (d.saidas/maxSaidas)*100 : d.efficiency;
-          return <button key={position} onClick={() => d && setSelectedPosition((current) => current === position ? "" : position)} style={{ minHeight: 58, border: selectedPosition === position ? "3px solid #0f172a" : "1px solid rgba(15,23,42,.12)", borderRadius: 8, background: d ? heatColor(d) : "#f8fafc", color: d && pct >= 80 ? "white" : "#0f172a", fontWeight: 800, cursor: d ? "pointer" : "default", position: "relative", gridColumn: position === "TB" ? "1 / -1" : undefined }}>
-            <div>{position}{mode === "Saídas de jogo" && d?.saidas ? " S" : ""}</div><div style={{ fontSize: 11 }}>{d ? (mode === "Saídas de jogo" ? `${d.saidas}x` : `${pct.toFixed(0)}%`) : "—"}</div>
-          </button>;
-        })())}
-      </div>
+      <CourtHeatmap data={positionData} mode={mode} color={displayColor} name={name} selected={selectedPosition} onSelect={(position) => setSelectedPosition(current => current === position ? "" : position)} />
       {detail && <div style={{ ...styles.info, marginTop: 12 }}>
         <strong>Posição {selectedPosition}</strong> · {mode === "Saídas de jogo" ? `${detail.saidas} saída(s)` : `${detail.total} jogadas · ${detail.acertos} acertos · ${detail.funcionais} funcionais · ${detail.erros} erros · ${detail.efficiency.toFixed(1)}% eficiência`}
       </div>}
@@ -779,6 +765,7 @@ function EvolutionLineChart({ data, title, countMode, maxValue }) {
 }
 
 function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdmin = false, ownerAccounts = [], favoriteAthleteIds = [], onToggleFavorite }) {
+  const [accountFilter, setAccountFilter] = useState("Todos");
   const [kind, setKind] = useState("Todos");
   const [athleteFilter, setAthleteFilter] = useState("Todos");
   const [gameFilter, setGameFilter] = useState("Todos");
@@ -794,13 +781,12 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     const ids = new Set();
     const names = new Set();
     sessions.forEach((session) => {
-      if (session.athleteId) ids.add(session.athleteId);
-      if (session.opponentId) ids.add(session.opponentId);
-      if (session.athlete) names.add(String(session.athlete).trim().toLocaleLowerCase("pt-BR"));
-      if (session.opponent) names.add(String(session.opponent).trim().toLocaleLowerCase("pt-BR"));
+      if (accountFilter !== 'Todos' && session.ownerUserId !== accountFilter) return;
+      if ((session.plays || []).some(p=>p.color===session.athleteColor)) {if(session.athleteId) ids.add(session.athleteId);else if(session.athlete) names.add(String(session.athlete).trim().toLocaleLowerCase('pt-BR'));}
+      if ((session.plays || []).some(p=>p.color!==session.athleteColor && ['Azul','Vermelho'].includes(p.color))) {if(session.opponentId) ids.add(session.opponentId);else if(session.opponent) names.add(String(session.opponent).trim().toLocaleLowerCase('pt-BR'));}
     });
     return { ids, names };
-  }, [sessions]);
+  }, [sessions,accountFilter]);
   const historyAthletes = useMemo(() => athletes.filter((a) => {
     const hasHistory = athletesWithHistory.ids.has(a.id) || athletesWithHistory.names.has(String(a.name || "").trim().toLocaleLowerCase("pt-BR"));
     const classOk = historyClassFilter === "Todos" || a.athleteClass === historyClassFilter;
@@ -820,7 +806,6 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     if (selectedSessionId === item.id) setSelectedSessionId("");
     window.location.reload();
   }
-  const [accountFilter, setAccountFilter] = useState("Todos");
 
   async function exportSavedSessionReport(item) {
     const { jsPDF } = await import("jspdf");
@@ -848,9 +833,9 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     text(redName,48,113,10,"bold",red); text("VERMELHO",48,130,7,"bold",muted);
     const redScore = item.athleteColor === "Vermelho" ? item.totalAthlete : item.totalOpponent;
     const blueScore = item.athleteColor === "Azul" ? item.totalAthlete : item.totalOpponent;
-    text(redScore,W/2-30,140,40,"bold",red,{align:"right"}); text("×",W/2,137,23,"bold",muted,{align:"center"}); text(blueScore,W/2+30,140,40,"bold",blue);
+    text(redScore,W/2-30,128,32,"bold",red,{align:"right"}); text("×",W/2,126,21,"bold",muted,{align:"center"}); text(blueScore,W/2+30,128,32,"bold",blue);
     text(blueName,W-48,113,10,"bold",blue,{align:"right"}); text("AZUL",W-48,130,7,"bold",muted,{align:"right"});
-    Object.entries(item.scores || {}).forEach(([name,score],index)=>{ const x=190+index*82; const a=Number(score.athlete||0),o=Number(score.opponent||0); const tone=a===o?yellow:a>o?(item.athleteColor==="Vermelho"?red:blue):(item.athleteColor==="Vermelho"?blue:red); text(name.replace("End ","E"),x,104,7,"bold",muted,{align:"center"}); text(`${a}-${o}`,x,122,12,"bold",tone,{align:"center"}); });
+    drawScorePartials(doc, item.scores || {}, item.athleteColor);
 
     const gap=12,colW=(W-52-gap)/2,left=26,right=left+colW+gap;
     [["Vermelho",redName,red,redPlays,left],["Azul",blueName,blue,bluePlays,right]].forEach(([color,name,tone,plays,x])=>{
@@ -863,6 +848,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     const allPlays=item.plays||[],half=Math.ceil(allPlays.length/2),histCol=(W-72)/2;
     allPlays.forEach((p,i)=>{const local=i<half?i:i-half,x=i<half?left+8:left+histCol+18,y=459+local*10;if(y>H-17)return;const tone=p.result==="Acerto"?[22,163,74]:p.result==="Funcional"?[234,88,12]:red;text(`${i+1}. ${String(p.end).replace("End ","E")} · ${p.ball} · ${p.play} · branca ${p.whitePositionTo||p.whitePositionFrom}`,x,y,5.8,"normal",navy);text(p.result,x+histCol-12,y,5.8,"bold",tone,{align:"right"});});
     text(`BochaScout · conta: ${accountName}`,W-26,H-10,6,"normal",[145,160,178],{align:"right"});
+    appendHeatmapReport(doc, [{ name: redName, color: "Vermelho", data: buildPositionPerformance((item.plays || []).filter(p => p.color === "Vermelho")) }, { name: blueName, color: "Azul", data: buildPositionPerformance((item.plays || []).filter(p => p.color === "Azul")) }]);
     doc.save(`BochaScout_${item.athlete}_vs_${item.opponent}_${item.date || todayISO()}.pdf`);
   }
 
@@ -1005,7 +991,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     <div style={{ ...styles.card, borderTop: "6px solid #0f172a" }}>
       <h2 style={{ marginBottom: 4 }}>Histórico do atleta</h2><div style={{ color: "#65a30d", fontWeight: 700, marginBottom: 16 }}>Análise completa de desempenho</div>
       <div style={styles.grid}>
-        {isAdmin && <Field label="Conta"><select value={accountFilter} onChange={e=>setAccountFilter(e.target.value)} style={styles.input}><option value="Todos">Todas as contas</option>{ownerAccounts.map(a=><option key={a.id} value={a.id}>{a.name || a.username || a.id}</option>)}</select></Field>}
+        {isAdmin && <Field label="Conta"><select value={accountFilter} onChange={e=>{setAccountFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option value="Todos">Todas as contas</option>{ownerAccounts.map(a=><option key={a.id} value={a.id}>{a.name || a.username || a.id}</option>)}</select></Field>}
         <Field label="🔎 Atleta"><AthleteCombobox
           items={historyAthletes}
           value={athleteFilter}
@@ -1110,12 +1096,13 @@ function DataScreen({ athletes, sessions, onImport, onClear, onBack }) {
         </label>
         <button onClick={onClear} style={{ ...styles.button, background: "#dc2626", width: "100%", marginTop: 10 }}>Apagar todos os dados locais</button>
       </div>
-      <button onClick={onBack} style={{ ...styles.button, background: "#475569", width: "100%" }}>Voltar</button>
+      {onBack && <button onClick={onBack} style={{ ...styles.button, background: "#475569", width: "100%" }}>Voltar</button>}
     </>
   );
 }
 
 export default function BochaScout() {
+  const dataHost=useContext(DataPanelContext);
   // =========================================================
   // CADASTRO
   // =========================================================
@@ -1128,7 +1115,7 @@ export default function BochaScout() {
   const [competitionScope, setCompetitionScope] = useState("Nacional");
   const [sessionDate, setSessionDate] = useState(todayISO());
 
-  const [athletes, setAthletes] = useState([]);
+  const [athletes, setAthletes] = useState(() => safeLoad(STORAGE_KEYS.athletes, []));
   const [sessions, setSessions] = useState([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState("");
   const [selectedOpponentId, setSelectedOpponentId] = useState("");
@@ -1171,7 +1158,7 @@ export default function BochaScout() {
   const [opponentGenderFilter, setOpponentGenderFilter] = useState("Todos");
   const [competitionClassFilter, setCompetitionClassFilter] = useState("Todos");
   const [competitionGenderFilter, setCompetitionGenderFilter] = useState("Todos");
-  const [currentUserId, setCurrentUserId] = useState("");
+  const [currentUserId, setCurrentUserId] = useState(() => localUser()?.id || "");
   const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [currentUserIsSuperAdmin, setCurrentUserIsSuperAdmin] = useState(false);
   const [ownerAccounts, setOwnerAccounts] = useState([]);
@@ -1189,7 +1176,8 @@ export default function BochaScout() {
 
   useEffect(() => {
     let active = true;
-    setSessions(safeLoad(STORAGE_KEYS.sessions, []));
+    if(!currentUserId)return;
+    setSessions(safeLoad(`${STORAGE_KEYS.sessions}:${currentUserId}`,safeLoad(STORAGE_KEYS.sessions,[]).filter(s=>s.ownerUserId===currentUserId)));
 
     async function loadAthletesFromDatabase() {
       const localAthletes = safeLoad(STORAGE_KEYS.athletes, []);
@@ -1220,7 +1208,7 @@ export default function BochaScout() {
       }));
 
       const databaseIds = new Set(databaseAthletes.map((item) => item.id));
-      const localOnly = localAthletes.filter((item) => !databaseIds.has(item.id));
+      const localOnly = localAthletes.filter((item) => item.source !== "database" && !databaseIds.has(item.id));
       setAthletes([...databaseAthletes, ...localOnly].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
     }
 
@@ -1243,21 +1231,22 @@ export default function BochaScout() {
 
     loadAthletesFromDatabase();
     loadTeamEntriesFromDatabase();
-    return () => { active = false; };
-  }, []);
+    window.addEventListener('boccia-catalog-updated',loadAthletesFromDatabase);
+    return () => { active = false; window.removeEventListener('boccia-catalog-updated',loadAthletesFromDatabase); };
+  }, [currentUserId]);
 
   useEffect(() => {
     safeSave(STORAGE_KEYS.athletes, athletes);
   }, [athletes]);
 
   useEffect(() => {
-    safeSave(STORAGE_KEYS.sessions, sessions);
-  }, [sessions]);
+    if(currentUserId)safeSave(`${STORAGE_KEYS.sessions}:${currentUserId}`, sessions.filter(s=>s.ownerUserId===currentUserId));
+  }, [sessions,currentUserId]);
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getUser().then(({ data }) => {
-      if (active) setCurrentUserId(data?.user?.id || "");
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && data?.session?.user) setCurrentUserId(data.session.user.id);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (active) setCurrentUserId(session?.user?.id || "");
@@ -1267,7 +1256,7 @@ export default function BochaScout() {
 
   useEffect(() => {
     if (!currentUserId) return;
-    setSessions((prev) => prev.map((s) => s.ownerUserId ? s : { ...s, ownerUserId: currentUserId }));
+    setSessions((prev) => prev.filter(s=>s.ownerUserId));
   }, [currentUserId]);
 
   const accountSessions = useMemo(() => currentUserId ? sessions.filter((s) => s.ownerUserId === currentUserId) : [], [sessions, currentUserId]);
@@ -1309,11 +1298,19 @@ export default function BochaScout() {
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            approvalStatus: row.approval_status || p.approvalStatus || "approved",
             createdAt: p.createdAt || row.created_at,
           };
         });
         const dbIds = new Set(dbSessions.map((s) => s.id));
-        const localLegacy = safeLoad(STORAGE_KEYS.sessions, []).filter((s) => !dbIds.has(s.id)).map((s) => ({ ...s, ownerUserId: s.ownerUserId || currentUserId }));
+        const localLegacy = safeLoad(`${STORAGE_KEYS.sessions}:${currentUserId}`, []).filter((s) => s.ownerUserId===currentUserId && !dbIds.has(s.id));
         setSessions([...dbSessions, ...localLegacy]);
       }
     }
@@ -1322,31 +1319,11 @@ export default function BochaScout() {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId) return;
-    const mine = sessions.filter((s) => s.ownerUserId === currentUserId);
-    if (!mine.length) return;
-    const owner = ownerAccounts.find((p) => p.id === currentUserId);
-    const ownerDisplay = owner?.name || owner?.username || "Conta";
-    const timer = setTimeout(() => {
-      mine.forEach(async (s) => {
-        const row = {
-          id: s.id,
-          owner_id: currentUserId,
-          session_date: s.date || todayISO(),
-          session_kind: s.sessionKind || "Treino",
-          game_type: s.gameType || "Individual",
-          athlete_id: s.athleteId || null,
-          opponent_id: s.opponentId || null,
-          athlete_name: s.athlete || "",
-          opponent_name: s.opponent || "",
-          payload: { ...s, ownerUserId: currentUserId, ownerDisplay },
-        };
-        const result = await supabase.from("scout_sessions").upsert(row, { onConflict: "id" });
-        if (result.error) console.error("Erro ao salvar scout no histórico da conta:", result.error);
-      });
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [sessions, currentUserId, ownerAccounts]);
+    if(!currentUserId)return;
+    const sync=()=>void flushAutosave(currentUserId);
+    const timer=setTimeout(sync,500);
+    return()=>clearTimeout(timer);
+  },[sessions,currentUserId]);
 
   function addAthlete(item) {
     const normalizedName = item.name.trim().toLocaleLowerCase("pt-BR");
@@ -1471,6 +1448,11 @@ export default function BochaScout() {
   // PARTIDA
   // =========================================================
 
+  const [matchHome,setMatchHome]=useState(false);
+  const [draftId,setDraftId]=useState("");
+  const [draftReady,setDraftReady]=useState(false);
+  const lastDraft=useRef("");
+  const storageWarned=useRef(false);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
 
@@ -1538,9 +1520,9 @@ export default function BochaScout() {
   const [undoStack, setUndoStack] = useState([]);
 
   useEffect(() => {
-    document.body.classList.toggle("bocha-scout-live-mode", started);
+    document.body.classList.toggle("bocha-scout-live-mode", started && !matchHome);
     return () => document.body.classList.remove("bocha-scout-live-mode");
-  }, [started]);
+  }, [started,matchHome]);
 
   function pushUndoSnapshot() {
     const snapshot = {
@@ -1590,6 +1572,72 @@ export default function BochaScout() {
   // =========================================================
 
   const [scores, setScores] = useState({});
+  const [endScoreDraft,setEndScoreDraft]=useState({athlete:"",opponent:""});
+
+  useEffect(() => {
+    if(!currentUserId)return;
+    const saved=readDraft(currentUserId);
+    if(saved?.payload?.version===1) {
+      const d=saved.payload;
+      setDraftId(saved.id);
+      setSessionKind(d.sessionKind);
+      setCompetitionName(d.competitionName);
+      setCompetitionPhase(d.competitionPhase);
+      setCompetitionLevel(d.competitionLevel);
+      setCompetitionScope(d.competitionScope);
+      setSessionDate(d.sessionDate);
+      setSelectedAthleteId(d.selectedAthleteId);
+      setSelectedOpponentId(d.selectedOpponentId);
+      setSelectedRedTeamEntryId(d.selectedRedTeamEntryId);
+      setSelectedBlueTeamEntryId(d.selectedBlueTeamEntryId);
+      setGameType(d.gameType);
+      setAthlete(d.athlete);
+      setOpponent(d.opponent);
+      setAthleteClass(d.athleteClass);
+      setOpponentClass(d.opponentClass);
+      setGender(d.gender);
+      setAthleteColor(d.athleteColor);
+      setStarted(d.started);
+      setFinished(d.finished);
+      setTieBreak(d.tieBreak);
+      setTieBreakRound(d.tieBreakRound);
+      setCurrentEnd(d.currentEnd);
+      setStage(d.stage);
+      setWhitePosition(d.whitePosition);
+      setNewWhitePosition(d.newWhitePosition);
+      setSelectedColor(d.selectedColor);
+      setSelectedResult(d.selectedResult);
+      setPlaysHistory(d.playsHistory);
+      setCommandHistory(d.commandHistory);
+      setDiscardedBalls(d.discardedBalls);
+      setScores(d.scores);
+      setEndScoreDraft(d.endScoreDraft || {athlete:"",opponent:""});
+      setMatchHome(d.matchHome);
+      setView(d.view);
+    }
+    setDraftReady(true);
+    return listenAutosave(currentUserId);
+  },[currentUserId]);
+  const draftSnapshot={version:1,endScoreDraft,sessionKind,competitionName,competitionPhase,competitionLevel,competitionScope,sessionDate,selectedAthleteId,selectedOpponentId,selectedRedTeamEntryId,selectedBlueTeamEntryId,gameType,athlete,opponent,athleteClass,opponentClass,gender,athleteColor,started,finished,tieBreak,tieBreakRound,currentEnd,stage,whitePosition,newWhitePosition,selectedColor,selectedResult,playsHistory,commandHistory,discardedBalls,scores,matchHome,view};
+  useLayoutEffect(()=>{
+    if(!draftReady || !currentUserId || !draftId || (!started && !finished))return;
+    const encoded=JSON.stringify(draftSnapshot);
+    if(encoded===lastDraft.current)return;
+    try {saveDraft(currentUserId,draftId,draftSnapshot);lastDraft.current=encoded;}
+    catch(error){if(!storageWarned.current){storageWarned.current=true;alert('Não foi possível salvar a reserva neste aparelho. Verifique o espaço disponível.');}console.error(error);}
+  });
+  useEffect(()=>{
+    if(!draftReady || !draftId)return;
+    const timer=setTimeout(()=>void flushAutosave(currentUserId),500);
+    return()=>clearTimeout(timer);
+  },[currentUserId,draftReady,draftId,endScoreDraft,sessionKind,competitionName,competitionPhase,competitionLevel,competitionScope,sessionDate,selectedAthleteId,selectedOpponentId,selectedRedTeamEntryId,selectedBlueTeamEntryId,gameType,athlete,opponent,athleteClass,opponentClass,gender,athleteColor,started,finished,tieBreak,tieBreakRound,currentEnd,stage,whitePosition,newWhitePosition,selectedColor,selectedResult,playsHistory,commandHistory,discardedBalls,scores,matchHome,view]);
+  function abandonGame() {
+    if(!window.confirm('Abandonar esta partida? As jogadas e o placar desta partida serão descartados. Partidas anteriores serão mantidas.'))return;
+    try {saveDraft(currentUserId,draftId,null,'closed');}catch {alert('Não foi possível descartar a partida com segurança. Tente novamente.');return;}
+    void flushAutosave(currentUserId);
+    setDraftId('');setMatchHome(false);newGame();setView('dashboard');
+  }
+
 
   // =========================================================
   // INICIAR PARTIDA
@@ -1631,6 +1679,9 @@ export default function BochaScout() {
 
     if (athleteColor !== "Vermelho") setAthleteColor("Vermelho");
 
+    setDraftId(crypto.randomUUID());
+    lastDraft.current="";
+    setMatchHome(false);
     setSessionDate(todayISO());
     setStarted(true);
     setFinished(false);
@@ -1650,6 +1701,7 @@ export default function BochaScout() {
     setDiscardedBalls({});
     setUndoStack([]);
     setScores({});
+    setEndScoreDraft({athlete:"",opponent:""});
 
     setStage("white");
   }
@@ -2062,6 +2114,7 @@ export default function BochaScout() {
     };
 
     setScores(updatedScores);
+    setEndScoreDraft({athlete:"",opponent:""});
 
     const isTieBreakEnd = String(currentEndName).startsWith("Tie-Break");
 
@@ -2259,6 +2312,8 @@ export default function BochaScout() {
   // =========================================================
 
   function newGame() {
+    if(draftId && finished){saveDraft(currentUserId,draftId,null,"closed");void flushAutosave(currentUserId);}
+    setDraftId("");setMatchHome(false);lastDraft.current="";
     setStarted(false);
     setFinished(false);
 
@@ -2303,21 +2358,19 @@ export default function BochaScout() {
     setDiscardedBalls({});
     setUndoStack([]);
     setScores({});
+    setEndScoreDraft({athlete:"",opponent:""});
   }
 
 
   useEffect(() => {
-    if (!finished || playsHistory.length === 0) return;
+    if (!finished || !draftReady || !currentUserId || !draftId) return;
 
     const statsSnapshot = calcStats(playsHistory.filter((p) => p.color === athleteColor));
     const totals = getRegularScoreTotals(scores);
 
-    const id = `session-${sessionDate}-${athlete}-${opponent}-${playsHistory[0]?.id || Date.now()}`;
+    const id = `session-${draftId}`;
 
-    setSessions((prev) => {
-      if (prev.some((item) => item.id === id)) return prev;
-      return [
-        {
+    const completed = {
           id,
           ownerUserId: currentUserId || null,
           date: sessionDate,
@@ -2342,11 +2395,11 @@ export default function BochaScout() {
           plays: playsHistory,
           commands: commandHistory,
           stats: statsSnapshot,
-        },
-        ...prev,
-      ];
-    });
-  }, [finished]);
+        };
+    queueSession(currentUserId, {id,owner_id:currentUserId,session_date:sessionDate,session_kind:sessionKind,game_type:gameType,athlete_id:completed.athleteId,opponent_id:completed.opponentId,athlete_name:athlete,opponent_name:opponent,payload:completed});
+    setSessions(prev=>prev.some(item=>item.id===id)?prev:[completed,...prev]);
+    void flushAutosave(currentUserId);
+  }, [finished,draftReady,currentUserId,draftId]);
 
   async function exportMatchReport() {
     const { jsPDF } = await import("jspdf");
@@ -2394,20 +2447,12 @@ export default function BochaScout() {
     box(26, 90, W - 52, 72, [244,247,250], 12);
     txt(redName, 48, 112, 10, "bold", red);
     txt("VERMELHO", 48, 128, 7, "bold", muted);
-    txt(sideScore("Vermelho"), W / 2 - 30, 139, 39, "bold", red, { align: "right" });
-    txt("×", W / 2, 136, 22, "bold", muted, { align: "center" });
-    txt(sideScore("Azul"), W / 2 + 30, 139, 39, "bold", blue);
+    txt(sideScore("Vermelho"), W / 2 - 30, 128, 32, "bold", red, { align: "right" });
+    txt("×", W / 2, 126, 21, "bold", muted, { align: "center" });
+    txt(sideScore("Azul"), W / 2 + 30, 128, 32, "bold", blue);
     txt(blueName, W - 48, 112, 10, "bold", blue, { align: "right" });
     txt("AZUL", W - 48, 128, 7, "bold", muted, { align: "right" });
-    const entries = Object.entries(scores);
-    const endW = Math.min(88, (W - 330) / Math.max(1, entries.length));
-    entries.forEach(([name, score], index) => {
-      const a = Number(score.athlete || 0), o = Number(score.opponent || 0);
-      const tone = a === o ? yellow : a > o ? (athleteColor === "Vermelho" ? red : blue) : (opponentColor === "Vermelho" ? red : blue);
-      const x = 188 + index * endW;
-      txt(name.replace("End ", "E"), x + endW/2, 105, 7, "bold", muted, {align:"center"});
-      txt(`${a}-${o}`, x + endW/2, 122, 12, "bold", tone, {align:"center"});
-    });
+    drawScorePartials(doc, scores, athleteColor);
 
     const colGap = 12;
     const colW = (W - 52 - colGap) / 2;
@@ -2453,17 +2498,10 @@ export default function BochaScout() {
     const mapX = left + histW + colGap;
     const mapW = W - 26 - mapX;
     section("Posições da branca", mapX, bottomY, mapW);
-    const positionData = buildPositionPerformance(playsHistory.filter((p)=>p.color===athleteColor));
-    POSITIONS.forEach((position,index) => {
-      if (!position) return;
-      const row = Math.floor(index/6), col = index%6;
-      const cw = (mapW - 20)/6, ch = 10;
-      const x = mapX + 8 + col*cw, y = bottomY + 32 + row*ch;
-      const count = positionData[position]?.total || 0;
-      if (count) { doc.setFillColor(...(athleteColor === "Vermelho" ? red : blue)); doc.circle(x+cw/2,y-2,4,"F"); txt(count,x+cw/2,y,5,"bold",[255,255,255],{align:"center"}); }
-      else txt(position,x+cw/2,y,5,"normal",[150,164,181],{align:"center"});
-    });
+    txt("Mapas completos dos dois atletas", mapX + 10, bottomY + 45, 9, "bold", navy);
+    txt("na página seguinte.", mapX + 10, bottomY + 61, 9, "normal", muted);
     txt(`Gerado pelo BochaScout · ${new Date().toLocaleString("pt-BR")}`, W - 26, H - 10, 6, "normal", [145,160,178], {align:"right"});
+    appendHeatmapReport(doc, [{ name: redName, color: "Vermelho", data: buildPositionPerformance((playsHistory).filter(p => p.color === "Vermelho")) }, { name: blueName, color: "Azul", data: buildPositionPerformance((playsHistory).filter(p => p.color === "Azul")) }]);
     doc.save(`BochaScout_${athlete}_vs_${opponent}_${new Date().toISOString().slice(0,10)}.pdf`);
   }
 
@@ -2888,7 +2926,8 @@ export default function BochaScout() {
   // TELA DE CADASTRO
   // =========================================================
 
-  if (!started && !finished) {
+  if(!draftReady)return <div style={{padding:24}}>Carregando Bocha Scout...</div>;
+  if ((!started && !finished) || matchHome) {
     return (
       <div style={styles.page}>
         <div style={styles.container}>
@@ -2902,12 +2941,13 @@ export default function BochaScout() {
 
           <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />
 
+          {started && <div style={{...styles.card,display:"flex",gap:10,flexWrap:"wrap"}}><button style={{...styles.button,...styles.green}} onClick={()=>setMatchHome(false)}>Voltar à partida</button><button style={{...styles.button,background:"#b91c1c"}} onClick={abandonGame}>Abandonar partida</button></div>}
           {view === "dashboard" && (
             <DashboardScreen
               sessions={accountSessions}
               athletes={athletes}
-              onNewTraining={() => { setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
-              onNewCompetition={() => { setSessionKind("Campeonato"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
+              onNewTraining={() => { if(started){setMatchHome(false);return;} setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
+              onNewCompetition={() => { if(started){setMatchHome(false);return;} setSessionKind("Campeonato"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
               onHistory={() => setView("history")}
             />
           )}
@@ -2935,14 +2975,13 @@ export default function BochaScout() {
             />
           )}
 
-          {view === "data" && currentUserIsSuperAdmin && (
+          {dataHost && currentUserIsSuperAdmin && createPortal(
             <DataScreen
               athletes={athletes}
               sessions={sessions}
               onImport={importAllData}
               onClear={clearAllData}
-              onBack={() => setView("dashboard")}
-            />
+            />, dataHost
           )}
 
           {view === "new" && (
@@ -3143,6 +3182,7 @@ export default function BochaScout() {
     return (
       <div style={styles.page} className="scout-live-page">
         <div style={styles.container} className="scout-live-container">
+          <div style={{display:"flex",gap:8,justifyContent:"space-between",marginBottom:10}}><button style={styles.button} onClick={()=>{setView("dashboard");setMatchHome(true);}}>Início</button><button style={{...styles.button,background:"#b91c1c"}} onClick={abandonGame}>Abandonar partida</button></div>
           <section className="scout-scoreboard" aria-label="Placar da partida">
             <div className="scout-brand">
               <img src="/bocha-scout-emblem.png" alt="" className="scout-brand-emblem" />
@@ -3511,7 +3551,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage === "endScore" && (
-            <EndScore
+            <EndScore draft={endScoreDraft} onDraftChange={setEndScoreDraft}
               athlete={athlete}
               opponent={opponent}
               athleteColor={
@@ -3670,7 +3710,7 @@ export default function BochaScout() {
           <div className="scout-final-row-icon"><img src="/scout-assets/zone.png" alt="" /></div>
           <div><strong>Mapa de calor</strong><span>{finalColor} · {finalName}</span><small>Veja onde as bolas foram jogadas durante a partida.</small></div><b>›</b>
         </button>
-        {finalDetailPanel === "heatmap" && <div className="scout-final-expanded"><HistoricalHeatmap plays={finalPlays} /></div>}
+        {finalDetailPanel === "heatmap" && <div className="scout-final-expanded"><HistoricalHeatmap plays={finalPlays} name={finalName} color={finalColor} /></div>}
         <button type="button" className="scout-final-row" onClick={() => setFinalDetailPanel((value) => value === "fundamentals" ? "" : "fundamentals")}>
           <div className="scout-final-row-icon"><img src="/scout-assets/approach.png" alt="" /></div>
           <div><strong>Fundamentos</strong><span>{finalBest ? `${finalBest[0]} · melhor desempenho` : "Sem jogadas registradas"}</span><small>Análise completa por fundamento.</small></div><b>›</b>
@@ -3821,7 +3861,7 @@ export default function BochaScout() {
           <div style={{ ...styles.card, textAlign: "left", marginTop: 20 }}>
             <h2>Mapa de calor da partida — {athlete}</h2>
             <p style={styles.helpText}>Somente as jogadas do atleta nesta partida.</p>
-            <HistoricalHeatmap plays={athleteMatchPlays} />
+            <HistoricalHeatmap plays={athleteMatchPlays} name={athlete} color={athleteColor} />
           </div>
 
           <button
@@ -3854,7 +3894,7 @@ export default function BochaScout() {
                 </div>
               </div>
               <h3 style={{ marginTop: 18 }}>Mapa de calor do adversário — {opponent}</h3>
-              <HistoricalHeatmap plays={opponentMatchPlays} />
+              <HistoricalHeatmap plays={opponentMatchPlays} name={opponent} color={opponentColor} />
             </div>
           )}
 
@@ -4119,44 +4159,8 @@ function Field({
   );
 }
 
-function PositionMap({
-  selected,
-  onSelect,
-}) {
-  return (
-    <div style={styles.map}>
-      {POSITIONS.map(
-        (position, index) =>
-          position === null ? (
-            <div
-              key={`empty-${index}`}
-              style={
-                styles.positionEmpty
-              }
-            />
-          ) : (
-            <button
-              key={position}
-              onClick={() =>
-                onSelect(
-                  position
-                )
-              }
-              style={{
-                ...styles.position,
-
-                ...(selected ===
-                position
-                  ? styles.positionSelected
-                  : {}),
-              }}
-            >
-              {position}
-            </button>
-          )
-      )}
-    </div>
-  );
+function PositionMap({ selected, onSelect }) {
+  return <CourtPositionMap selected={selected} onSelect={onSelect} />;
 }
 
 function ResultBadge({
@@ -4601,23 +4605,11 @@ function ColorScoutSummary({
 // PLACAR DO END
 // ============================================================
 
-function EndScore({
-  athlete,
-  opponent,
-  athleteColor,
-  opponentColor,
-  endName,
-  onSave,
-}) {
-  const [
-    athleteScore,
-    setAthleteScore,
-  ] = useState("");
-
-  const [
-    opponentScore,
-    setOpponentScore,
-  ] = useState("");
+function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,draft,onDraftChange}) {
+  const athleteScore=draft.athlete;
+  const opponentScore=draft.opponent;
+  const setAthleteScore=(value)=>onDraftChange({...draft,athlete:value});
+  const setOpponentScore=(value)=>onDraftChange({...draft,opponent:value});
 
   return (
     <div

@@ -1,3 +1,7 @@
+import {localUser} from '../lib/scoutAutosave';
+import AccountNotifications from './AccountNotifications';
+import PasswordRecovery from './PasswordRecovery';
+import {DataPanelContext} from './DataPanelContext';
 import React, { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -11,12 +15,22 @@ import TeamRegistrationPanel from './TeamRegistrationPanel';
 import ProfilePanel from './ProfilePanel';
 
 const PROFILE_TYPES = ['Técnico', 'Atleta', 'Professor', 'Outro'];
-const TERMS_VERSION = '2026-09-05';
-const TERMS_TEXT = `Ao criar uma conta no Bocha Scout, você concorda em usar a plataforma apenas para registro, acompanhamento e análise esportiva. As informações cadastradas devem ser verdadeiras e você é responsável por manter sua senha protegida.
+const TERMS_VERSION = '2026-09-08';
+const TERMS_TEXT = `1. Finalidade e conta. O Bocha Scout permite cadastrar atletas e registrar e analisar partidas de bocha. Ao criar uma conta, informe dados verdadeiros, proteja sua senha e use somente uma conta à qual tenha autorização de acesso.
 
-Os dados de perfil, atletas e scouts serão armazenados para o funcionamento da plataforma. Eles não devem ser usados para constranger, discriminar ou expor atletas. Dados pessoais de crianças e adolescentes só podem ser cadastrados com autorização do responsável e para finalidade esportiva legítima.
+2. Dados dos atletas. Cadastre somente informações necessárias à atividade esportiva, com autorização para seu uso. Não inclua laudos, documentos, contatos privados ou outros dados sensíveis no campo de observações. Para crianças e adolescentes, obtenha autorização do responsável antes de cadastrar informações.
 
-O administrador pode moderar cadastros, bloquear acessos que violem estas regras e excluir contas quando necessário. O usuário pode solicitar correção ou exclusão dos seus dados. Mudanças relevantes nestes termos serão apresentadas novamente para aceite.`;
+3. Quem pode ver. Os cadastros aprovados de atletas ficam disponíveis às contas da plataforma. Contas comuns consultam as partidas registradas por elas. Administradores e o superadministrador podem consultar registros para gestão e aprovação. Ao exportar um PDF ou backup, você se responsabiliza por compartilhar o arquivo somente com pessoas autorizadas.
+
+4. Correções e aprovação. O superadministrador pode corrigir cadastros. Alterações propostas por administradores aguardam sua aprovação. Pedidos, decisões e alterações podem ser registrados para acompanhamento. O cadastro ou pedido pode ser rejeitado quando houver informações incorretas ou uso inadequado.
+
+5. Uso responsável. É proibido usar a plataforma para expor, constranger ou discriminar pessoas, acessar contas alheias, divulgar informações sem autorização ou prejudicar o serviço. Violações podem resultar em bloqueio ou exclusão da conta pela administração.
+
+6. Análises e disponibilidade. Os indicadores dependem das jogadas informadas e podem conter erros de registro. Confira os resultados antes de utilizá-los. As análises apoiam o trabalho esportivo e não constituem avaliação médica nem certificação de classificação esportiva. O serviço pode passar por manutenção.
+
+7. Correção e exclusão de dados. Solicite à administração do Bocha Scout a revisão, correção ou exclusão de seus dados. A administração poderá precisar confirmar sua identidade e avaliar os registros envolvidos antes de atender à solicitação.
+
+8. Aceite. Ao marcar a caixa de aceite e criar a conta, você declara ter lido estes termos. A versão e a data do aceite são registradas junto ao cadastro. Mudanças nestes termos serão identificadas por uma nova versão.`;
 
 function fieldStyle(): React.CSSProperties {
   return {
@@ -31,15 +45,17 @@ function fieldStyle(): React.CSSProperties {
 }
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(()=>localUser());
   const [profile, setProfile] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(()=>!localUser());
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'notifications'>('overview');
-  const [notificationCount, setNotificationCount] = useState(0);
+  const [dataHost,setDataHost]=useState<HTMLElement|null>(null);
+  const [recovery,setRecovery]=useState(/type=recovery/.test(window.location.hash));
+  const [requestRecovery,setRequestRecovery]=useState(false);
   const [showAthleteRegistration, setShowAthleteRegistration] = useState(false);
   const [showTeamRegistration, setShowTeamRegistration] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -58,36 +74,21 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     if (!error) setProfile(data || null);
   }
 
-  async function loadNotificationCount() {
-    if (profile?.role !== 'admin') {
-      setNotificationCount(0);
-      return;
-    }
-    const { data, error } = await supabase
-      .from('admin_notifications')
-      .select('id')
-      .eq('status', 'pending');
-    if (!error) setNotificationCount((data || []).length);
-  }
-
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
-      const nextUser = data.session?.user ?? null;
+      const nextUser = data.session?.user ?? (!navigator.onLine ? localUser() : null);
       setUser(nextUser);
       await loadProfile(nextUser);
       setLoading(false);
     });
-    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') setRecovery(true);
       const nextUser = session?.user ?? null;
       setUser(nextUser);
-      await loadProfile(nextUser);
+      setTimeout(() => { void loadProfile(nextUser); }, 0);
     });
     return () => data.subscription.unsubscribe();
   }, []);
-
-  useEffect(() => {
-    void loadNotificationCount();
-  }, [profile?.role, showAdmin]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -127,6 +128,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }
 
+  if (recovery || requestRecovery) return <PasswordRecovery reset={recovery} onClose={() => {setRecovery(false);setRequestRecovery(false);window.history.replaceState(null,'',window.location.pathname);}}/>;
+
   if (loading) return <div style={{ padding: 30, fontFamily: 'Arial, sans-serif' }}>Carregando Bocha Scout...</div>;
 
   if (!user) {
@@ -162,6 +165,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               {busy ? 'Aguarde...' : mode === 'login' ? 'Entrar no Bocha Scout' : 'Criar minha conta'}
             </button>
           </form>
+          {mode === 'login' && <button type="button" onClick={()=>setRequestRecovery(true)} style={{marginTop:14,border:0,background:'transparent',color:'#1d4ed8',cursor:'pointer'}}>Esqueci minha senha</button>}
           <p style={{ color: '#64748b', fontSize: 12, marginTop: 15 }}>O acesso fica salvo neste aparelho até você sair da conta.</p>
         </div>
         {showTerms && <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.7)', zIndex: 11000, padding: 18, overflowY: 'auto' }}>
@@ -194,24 +198,16 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
           <button onClick={() => setShowAthleteRegistration(true)} style={{ border: '1px solid #16a34a', background: '#15803d', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar atleta</button>
           <button onClick={() => setShowTeamRegistration(true)} style={{ border: '1px solid #60a5fa', background: '#2563eb', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar Pares/Equipes</button>
-          {isAdmin && <button
-            onClick={() => { setAdminInitialTab('notifications'); setShowAdmin(true); }}
-            title="Notificações"
-            aria-label={notificationCount > 0 ? `Notificações: ${notificationCount} pendente(s)` : 'Notificações'}
-            style={{ position: 'relative', border: '1px solid #64748b', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 11px', minWidth: 42, fontSize: 18, lineHeight: 1, cursor: 'pointer' }}
-          >
-            🔔
-            {notificationCount > 0 && <span style={{ position: 'absolute', top: -7, right: -7, minWidth: 18, height: 18, padding: '0 4px', borderRadius: 999, background: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 900, display: 'grid', placeItems: 'center', boxSizing: 'border-box' }}>{notificationCount > 99 ? '99+' : notificationCount}</span>}
-          </button>}
+          <AccountNotifications key={user.id} userId={user.id} role={profile?.role || 'user'}/>
           {isAdmin && <button onClick={() => { setAdminInitialTab('overview'); setShowAdmin(true); }} style={{ border: '1px solid #93c5fd', background: '#1d4ed8', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Painel Admin</button>}
           <button onClick={() => setShowProfile(true)} style={{ border: '1px solid #94a3b8', background: '#334155', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Meu perfil</button>
           <button onClick={() => supabase.auth.signOut()} style={{ border: '1px solid #475569', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Sair</button>
         </div>
       </div>
-      {children}
+      <DataPanelContext.Provider key={user.id} value={dataHost}>{children}</DataPanelContext.Provider>
       {showAthleteRegistration && <AthleteRegistrationPanel user={user} onClose={() => setShowAthleteRegistration(false)} />}
       {showTeamRegistration && <TeamRegistrationPanel user={user} onClose={() => setShowTeamRegistration(false)} />}
-      {showAdmin && isAdmin && <AdminPanel initialTab={adminInitialTab} onClose={() => setShowAdmin(false)} />}
+      {showAdmin && isAdmin && <AdminPanel isSuperAdmin={isSuperAdmin} onDataHost={setDataHost} initialTab={adminInitialTab} onClose={() => setShowAdmin(false)} />}
       {showProfile && <ProfilePanel user={user} profile={profile} onSaved={loadProfile} onClose={() => setShowProfile(false)} />}
     </div>
   );

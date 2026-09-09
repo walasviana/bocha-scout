@@ -1,3 +1,4 @@
+import {CorrectionPreview} from './AccountNotifications';
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 // PATCH: notification-bell-admin-v22
@@ -21,8 +22,8 @@ function fmt(value?: string | null) {
   try { return new Date(value).toLocaleString('pt-BR'); } catch { return value; }
 }
 
-export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClose: () => void; initialTab?: 'overview' | 'notifications' }) {
-  const [tab, setTab] = useState<'overview' | 'accounts' | 'athletes' | 'teams' | 'notifications' | 'audit'>(initialTab);
+export default function AdminPanel({ onClose, initialTab = 'overview',isSuperAdmin=false,onDataHost }: { onClose: () => void; initialTab?: 'overview' | 'notifications';isSuperAdmin?:boolean;onDataHost:(el:HTMLDivElement|null)=>void }) {
+  const [tab, setTab] = useState<'overview' | 'accounts' | 'athletes' | 'teams' | 'notifications' | 'audit' | 'data'>(initialTab);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [stats, setStats] = useState<any>({});
@@ -50,7 +51,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
         supabase.rpc('admin_list_users'),
         supabase.from('athletes').select('id,name,class,gender,country,uf,observations,created_by,created_at,updated_at,approval_status').order('name'),
         supabase.from('boccia_team_entries').select('id,name,entity_type,division,country,created_by,created_at,updated_at,approval_status').order('division').order('name'),
-        supabase.from('admin_notifications').select('id,source_type,source_id,requester_id,title,message,status,created_at,resolved_at,resolved_by').order('created_at', { ascending: false }),
+        supabase.from('admin_notifications').select('id,source_type,source_id,requester_id,title,message,status,created_at,resolved_at,resolved_by,change_data').order('created_at', { ascending: false }),
         supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(100),
       ]);
       if (statsRes.error) throw statsRes.error;
@@ -80,7 +81,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
     const matchesText = !q || [a.name, a.country, a.uf, ownerById[a.created_by]].some(v => String(v || '').toLowerCase().includes(q));
     const matchesClass = classFilter === 'Todos' || a.class === classFilter;
     const matchesGender = genderFilter === 'Todos' || a.gender === genderFilter;
-    return matchesText && matchesClass && matchesGender;
+    return (q.length > 0 || classFilter !== 'Todos' || genderFilter !== 'Todos') && matchesText && matchesClass && matchesGender;
   }), [athletes, search, classFilter, genderFilter, ownerById]);
 
   async function changeBlock(user: any) {
@@ -117,7 +118,9 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
     });
     if (error) return setMessage(error.message);
     setEditing(null);
+    window.dispatchEvent(new Event('boccia-catalog-updated'));
     await loadAll();
+    setMessage(isSuperAdmin ? 'Dados do atleta atualizados.' : 'Correção enviada para aprovação do Super Admin.');
   }
 
   async function setAthleteApproval(athlete: any, status: 'approved' | 'rejected') {
@@ -176,11 +179,13 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
     await loadAll();
   }
 
-  const pendingNotifications = notifications.filter(n => n.status === 'pending');
+  const pendingNotifications = notifications.filter(n => n.status === 'pending' && (n.source_type !== 'athlete_edit' || isSuperAdmin));
 
   async function resolveNotification(item: any, status: 'approved' | 'rejected') {
     let error: any = null;
-    if (item.source_type === 'athlete') {
+    if (item.source_type === 'athlete_edit') {
+      ({error}=await supabase.rpc('resolve_athlete_correction',{notification_id:item.id,new_status:status}));
+    } else if (item.source_type === 'athlete') {
       ({ error } = await supabase.rpc('admin_set_athlete_approval', { target_athlete_id: item.source_id, new_status: status }));
     } else if (item.source_type === 'team_entry') {
       ({ error } = await supabase.rpc('admin_set_team_entry_approval', { target_entry_id: item.source_id, new_status: status }));
@@ -188,6 +193,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
       ({ error } = await supabase.rpc('admin_set_scout_approval', { target_session_id: item.source_id, new_status: status }));
     }
     if (error) return setMessage(error.message);
+    window.dispatchEvent(new Event('boccia-catalog-updated'));
     await loadAll();
   }
 
@@ -203,16 +209,17 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: 18 }}>
         <div style={{ ...card, background: '#0f172a', color: '#fff', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div><div style={{ fontSize: 25, fontWeight: 900 }}>Painel do Administrador</div><div style={{ color: '#cbd5e1', marginTop: 4 }}>Contas, atletas e auditoria do Bocha Scout</div></div>
-          <button onClick={() => { onClose(); window.location.reload(); }} style={{ ...button, background: '#fff', color: '#0f172a' }}>Fechar e atualizar</button>
+          <button onClick={() => { onClose(); }} style={{ ...button, background: '#fff', color: '#0f172a' }}>Fechar</button>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', overflowX: 'auto', position: 'sticky', top: 8, zIndex: 20, background: 'rgba(248,250,252,.95)', backdropFilter: 'blur(10px)', padding: 8, borderRadius: 14, margin: '14px 0', boxShadow: '0 6px 18px rgba(15,23,42,.06)' }}>
-          {[['overview','Visão geral'],['accounts','Contas'],['athletes','Atletas'],['teams','Pares/Equipes'],['audit','Auditoria']].map(([id,label]) => (
+          {[['overview','Visão geral'],['accounts','Contas'],['athletes','Atletas'],['teams','Pares/Equipes'],['audit','Auditoria'],['notifications','Notificações'],...(isSuperAdmin ? [['data','Dados']] : [])].map(([id,label]) => (
             <button key={id} onClick={() => setTab(id as any)} style={{ ...button, background: tab === id ? '#0f172a' : '#cbd5e1', color: tab === id ? '#fff' : '#0f172a' }}>{label}</button>
           ))}
           <button onClick={loadAll} style={{ ...button, background: '#15803d', color: '#fff' }}>Atualizar</button>
         </div>
 
+        {tab === 'data' && isSuperAdmin && <div ref={onDataHost}/>}
         {message && <div style={{ ...card, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b', marginBottom: 12 }}>{message}</div>}
         {loading ? <div style={card}>Carregando...</div> : null}
 
@@ -246,7 +253,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
         </div>}
 
         {!loading && tab === 'athletes' && <div style={card}>
-          <h2 style={{ marginTop: 0 }}>Atletas</h2>
+          <h2 style={{ marginTop: 0 }}>Atletas</h2><p>Busque um nome ou escolha classe/gênero para listar atletas. Mostrando até 50 resultados; refine os filtros se necessário.</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8, marginBottom: 12 }}>
             <input placeholder="Buscar nome, país, UF ou conta" value={search} onChange={e => setSearch(e.target.value)} style={input} />
             <select value={classFilter} onChange={e => setClassFilter(e.target.value)} style={input}><option>Todos</option>{CLASSES.map(x => <option key={x}>{x}</option>)}</select>
@@ -254,7 +261,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
           </div>
           <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead><tr>{['Atleta','Classe','Gênero','País/UF','Cadastrado por','Status','Ações'].map(x => <th key={x} style={{ textAlign: 'left', padding: 9, borderBottom: '1px solid #cbd5e1' }}>{x}</th>)}</tr></thead>
-            <tbody>{visibleAthletes.map(a => <tr key={a.id}>
+            <tbody>{visibleAthletes.slice(0,50).map(a => <tr key={a.id}>
               <td style={{ padding: 9, borderBottom: '1px solid #e2e8f0' }}><strong>{a.name}</strong></td>
               <td style={{ padding: 9, borderBottom: '1px solid #e2e8f0' }}>{a.class}</td>
               <td style={{ padding: 9, borderBottom: '1px solid #e2e8f0' }}>{a.gender || '-'}</td>
@@ -299,7 +306,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
           <p style={{ color: '#64748b' }}>Pedidos de atletas, pares/equipes e Scouts enviados por contas comuns.</p>
           {pendingNotifications.length === 0 ? <p>Nenhum pedido pendente.</p> : pendingNotifications.map(item => <div key={item.id} style={{ padding: '12px 0', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <div>
-              <strong>{item.title}</strong>
+              <strong>{item.title}</strong><CorrectionPreview data={item.change_data}/>
               <div style={{ color: '#475569', marginTop: 3 }}>{item.message || '-'}</div>
               <div style={{ color: '#64748b', fontSize: 12, marginTop: 3 }}>Solicitado por: {ownerById[item.requester_id] || 'Conta'} · {fmt(item.created_at)}</div>
             </div>
@@ -331,7 +338,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
 
       {editing && <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(15,23,42,.55)', display: 'grid', placeItems: 'center', padding: 16 }}>
         <div style={{ ...card, width: 'min(560px,100%)' }}>
-          <h2 style={{ marginTop: 0 }}>Editar atleta</h2>
+          <h2 style={{ marginTop: 0 }}>Editar atleta</h2><p>{isSuperAdmin ? "As alterações serão aplicadas ao salvar." : "As alterações serão enviadas ao Super Admin para aprovação."}</p>
           <div style={{ display: 'grid', gap: 9 }}>
             <input value={editing.name || ''} onChange={e => setEditing({ ...editing, name: e.target.value.toLocaleUpperCase('pt-BR') })} style={input} placeholder="Nome" />
             <select value={editing.class || ''} onChange={e => setEditing({ ...editing, class: e.target.value })} style={input}>{CLASSES.map(x => <option key={x}>{x}</option>)}</select>
@@ -339,7 +346,7 @@ export default function AdminPanel({ onClose, initialTab = 'overview' }: { onClo
             <input value={editing.country || ''} onChange={e => setEditing({ ...editing, country: e.target.value })} style={input} placeholder="País" />
             <input value={editing.uf || ''} onChange={e => setEditing({ ...editing, uf: e.target.value })} style={input} placeholder="UF" />
             <textarea value={editing.observations || ''} onChange={e => setEditing({ ...editing, observations: e.target.value })} style={{ ...input, minHeight: 80 }} placeholder="Observações" />
-            <div style={{ display: 'flex', gap: 8 }}><button onClick={saveAthlete} style={{ ...button, background: '#15803d', color: '#fff', flex: 1 }}>Salvar alterações</button><button onClick={() => setEditing(null)} style={{ ...button, background: '#cbd5e1', color: '#0f172a', flex: 1 }}>Cancelar</button></div>
+            <div style={{ display: 'flex', gap: 8 }}><button onClick={saveAthlete} style={{ ...button, background: '#15803d', color: '#fff', flex: 1 }}>{isSuperAdmin ? "Salvar alterações" : "Enviar para aprovação"}</button><button onClick={() => setEditing(null)} style={{ ...button, background: '#cbd5e1', color: '#0f172a', flex: 1 }}>Cancelar</button></div>
           </div>
         </div>
       </div>}
