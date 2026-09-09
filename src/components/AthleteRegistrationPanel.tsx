@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+// PATCH: uppercase-athlete-registration-v14
+// PATCH: athlete-approval-v15
+// PATCH: athlete-own-pending-v16
 
 const CLASSES = ['BC1', 'BC2', 'BC3', 'BC4'];
 const GENDERS = ['Masculino', 'Feminino'];
@@ -18,7 +21,7 @@ export default function AthleteRegistrationPanel({ user, onClose }: { user: User
     if (!form.name.trim() || !form.athleteClass) return setMessage('Informe o nome e a classe do atleta.');
     setBusy(true);
     const { error } = await supabase.from('athletes').insert({
-      name: form.name.trim(),
+      name: form.name.trim().toLocaleUpperCase('pt-BR'),
       class: form.athleteClass,
       gender: form.gender || null,
       country: form.country.trim() || null,
@@ -27,16 +30,19 @@ export default function AthleteRegistrationPanel({ user, onClose }: { user: User
       created_by: user.id,
     });
     setBusy(false);
-    if (error) return setMessage(error.message);
-    setMessage('Atleta cadastrado com sucesso.');
+    if (error) {
+      if (error.code === '23505') return setMessage('Esse atleta já está cadastrado nessa classe.');
+      return setMessage(error.message);
+    }
+    setMessage('Cadastro salvo. Você já pode usar este atleta no seu Novo Scout. Ele só entra na base geral após aprovação do administrador.');
     setForm({ name: '', athleteClass: '', gender: '', country: 'Brasil', uf: '', observations: '' });
   }
 
   return <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(15,23,42,.55)', display: 'grid', placeItems: 'center', padding: 16, fontFamily: 'Arial, sans-serif' }}>
     <div style={{ background: '#fff', borderRadius: 15, padding: 18, width: 'min(560px,100%)', maxHeight: '90vh', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><div><h2 style={{ margin: 0 }}>Cadastrar atleta</h2><div style={{ color: '#64748b', marginTop: 4 }}>Contas comuns podem cadastrar atletas. Edição e exclusão ficam restritas ao administrador.</div></div><button onClick={() => { onClose(); if (message.includes('sucesso')) window.location.reload(); }} style={{ ...button, background: '#e2e8f0', color: '#0f172a' }}>Fechar</button></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}><div><h2 style={{ margin: 0 }}>Cadastrar atleta</h2><div style={{ color: '#64748b', marginTop: 4 }}>Contas comuns podem cadastrar atletas. Edição e exclusão ficam restritas ao administrador.</div></div><button onClick={() => { onClose(); if (message.includes('Cadastro salvo')) window.location.reload(); }} style={{ ...button, background: '#e2e8f0', color: '#0f172a' }}>Fechar</button></div>
       <form onSubmit={submit} style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-        <input style={input} placeholder="Nome completo do atleta" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+        <input style={input} placeholder="Nome completo do atleta" value={form.name} onChange={e => setForm({ ...form, name: e.target.value.toLocaleUpperCase('pt-BR') })} />
         <select style={input} value={form.athleteClass} onChange={e => setForm({ ...form, athleteClass: e.target.value })}><option value="">Selecione a classe</option>{CLASSES.map(x => <option key={x}>{x}</option>)}</select>
         <select style={input} value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}><option value="">Gênero não informado</option>{GENDERS.map(x => <option key={x}>{x}</option>)}</select>
         <input style={input} placeholder="País" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} />
