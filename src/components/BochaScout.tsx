@@ -8,6 +8,10 @@ import { useEffect, useLayoutEffect, useRef, useMemo, useState } from "react";
 // PATCH: heatmap-v2
 import CourtHeatmap from "./CourtHeatmap";
 import CourtPositionMap from "./CourtPositionMap";
+import { createMatchReport } from '../lib/matchReport';
+import PrecisePosition from './PrecisePosition';
+import PartialPerformance from './PartialPerformance';
+import { calcStats, regularEnds as getRegularEnds, formatDuration, durationOf, positionLabel, playName, modeLabel, playsForAthlete, removeAndRenumber, participants } from '../lib/scoutData';
 import { drawScorePartials } from "../lib/pdfPartials";
 import { appendHeatmapReport } from "../lib/courtHeatmap";
 import { supabase } from "../lib/supabase";
@@ -127,33 +131,6 @@ const POSITIONS = [
   "96", "95", "94", "93", "92", "91", "TB",
 ];
 
-function getRegularEnds(gameType) {
-  const total =
-    (gameType === "Equipes" || gameType === "Equipe BC1/BC2") ? 6 : 4;
-
-  return Array.from(
-    { length: total },
-    (_, i) => `End ${i + 1}`
-  );
-}
-
-function calcStats(data) {
-  const total = data.length;
-  const acertos = data.filter((p) => p.result === "Acerto").length;
-  const funcionais = data.filter((p) => p.result === "Funcional").length;
-  const erros = data.filter((p) => p.result === "Erro").length;
-
-  return {
-    total,
-    acertos,
-    funcionais,
-    erros,
-    efficiency: total === 0 ? 0 : ((acertos + funcionais * 0.5) / total) * 100,
-    accuracy: total === 0 ? 0 : (acertos / total) * 100,
-    errorRate: total === 0 ? 0 : (erros / total) * 100,
-  };
-}
-
 function buildPlayStats(plays) {
   const data = { Vermelho: {}, Azul: {} };
 
@@ -240,7 +217,11 @@ function buildPositionPerformance(plays) {
     if (p.result === "Acerto") item.acertos += 1;
     if (p.result === "Funcional") item.funcionais += 1;
     if (p.result === "Erro") item.erros += 1;
-    if (p.play === "Saída de jogo") item.saidas += 1;
+    if (p.play === "Saída de jogo") {
+      item.saidas += 1;
+      const point=p.whitePointTo || p.whitePointFrom;
+      if(point) (item.points ||= []).push(point);
+    }
   });
   Object.values(map).forEach((item) => {
     item.efficiency = item.total ? ((item.acertos + item.funcionais * 0.5) / item.total) * 100 : 0;
@@ -277,7 +258,7 @@ function safeSave(key, value) {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  const now=new Date();return [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
 }
 
 function formatDateBR(iso) {
@@ -556,8 +537,8 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
         {filteredAthletes.length === 0 ? (
           <p style={styles.empty}>Nenhum atleta para os filtros selecionados.</p>
         ) : filteredAthletes.slice(0,limit).map((a) => {
-          const athleteSessions = sessions.filter((s) => s.athleteId === a.id || s.opponentId === a.id);
-          const stats = calcStats(athleteSessions.flatMap((s) => (s.plays || []).filter(p=>p.color === (s.athleteId===a.id ? s.athleteColor : s.athleteColor==="Vermelho" ? "Azul" : "Vermelho"))));
+          const athleteSessions = sessions.filter((s) => s.athleteId === a.id || s.opponentId === a.id || (s.plays||[]).some(p=>p.playerId===a.id));
+          const stats = calcStats(athleteSessions.flatMap((s) => playsForAthlete(s,a.id)));
           return (
             <div key={a.id} style={{ padding: "12px 0", borderBottom: "1px solid #e2e8f0" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -585,7 +566,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
   const targetColor = selectedIsOpponent
     ? (item.athleteColor === "Vermelho" ? "Azul" : "Vermelho")
     : item.athleteColor;
-  const analyzedName = selectedIsOpponent ? item.opponent : item.athlete;
+  const analyzedName = (item.plays||[]).find(p=>p.playerId===selectedAthleteId)?.playerName || (selectedIsOpponent ? item.opponent : item.athlete);
   const athletePlays = (item.plays || []).filter((p) => p.color === targetColor);
   const analysisItem = selectedIsOpponent ? {
     ...item,
@@ -602,10 +583,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
   const ranking = Object.entries(fundamentals).sort((a,b) => b[1].total - a[1].total);
   const redName = item.athleteColor === "Vermelho" ? item.athlete : item.opponent;
   const blueName = item.athleteColor === "Azul" ? item.athlete : item.opponent;
-  const matchSides = [
-    { color: "Vermelho", name: redName, plays: (item.plays || []).filter((p) => p.color === "Vermelho") },
-    { color: "Azul", name: blueName, plays: (item.plays || []).filter((p) => p.color === "Azul") },
-  ].map((side) => {
+  const matchSides = participants(item).map((side) => {
     const stats = calcStats(side.plays);
     const map = {};
     side.plays.forEach((p) => {
@@ -631,7 +609,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
       <h3>{item.athlete} × {item.opponent}</h3>
       <div style={{ fontSize: 13, color: "#475569", fontWeight: 700 }}>Analisando: {analyzedName}</div>
       <p style={{ color: "#64748b" }}>
-        {formatDateBR(item.date)} · {item.sessionKind} · {item.gameType}
+        {formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {modeLabel(item)}
         {item.competitionName ? ` · ${item.competitionName}` : ""}{item.competitionPhase ? ` · ${item.competitionPhase}` : ""}
       </p>
       <div style={styles.miniStats}>
@@ -641,10 +619,11 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
         <MiniStat label="Resultado" value={getSessionWinner(item)} />
       </div>
 
-      <h3 style={{ marginTop: 20 }}>Análise dos dois atletas</h3>
+      <PartialPerformance plays={item.plays||[]} gameType={item.gameType} athlete={item.athlete} opponent={item.opponent} athleteColor={item.athleteColor} scoutMode={item.scoutMode} isHistory/>
+      <h3 style={{ marginTop: 20 }}>Análise dos dois lados</h3>
       <div className="session-athlete-comparison">
         {matchSides.map((side) => (
-          <section key={side.color} className={`session-athlete-side is-${side.color.toLowerCase()}`}>
+          <section key={side.id} className={`session-athlete-side is-${side.color.toLowerCase()}`}>
             <div className="session-athlete-heading"><span>{side.color}</span><strong>{side.name}</strong></div>
             <div className="session-athlete-metrics"><MiniStat label="Jogadas" value={side.stats.total}/><MiniStat label="Eficiência" value={`${side.stats.efficiency.toFixed(1)}%`}/><MiniStat label="Erros" value={side.stats.erros}/></div>
             <h4>Fundamentos</h4>
@@ -657,15 +636,15 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
 
       <h3 style={{ marginTop: 20 }}>Placar por End</h3>
       {Object.keys(item.scores || {}).length === 0 ? <p style={styles.empty}>Sem placar por End salvo.</p> : Object.entries(item.scores || {}).map(([name, s]) => (
-        <div key={name} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #e2e8f0" }}>
-          <span>{name}</span><strong>{s.athlete} × {s.opponent}</strong>
+        <div key={name} style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, padding: "7px 0", borderBottom: "1px solid #e2e8f0" }}>
+          <span>{name}</span><strong>{s.athlete} × {s.opponent}</strong><span>{item.athlete}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color===item.athleteColor)).efficiency.toFixed(1)}% · {item.opponent}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color!==item.athleteColor)).efficiency.toFixed(1)}%</span>
         </div>
       ))}
 
       <h3 style={{ marginTop: 20 }}>Jogadas da partida</h3>
       {(item.plays || []).map((p, idx) => (
         <div key={p.id || idx} style={{ fontSize: 13, padding: "7px 0", borderBottom: "1px solid #e2e8f0" }}>
-          <strong>{p.end} · {p.ball}</strong> · {p.color} · {p.play} · {p.result} · branca {p.whitePositionFrom}{p.whitePositionTo && p.whitePositionTo !== p.whitePositionFrom ? ` para ${p.whitePositionTo}` : ""}
+          <strong>{p.end} · {p.ball}</strong> · {playName(item,p)} · {p.color} · {p.play} · {p.result} · branca {positionLabel(p)} · Tempo: {formatDuration(durationOf(p))}
         </div>
       ))}
     </div>
@@ -808,48 +787,8 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
   }
 
   async function exportSavedSessionReport(item) {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
-    const W = doc.internal.pageSize.getWidth();
-    const H = doc.internal.pageSize.getHeight();
-    const navy = [6,45,84], yellow = [250,204,21], red = [239,65,72], blue = [22,128,244], muted = [96,116,142];
-    const accountName = item.ownerDisplay || ownerAccounts.find((account) => account.id === item.ownerUserId)?.name || ownerAccounts.find((account) => account.id === item.ownerUserId)?.username || "Conta responsável";
-    const redName = item.athleteColor === "Vermelho" ? item.athlete : item.opponent;
-    const blueName = item.athleteColor === "Azul" ? item.athlete : item.opponent;
-    const redPlays = (item.plays || []).filter((p) => p.color === "Vermelho");
-    const bluePlays = (item.plays || []).filter((p) => p.color === "Azul");
-    const colorFundaments = buildPlayStats(item.plays || []);
-    const text = (value,x,y,size=9,style="normal",color=navy,options={}) => { doc.setFont("helvetica",style); doc.setFontSize(size); doc.setTextColor(...color); doc.text(String(value ?? ""),x,y,options); };
-    const box = (x,y,w,h,fill,r=8) => { doc.setFillColor(...fill); doc.roundedRect(x,y,w,h,r,r,"F"); };
-    const section = (label,x,y,w,tone=navy) => { box(x,y,w,22,tone,6); text(label.toUpperCase(),x+9,y+15,8,"bold",[255,255,255]); };
-
-    doc.setFillColor(...navy); doc.rect(0,0,W,78,"F");
-    text("BOCHA",26,31,23,"bold",[255,255,255]); text("SCOUT",112,31,23,"bold",yellow);
-    text("RELATÓRIO TÉCNICO DA PARTIDA",W-26,27,13,"bold",[255,255,255],{align:"right"});
-    text(`${formatDateBR(item.date)} · ${item.sessionKind || "Sessão"} · ${item.gameType || "Jogo"} · ${item.athleteClass || "-"}`,W-26,45,8,"normal",[184,200,218],{align:"right"});
-    text(`Análise realizada pela conta: ${accountName}`,W-26,62,8,"normal",[184,200,218],{align:"right"});
-
-    box(26,90,W-52,72,[244,247,250],12);
-    text(redName,48,113,10,"bold",red); text("VERMELHO",48,130,7,"bold",muted);
-    const redScore = item.athleteColor === "Vermelho" ? item.totalAthlete : item.totalOpponent;
-    const blueScore = item.athleteColor === "Azul" ? item.totalAthlete : item.totalOpponent;
-    text(redScore,W/2-30,128,32,"bold",red,{align:"right"}); text("×",W/2,126,21,"bold",muted,{align:"center"}); text(blueScore,W/2+30,128,32,"bold",blue);
-    text(blueName,W-48,113,10,"bold",blue,{align:"right"}); text("AZUL",W-48,130,7,"bold",muted,{align:"right"});
-    drawScorePartials(doc, item.scores || {}, item.athleteColor);
-
-    const gap=12,colW=(W-52-gap)/2,left=26,right=left+colW+gap;
-    [["Vermelho",redName,red,redPlays,left],["Azul",blueName,blue,bluePlays,right]].forEach(([color,name,tone,plays,x])=>{
-      section(`${name} · ${color}`,x,177,colW,tone); const st=calcStats(plays);
-      [["Eficiência",`${st.efficiency.toFixed(1)}%`],["Jogadas",st.total],["Acertos",st.acertos],["Erros",st.erros]].forEach(([label,value],i)=>{const mx=x+12+i*((colW-24)/4);text(label,mx,215,7,"normal",muted);text(value,mx,234,15,"bold",navy);});
-      section("Fundamentos",x,250,colW,tone);
-      Object.entries(colorFundaments[color] || {}).sort((a,b)=>b[1].efficiency-a[1].efficiency||b[1].total-a[1].total).slice(0,8).forEach(([foundation,data],i)=>{const y=285+i*16;text(foundation,x+10,y,7.2,i===0?"bold":"normal",navy);text(`${data.total}x · ${data.acertos}A · ${data.funcionais}F · ${data.erros}E · ${data.efficiency.toFixed(0)}%`,x+colW-10,y,7.2,"bold",muted,{align:"right"});});
-    });
-    section("Histórico de jogadas",left,424,W-52);
-    const allPlays=item.plays||[],half=Math.ceil(allPlays.length/2),histCol=(W-72)/2;
-    allPlays.forEach((p,i)=>{const local=i<half?i:i-half,x=i<half?left+8:left+histCol+18,y=459+local*10;if(y>H-17)return;const tone=p.result==="Acerto"?[22,163,74]:p.result==="Funcional"?[234,88,12]:red;text(`${i+1}. ${String(p.end).replace("End ","E")} · ${p.ball} · ${p.play} · branca ${p.whitePositionTo||p.whitePositionFrom}`,x,y,5.8,"normal",navy);text(p.result,x+histCol-12,y,5.8,"bold",tone,{align:"right"});});
-    text(`BochaScout · conta: ${accountName}`,W-26,H-10,6,"normal",[145,160,178],{align:"right"});
-    appendHeatmapReport(doc, [{ name: redName, color: "Vermelho", data: buildPositionPerformance((item.plays || []).filter(p => p.color === "Vermelho")) }, { name: blueName, color: "Azul", data: buildPositionPerformance((item.plays || []).filter(p => p.color === "Azul")) }]);
-    doc.save(`BochaScout_${item.athlete}_vs_${item.opponent}_${item.date || todayISO()}.pdf`);
+    const doc=await createMatchReport({...item,ownerDisplay:item.ownerDisplay || ownerAccounts.find(a=>a.id===item.ownerUserId)?.name},buildPositionPerformance);
+    doc.save('BochaScout_'+item.date+'.pdf');
   }
 
   async function exportSavedSessionReportLegacy(item) {
@@ -916,6 +855,8 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     if (athleteFilter === "Todos") return "principal";
     if (session.athleteId === athleteFilter) return "principal";
     if (session.opponentId === athleteFilter) return "adversario";
+    const member=(session.plays||[]).find(p=>p.playerId===athleteFilter);
+    if(member)return member.color===session.athleteColor?'principal':'adversario';
     return null;
   }
   function colorForSelectedAthlete(session) {
@@ -923,12 +864,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     if (role === "adversario") return session.athleteColor === "Vermelho" ? "Azul" : "Vermelho";
     return session.athleteColor;
   }
-  function playsForSelectedAthlete(session) {
-    const role = athleteRole(session);
-    if (!role) return [];
-    const targetColor = colorForSelectedAthlete(session);
-    return (session.plays || []).filter((p) => p.color === targetColor);
-  }
+  function playsForSelectedAthlete(session) { return playsForAthlete(session,athleteFilter); }
   function resultForSelectedAthlete(session) {
     const base = getSessionWinner(session);
     if (athleteRole(session) !== "adversario") return base;
@@ -940,13 +876,13 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
   const filtered = sessions.filter((s) => {
     const accountOk = !isAdmin || accountFilter === "Todos" || s.ownerUserId === accountFilter;
     const dateOk = !cutoff || new Date(`${s.date}T12:00:00`) >= cutoff;
-    const athleteOk = athleteFilter === "Todos" || s.athleteId === athleteFilter || s.opponentId === athleteFilter;
+    const athleteOk = athleteFilter === "Todos" || s.athleteId === athleteFilter || s.opponentId === athleteFilter || (s.plays||[]).some(p=>p.playerId===athleteFilter);
     const selectedColor = colorForSelectedAthlete(s);
     const role = athleteRole(s);
-    const roleClass = role === "adversario" ? s.opponentClass : s.athleteClass;
+    const roleClass = athletes.find(a=>a.id===athleteFilter)?.athleteClass || (role === "adversario" ? s.opponentClass : s.athleteClass);
     const athleteGenderValue = s.athleteGender || athletes.find((a)=>a.id===s.athleteId)?.gender || "";
     const opponentGenderValue = s.opponentGender || athletes.find((a)=>a.id===s.opponentId)?.gender || "";
-    const roleGender = role === "adversario" ? opponentGenderValue : athleteGenderValue;
+    const roleGender = athletes.find(a=>a.id===athleteFilter)?.gender || (role === "adversario" ? opponentGenderValue : athleteGenderValue);
     const classOk = historyClassFilter === "Todos" || (athleteFilter === "Todos" ? s.athleteClass === historyClassFilter || s.opponentClass === historyClassFilter : roleClass === historyClassFilter);
     const genderOk = historyGenderFilter === "Todos" || (athleteFilter === "Todos" ? athleteGenderValue === historyGenderFilter || opponentGenderValue === historyGenderFilter : roleGender === historyGenderFilter);
     const levelOk = historyLevelFilter === "Todos" || (s.sessionKind === "Campeonato" && s.competitionLevel === historyLevelFilter);
@@ -1036,7 +972,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     </div>
 
     {selected && <SessionDetail item={selected} selectedAthleteId={athleteFilter} onClose={()=>setSelectedSessionId("")} onExportPdf={exportSavedSessionReport}/>} 
-    <div style={styles.card}><h2>Histórico de partidas</h2>{filtered.length===0?<p style={styles.empty}>Nenhuma sessão registrada com esse filtro.</p>:filtered.map(item=><div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{item.athlete} × {item.opponent}</strong><div style={{fontSize:13,color:"#64748b"}}>{formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {item.athleteColor}{isAdmin && <span> · Criado por: {item.ownerDisplay || ownerAccounts.find(a => a.id === item.ownerUserId)?.name || ownerAccounts.find(a => a.id === item.ownerUserId)?.username || "Conta"}</span>}</div></div><strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong></div><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}><button onClick={()=>setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>{isSuperAdmin && <button onClick={()=>deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}</div></div>)}</div>
+    <div style={styles.card}><h2>Histórico de partidas</h2>{filtered.length===0?<p style={styles.empty}>Nenhuma sessão registrada com esse filtro.</p>:filtered.map(item=><div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{item.athlete} × {item.opponent}</strong><div style={{fontSize:13,color:"#64748b"}}>{formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {modeLabel(item)} · {item.athleteColor}{isAdmin && <span> · Criado por: {item.ownerDisplay || ownerAccounts.find(a => a.id === item.ownerUserId)?.name || ownerAccounts.find(a => a.id === item.ownerUserId)?.username || "Conta"}</span>}</div></div><strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong></div><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}><button onClick={()=>setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>{isSuperAdmin && <button onClick={()=>deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}</div></div>)}</div>
     <button onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }
@@ -1113,6 +1049,7 @@ export default function BochaScout() {
   const [competitionPhase, setCompetitionPhase] = useState("");
   const [competitionLevel, setCompetitionLevel] = useState("Nacional");
   const [competitionScope, setCompetitionScope] = useState("Nacional");
+  const [scoutMode, setScoutMode] = useState('live');
   const [sessionDate, setSessionDate] = useState(todayISO());
 
   const [athletes, setAthletes] = useState(() => safeLoad(STORAGE_KEYS.athletes, []));
@@ -1291,22 +1228,6 @@ export default function BochaScout() {
             opponentId: p.opponentId || row.opponent_id,
             athlete: p.athlete || row.athlete_name,
             opponent: p.opponent || row.opponent_name,
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
-            approvalStatus: row.approval_status || p.approvalStatus || "approved",
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
             createdAt: p.createdAt || row.created_at,
           };
@@ -1508,6 +1429,7 @@ export default function BochaScout() {
   // JOGADA ATUAL
   // =========================================================
 
+  const [selectedPlayerId,setSelectedPlayerId]=useState('');
   const [selectedColor, setSelectedColor] = useState("");
 
   const [selectedResult, setSelectedResult] = useState("");
@@ -1517,9 +1439,35 @@ export default function BochaScout() {
   // =========================================================
 
   const [playsHistory, setPlaysHistory] = useState([]);
+  const [historyEndFilter,setHistoryEndFilter]=useState('Atual');
   const [commandHistory, setCommandHistory] = useState([]);
   const [discardedBalls, setDiscardedBalls] = useState({});
   const [undoStack, setUndoStack] = useState([]);
+  const [whitePoint, setWhitePoint] = useState(null);
+  const [newWhitePoint, setNewWhitePoint] = useState(null);
+  const [positionDraft, setPositionDraft] = useState(null);
+  const [throwTimer, setThrowTimer] = useState({startedAt:null, elapsed:0});
+  const [throwDuration, setThrowDuration] = useState(null);
+  const [clockTick, setClockTick] = useState(Date.now());
+  useEffect(() => { if(!throwTimer.startedAt)return; const id=setInterval(()=>setClockTick(Date.now()),250);return()=>clearInterval(id); },[throwTimer.startedAt]);
+  const elapsedThrow = throwTimer.elapsed + (throwTimer.startedAt ? Math.max(0,clockTick-throwTimer.startedAt) : 0);
+  function changeTimer() {
+    pushUndoSnapshot();
+    const now=Date.now();setClockTick(now);
+    setThrowTimer(t=>t.startedAt ? {startedAt:null,elapsed:t.elapsed+now-t.startedAt} : {...t,startedAt:now});
+  }
+  function openPosition(cell,target) {
+    pushUndoSnapshot();
+    if(cell==='TB') { if(target==='initial'){setWhitePosition(cell);setWhitePoint(null);setStage('color');}else{setNewWhitePosition(cell);setNewWhitePoint(null);}return; }
+    setPositionDraft({cell,target,point:null});
+  }
+  function confirmPosition() {
+    if(!positionDraft?.point)return;
+    pushUndoSnapshot();
+    if(positionDraft.target==='initial'){setWhitePosition(positionDraft.cell);setWhitePoint(positionDraft.point);setStage('color');}
+    else {setNewWhitePosition(positionDraft.cell);setNewWhitePoint(positionDraft.point);}
+    setPositionDraft(null);
+  }
 
   useEffect(() => {
     document.body.classList.toggle("bocha-scout-live-mode", started && !matchHome);
@@ -1528,6 +1476,8 @@ export default function BochaScout() {
 
   function pushUndoSnapshot() {
     const snapshot = {
+      whitePoint, newWhitePoint, positionDraft, endScoreDraft, throwDuration, selectedPlayerId,
+      throwTimer: {startedAt:null,elapsed:throwTimer.elapsed+(throwTimer.startedAt?Date.now()-throwTimer.startedAt:0)},
       playsHistory: structuredClone(playsHistory),
       commandHistory: structuredClone(commandHistory),
       discardedBalls: structuredClone(discardedBalls),
@@ -1553,6 +1503,10 @@ export default function BochaScout() {
     }
     const snapshot = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.slice(0, -1));
+    setSelectedPlayerId(snapshot.selectedPlayerId || '');
+    setWhitePoint(snapshot.whitePoint || null);setNewWhitePoint(snapshot.newWhitePoint || null);
+    setPositionDraft(snapshot.positionDraft || null);setThrowTimer(snapshot.throwTimer || {startedAt:null,elapsed:0});
+    setThrowDuration(snapshot.throwDuration ?? null);setEndScoreDraft(snapshot.endScoreDraft || {athlete:'',opponent:''});
     setPlaysHistory(snapshot.playsHistory);
     setCommandHistory(snapshot.commandHistory);
     setDiscardedBalls(snapshot.discardedBalls);
@@ -1587,7 +1541,11 @@ export default function BochaScout() {
       setCompetitionPhase(d.competitionPhase);
       setCompetitionLevel(d.competitionLevel);
       setCompetitionScope(d.competitionScope);
-      setSessionDate(d.sessionDate);
+      setSessionDate(d.sessionDate);setScoutMode(d.scoutMode || 'live');
+      setWhitePoint(d.whitePoint || null);setNewWhitePoint(d.newWhitePoint || null);setPositionDraft(d.positionDraft || null);
+      setThrowDuration(d.throwDuration ?? null);
+      // Reloading cannot measure time while the app was closed.
+      setThrowTimer({startedAt:null,elapsed:0});
       setSelectedAthleteId(d.selectedAthleteId);
       setSelectedOpponentId(d.selectedOpponentId);
       setSelectedRedTeamEntryId(d.selectedRedTeamEntryId);
@@ -1607,7 +1565,7 @@ export default function BochaScout() {
       setStage(d.stage);
       setWhitePosition(d.whitePosition);
       setNewWhitePosition(d.newWhitePosition);
-      setSelectedColor(d.selectedColor);
+      setSelectedColor(d.selectedColor);setSelectedPlayerId(d.selectedPlayerId || '');
       setSelectedResult(d.selectedResult);
       setPlaysHistory(d.playsHistory);
       setCommandHistory(d.commandHistory);
@@ -1620,7 +1578,7 @@ export default function BochaScout() {
     setDraftReady(true);
     return listenAutosave(currentUserId);
   },[currentUserId]);
-  const draftSnapshot={version:1,endScoreDraft,sessionKind,competitionName,competitionPhase,competitionLevel,competitionScope,sessionDate,selectedAthleteId,selectedOpponentId,selectedRedTeamEntryId,selectedBlueTeamEntryId,gameType,athlete,opponent,athleteClass,opponentClass,gender,athleteColor,started,finished,tieBreak,tieBreakRound,currentEnd,stage,whitePosition,newWhitePosition,selectedColor,selectedResult,playsHistory,commandHistory,discardedBalls,scores,matchHome,view};
+  const draftSnapshot={version:1,selectedPlayerId,scoutMode,whitePoint,newWhitePoint,positionDraft,throwDuration,endScoreDraft,sessionKind,competitionName,competitionPhase,competitionLevel,competitionScope,sessionDate,selectedAthleteId,selectedOpponentId,selectedRedTeamEntryId,selectedBlueTeamEntryId,gameType,athlete,opponent,athleteClass,opponentClass,gender,athleteColor,started,finished,tieBreak,tieBreakRound,currentEnd,stage,whitePosition,newWhitePosition,selectedColor,selectedResult,playsHistory,commandHistory,discardedBalls,scores,matchHome,view};
   useLayoutEffect(()=>{
     if(!draftReady || !currentUserId || !draftId || (!started && !finished))return;
     const encoded=JSON.stringify(draftSnapshot);
@@ -1646,6 +1604,7 @@ export default function BochaScout() {
   // =========================================================
 
   function startGame() {
+    if(scoutMode==='recorded' && (!/^\d{4}-\d{2}-\d{2}$/.test(sessionDate) || sessionDate>todayISO())){alert('Informe a data real da partida, até hoje.');return;}
     if (sessionKind === "Campeonato" && !competitionName.trim()) {
       alert("Informe o nome do campeonato.");
       return;
@@ -1684,7 +1643,8 @@ export default function BochaScout() {
     setDraftId(crypto.randomUUID());
     lastDraft.current="";
     setMatchHome(false);
-    setSessionDate(todayISO());
+    if(scoutMode==='live')setSessionDate(todayISO());
+    setWhitePoint(null);setNewWhitePoint(null);setPositionDraft(null);setThrowDuration(null);setThrowTimer({startedAt:null,elapsed:0});
     setStarted(true);
     setFinished(false);
 
@@ -1714,6 +1674,7 @@ export default function BochaScout() {
 
   function startNewEnd(index, forcedWhite) {
     setCurrentEnd(index);
+    setWhitePoint(null);setNewWhitePoint(null);setPositionDraft(null);setThrowTimer({startedAt:null,elapsed:0});setThrowDuration(null);
 
     // NOVO END = nova posição inicial da branca
     // (no Tie-Break a branca já entra fixa no TB)
@@ -1776,16 +1737,8 @@ export default function BochaScout() {
   // POSIÇÃO DA BRANCA
   // =========================================================
 
-  function selectInitialWhitePosition(position) {
-    pushUndoSnapshot();
-    setWhitePosition(position);
-
-    setStage("color");
-  }
-
-  function selectNewWhitePosition(position) {
-    setNewWhitePosition(position);
-  }
+  function selectInitialWhitePosition(position) { openPosition(position,'initial'); }
+  function selectNewWhitePosition(position) { openPosition(position,'move'); }
 
   // =========================================================
   // SELECIONAR COR
@@ -1802,6 +1755,9 @@ export default function BochaScout() {
       return;
     }
 
+    pushUndoSnapshot();
+    setThrowDuration(null);setThrowTimer({startedAt:null,elapsed:0});
+    setSelectedPlayerId(gameType==='Individual' ? (color===athleteColor?selectedAthleteId:selectedOpponentId) : '');
     setSelectedColor(color);
 
     setSelectedResult("");
@@ -1814,6 +1770,13 @@ export default function BochaScout() {
   // =========================================================
 
   function selectResult(result) {
+    if(gameType!=='Individual' && !selectedPlayerId){alert('Selecione o atleta que fez o lançamento.');return;}
+    pushUndoSnapshot();
+    if(scoutMode==='live') {
+      const elapsed=throwTimer.elapsed+(throwTimer.startedAt?Date.now()-throwTimer.startedAt:0);
+      setThrowDuration(throwTimer.startedAt || throwTimer.elapsed>0 ? elapsed : null);
+      setThrowTimer({startedAt:null,elapsed});
+    }
     setSelectedResult(result);
 
     setStage("play");
@@ -1843,7 +1806,8 @@ export default function BochaScout() {
       Mover branca
     */
 
-    if (play === "Mover branca") {
+    if (play === "Mover branca" && selectedResult !== 'Erro') {
+      pushUndoSnapshot();setNewWhitePoint(null);
       setNewWhitePosition("");
 
       setStage("moveWhite");
@@ -1903,12 +1867,17 @@ export default function BochaScout() {
       whitePositionFrom: whitePosition,
 
       whitePositionTo: whitePosition,
+      whitePointTo: whitePoint,
 
       play,
 
       result,
 
-      time: now.toLocaleTimeString("pt-BR"),
+      time: scoutMode==='live' ? now.toLocaleTimeString('pt-BR') : null,
+      durationMs: throwDuration, timingSource: throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
+      playerName: athletes.find(a=>a.id===selectedPlayerId)?.name || (selectedColor===athleteColor ? athlete : opponent),
+      playerId: selectedPlayerId || null,
+      whitePointFrom: whitePoint,
 
       athlete,
       opponent,
@@ -1967,12 +1936,17 @@ export default function BochaScout() {
       whitePositionFrom: whitePosition,
 
       whitePositionTo: newWhitePosition,
+      whitePointTo: newWhitePoint,
 
       play: "Mover branca",
 
-      result: "Acerto",
+      result: selectedResult,
 
-      time: now.toLocaleTimeString("pt-BR"),
+      time: scoutMode==='live' ? now.toLocaleTimeString('pt-BR') : null,
+      durationMs: throwDuration, timingSource: throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
+      playerName: athletes.find(a=>a.id===selectedPlayerId)?.name || (selectedColor===athleteColor ? athlete : opponent),
+      playerId: selectedPlayerId || null,
+      whitePointFrom: whitePoint,
 
       athlete,
       opponent,
@@ -1991,7 +1965,8 @@ export default function BochaScout() {
       Atualiza a branca
     */
 
-    setWhitePosition(newWhitePosition);
+    setWhitePosition(newWhitePosition);setWhitePoint(newWhitePoint);
+    setThrowDuration(null);setThrowTimer({startedAt:null,elapsed:0});
 
     setNewWhitePosition("");
 
@@ -2054,6 +2029,7 @@ export default function BochaScout() {
       },
     }));
 
+    setThrowTimer({startedAt:null,elapsed:0});setThrowDuration(null);
     const resolvedAfter = totalBallsResolved + remaining;
     setSelectedColor("");
     setSelectedResult("");
@@ -2065,6 +2041,7 @@ export default function BochaScout() {
   // =========================================================
 
   function clearCurrentPlay() {
+    setThrowTimer({startedAt:null,elapsed:0});setThrowDuration(null);
     setSelectedColor("");
     setSelectedResult("");
 
@@ -2159,11 +2136,15 @@ export default function BochaScout() {
 
   function removePlay(id) {
     pushUndoSnapshot();
-    setPlaysHistory((previous) =>
-      previous.filter(
-        (play) => play.id !== id
-      )
-    );
+    const removed=playsHistory.find(p=>p.id===id);
+    const remaining=removeAndRenumber(playsHistory,id);
+    setPlaysHistory(remaining);
+    if(removed?.end===currentEndName){
+      const latest=remaining.filter(p=>p.end===currentEndName).at(-1);
+      setWhitePosition(latest?.whitePositionTo || latest?.whitePositionFrom || removed.whitePositionFrom);
+      setWhitePoint(latest ? latest.whitePointTo || latest.whitePointFrom || null : removed.whitePointFrom || null);
+      if(stage==='endScore')setStage('color');
+    }
   }
 
   // =========================================================
@@ -2315,7 +2296,7 @@ export default function BochaScout() {
 
   function newGame() {
     if(draftId && finished){saveDraft(currentUserId,draftId,null,"closed");void flushAutosave(currentUserId);}
-    setDraftId("");setMatchHome(false);lastDraft.current="";
+    setDraftId("");setMatchHome(false);lastDraft.current="";setScoutMode("live");
     setStarted(false);
     setFinished(false);
 
@@ -2376,6 +2357,7 @@ export default function BochaScout() {
           id,
           ownerUserId: currentUserId || null,
           date: sessionDate,
+          scoutMode, schemaVersion: 2,
           createdAt: new Date().toISOString(),
           sessionKind,
           competitionName: sessionKind === "Campeonato" ? competitionName.trim() : "",
@@ -2399,112 +2381,13 @@ export default function BochaScout() {
           stats: statsSnapshot,
         };
     queueSession(currentUserId, {id,owner_id:currentUserId,session_date:sessionDate,session_kind:sessionKind,game_type:gameType,athlete_id:completed.athleteId,opponent_id:completed.opponentId,athlete_name:athlete,opponent_name:opponent,payload:completed});
-    setSessions(prev=>prev.some(item=>item.id===id)?prev:[completed,...prev]);
+    setSessions(prev=>[completed,...prev.filter(item=>item.id!==id)]);
     void flushAutosave(currentUserId);
   }, [finished,draftReady,currentUserId,draftId]);
 
   async function exportMatchReport() {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
-    const W = doc.internal.pageSize.getWidth();
-    const H = doc.internal.pageSize.getHeight();
-    const navy = [6, 45, 84];
-    const yellow = [250, 204, 21];
-    const red = [239, 65, 72];
-    const blue = [22, 128, 244];
-    const muted = [96, 116, 142];
-    const allStats = {
-      Vermelho: calcStats(playsHistory.filter((p) => p.color === "Vermelho")),
-      Azul: calcStats(playsHistory.filter((p) => p.color === "Azul")),
-    };
-    const playStats = buildPlayStats(playsHistory);
-    const redName = athleteColor === "Vermelho" ? athlete : opponent;
-    const blueName = athleteColor === "Azul" ? athlete : opponent;
-    const reportAccountName = ownerAccounts.find((account) => account.id === currentUserId)?.name || ownerAccounts.find((account) => account.id === currentUserId)?.username || "Conta responsável";
-    const sideScore = (color) => color === athleteColor ? totalAthlete : totalOpponent;
-
-    const txt = (value, x, y, size = 9, style = "normal", color = navy, options = {}) => {
-      doc.setFont("helvetica", style);
-      doc.setFontSize(size);
-      doc.setTextColor(...color);
-      doc.text(String(value ?? ""), x, y, options);
-    };
-    const box = (x, y, w, h, fill, radius = 9) => {
-      doc.setFillColor(...fill);
-      doc.roundedRect(x, y, w, h, radius, radius, "F");
-    };
-    const section = (title, x, y, w, tone = navy) => {
-      box(x, y, w, 22, tone, 6);
-      txt(title.toUpperCase(), x + 10, y + 15, 9, "bold", [255,255,255]);
-    };
-
-    doc.setFillColor(...navy); doc.rect(0, 0, W, 78, "F");
-    txt("BOCHA", 26, 31, 23, "bold", [255,255,255]);
-    txt("SCOUT", 112, 31, 23, "bold", yellow);
-    txt("DADOS QUE INCLUEM", 27, 49, 7, "bold", [184,200,218]);
-    txt("RELATÓRIO TÉCNICO DA PARTIDA", W - 26, 29, 13, "bold", [255,255,255], { align: "right" });
-    txt(`${sessionKind} · ${gameType} · ${sessionDate ? formatDateBR(sessionDate) : new Date().toLocaleDateString("pt-BR")} · ${athleteClass || "-"}`, W - 26, 48, 8, "normal", [184,200,218], { align: "right" });
-    txt(`Análise realizada pela conta: ${reportAccountName}`, W - 26, 63, 7, "normal", [184,200,218], { align: "right" });
-
-    box(26, 90, W - 52, 72, [244,247,250], 12);
-    txt(redName, 48, 112, 10, "bold", red);
-    txt("VERMELHO", 48, 128, 7, "bold", muted);
-    txt(sideScore("Vermelho"), W / 2 - 30, 128, 32, "bold", red, { align: "right" });
-    txt("×", W / 2, 126, 21, "bold", muted, { align: "center" });
-    txt(sideScore("Azul"), W / 2 + 30, 128, 32, "bold", blue);
-    txt(blueName, W - 48, 112, 10, "bold", blue, { align: "right" });
-    txt("AZUL", W - 48, 128, 7, "bold", muted, { align: "right" });
-    drawScorePartials(doc, scores, athleteColor);
-
-    const colGap = 12;
-    const colW = (W - 52 - colGap) / 2;
-    const left = 26, right = left + colW + colGap;
-    section("Desempenho", left, 176, colW);
-    [["Vermelho", redName, red], ["Azul", blueName, blue]].forEach(([color, name, tone], i) => {
-      const x = i === 0 ? left : right;
-      const st = allStats[color];
-      section(`${name} · ${color}`, x, 176, colW, tone);
-      const metrics = [["Eficiência", `${st.efficiency.toFixed(1)}%`], ["Acertos", st.acertos], ["Funcionais", st.funcionais], ["Erros", st.erros]];
-      metrics.forEach(([label,value], j) => {
-        const mx = x + 12 + j * ((colW - 24)/4);
-        txt(label, mx, 216, 7, "normal", muted);
-        txt(value, mx, 234, 15, "bold", navy);
-      });
-    });
-
-    section("Fundamentos", left, 252, colW);
-    section("Fundamentos", right, 252, colW);
-    [["Vermelho",left],["Azul",right]].forEach(([color,x]) => {
-      const rows = Object.entries(playStats[color]).sort((a,b)=>b[1].efficiency-a[1].efficiency || b[1].total-a[1].total).slice(0,8);
-      rows.forEach(([name,data], i) => {
-        const y = 288 + i * 16;
-        txt(name, x + 10, y, 7.2, i === 0 ? "bold" : "normal", navy);
-        txt(`${data.total}x · ${data.acertos}A · ${data.funcionais}F · ${data.erros}E · ${data.efficiency.toFixed(0)}%`, x + colW - 10, y, 7.2, "bold", data.erros > data.acertos ? red : muted, {align:"right"});
-      });
-    });
-
-    const bottomY = 426;
-    section("Histórico de jogadas", left, bottomY, colW * 1.35 + colGap);
-    const histW = colW * 1.35 + colGap;
-    const half = Math.ceil(playsHistory.length / 2);
-    playsHistory.forEach((p, i) => {
-      const local = i < half ? i : i - half;
-      const x = i < half ? left + 8 : left + histW/2 + 4;
-      const y = bottomY + 36 + local * 10;
-      if (y > H - 18) return;
-      const resultColor = p.result === "Acerto" ? [22,163,74] : p.result === "Funcional" ? [234,88,12] : red;
-      txt(`${i+1}. ${p.end.replace("End ","E")} · ${p.ball} · ${p.play} · ${p.whitePositionTo || p.whitePositionFrom}`, x, y, 5.8, "normal", navy);
-      txt(p.result, x + histW/2 - 10, y, 5.8, "bold", resultColor, {align:"right"});
-    });
-
-    const mapX = left + histW + colGap;
-    const mapW = W - 26 - mapX;
-    section("Posições da branca", mapX, bottomY, mapW);
-    txt("Mapas completos dos dois atletas", mapX + 10, bottomY + 45, 9, "bold", navy);
-    txt("na página seguinte.", mapX + 10, bottomY + 61, 9, "normal", muted);
-    txt(`Gerado pelo BochaScout · ${new Date().toLocaleString("pt-BR")}`, W - 26, H - 10, 6, "normal", [145,160,178], {align:"right"});
-    appendHeatmapReport(doc, [{ name: redName, color: "Vermelho", data: buildPositionPerformance((playsHistory).filter(p => p.color === "Vermelho")) }, { name: blueName, color: "Azul", data: buildPositionPerformance((playsHistory).filter(p => p.color === "Azul")) }]);
-    doc.save(`BochaScout_${athlete}_vs_${opponent}_${new Date().toISOString().slice(0,10)}.pdf`);
+    const doc=await createMatchReport({athlete,opponent,athleteColor,gameType,sessionKind,date:sessionDate,scoutMode,scores,totalAthlete,totalOpponent,plays:playsHistory,ownerDisplay:ownerAccounts.find(a=>a.id===currentUserId)?.name},buildPositionPerformance);
+    doc.save('BochaScout_'+sessionDate+'.pdf');
   }
 
   async function exportMatchReportLegacy() {
@@ -2931,7 +2814,7 @@ export default function BochaScout() {
   if(!draftReady)return <div style={{padding:24}}>Carregando Bocha Scout...</div>;
   if ((!started && !finished) || matchHome) {
     return (
-      <div style={styles.page}>
+      <div style={styles.page} className="hub-scout-home">
         <div style={styles.container}>
           <div style={styles.brandHeader}>
             <div>
@@ -2990,7 +2873,8 @@ export default function BochaScout() {
             <div style={styles.card}>
               <h2>Novo Scout · {sessionKind}</h2>
               <p style={{ color: "#64748b", marginTop: -4 }}>
-                Data automática: <strong>{formatDateBR(todayISO())}</strong>
+                <label>Modo do Scout <select aria-label="Modo do Scout" value={scoutMode} onChange={e=>{setScoutMode(e.target.value);setSessionDate(e.target.value==='recorded'?'':todayISO());}}><option value="live">Ao Vivo</option><option value="recorded">Scout de Partida Gravada</option></select></label>
+                {scoutMode==='recorded' ? <label>Data real da partida <input aria-label="Data real da partida" type="date" required max={todayISO()} value={sessionDate} onChange={e=>setSessionDate(e.target.value)}/></label> : <span>Data automática: <strong>{formatDateBR(todayISO())}</strong></span>}
               </p>
 
               <div style={styles.grid}>
@@ -3225,11 +3109,17 @@ export default function BochaScout() {
             </div>
           )}
 
+          {positionDraft && <PrecisePosition cell={positionDraft.cell} point={positionDraft.point} onPoint={point=>{pushUndoSnapshot();setPositionDraft({...positionDraft,point});}} onConfirm={confirmPosition} onBack={()=>{pushUndoSnapshot();setPositionDraft(null);}} />}
+          {stage==='result' && gameType!=='Individual' && <section className="throw-timer"><label>Atleta que vai lançar <select aria-label="Atleta que vai lançar" value={selectedPlayerId} onChange={e=>{pushUndoSnapshot();setSelectedPlayerId(e.target.value);}}><option value="">Selecione o atleta</option>{athletes.filter(a=>!playsHistory.some(p=>p.playerId===a.id&&p.color!==selectedColor)).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label></section>}
+          {stage==='result' && <section className="throw-timer">
+            <strong>{scoutMode==='recorded' ? 'Tempo do vídeo (opcional)' : 'Tempo do lançamento'}</strong>
+            {scoutMode==='recorded' ? <label>Segundos observados no vídeo <input aria-label="Tempo no vídeo em segundos" type="number" min="0" step="0.1" value={throwDuration===null?'':throwDuration/1000} onChange={e=>{pushUndoSnapshot();setThrowDuration(e.target.value===''?null:Math.max(0,Number(e.target.value))*1000);}} /></label> : <><output>{formatDuration(elapsedThrow)}</output><button onClick={changeTimer}>{throwTimer.startedAt?'Pausar':throwTimer.elapsed?'Retomar cronômetro':'Iniciar cronômetro'}</button><small>Inicie quando o atleta começar. Ao marcar o resultado, o tempo para. Sem iniciar, fica não registrado.</small></>}
+          </section>}
           {/* =================================================
               ETAPA 1 - POSIÇÃO INICIAL
           ================================================= */}
 
-          {stage === "white" && (
+          {stage === "white" && !positionDraft && (
             <div style={styles.card} className="scout-action-card scout-position-card">
               <StepHeader
                 number="1"
@@ -3501,7 +3391,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage ===
-            "moveWhite" && (
+            "moveWhite" && !positionDraft && (
             <div style={styles.card}>
               <StepHeader
                 number="5"
@@ -3564,7 +3454,7 @@ export default function BochaScout() {
           ================================================= */}
 
           {stage === "endScore" && (
-            <EndScore draft={endScoreDraft} onDraftChange={setEndScoreDraft}
+            <EndScore draft={endScoreDraft} onDraftChange={value=>{pushUndoSnapshot();setEndScoreDraft(value);}}
               athlete={athlete}
               opponent={opponent}
               athleteColor={
@@ -3583,35 +3473,26 @@ export default function BochaScout() {
           )}
 
           <div className="scout-live-performance">
-            <LivePerformancePanel
-              endName={currentEndName}
-              athlete={athlete}
-              opponent={opponent}
-              athleteColor={athleteColor}
-              opponentColor={opponentColor}
-              athleteEnd={liveAthleteEndStats}
-              opponentEnd={liveOpponentEndStats}
-              athleteMatch={liveAthleteMatchStats}
-              opponentMatch={liveOpponentMatchStats}
-            />
+            <PartialPerformance plays={playsHistory} gameType={gameType} athlete={athlete} opponent={opponent} athleteColor={athleteColor} scoutMode={scoutMode} />
           </div>
 
-          <section className="scout-partial-history" aria-label="Histórico de jogadas da parcial atual">
+          <section className="scout-partial-history" aria-label="Histórico de jogadas da partida">
+            <label>Histórico <select aria-label="Parcial do histórico" value={historyEndFilter} onChange={e=>setHistoryEndFilter(e.target.value)}><option>Atual</option><option>Geral</option>{[...new Set([...regularEnds,...playsHistory.map(p=>p.end)])].map(end=><option key={end}>{end}</option>)}</select></label>
             <div className="scout-partial-history-title">
-              <div><strong>Jogadas da parcial</strong><span>{currentEndName}</span></div>
-              <b>{currentEndPlays.length}</b>
+              <div><strong>Jogadas da partida</strong><span>{historyEndFilter==='Atual'?currentEndName:historyEndFilter}</span></div>
+              <b>{playsHistory.filter(p=>historyEndFilter==='Geral'||p.end===(historyEndFilter==='Atual'?currentEndName:historyEndFilter)).length}</b>
             </div>
-            {currentEndPlays.length === 0 ? (
+            {playsHistory.filter(p=>historyEndFilter==='Geral'||p.end===(historyEndFilter==='Atual'?currentEndName:historyEndFilter)).length === 0 ? (
               <p>Nenhuma jogada registrada nesta parcial.</p>
             ) : (
               <div className="scout-partial-history-list">
-                {[...currentEndPlays].reverse().map((play) => (
+                {[...playsHistory.filter(p=>historyEndFilter==='Geral'||p.end===(historyEndFilter==='Atual'?currentEndName:historyEndFilter))].reverse().map((play) => (
                   <div className={`scout-partial-history-item is-${play.color.toLowerCase()}`} key={play.id}>
                     <img src={playAsset(play.play)} alt="" />
                     <div>
-                      <strong>{play.play}</strong>
-                      <span className="scout-history-player">{play.color === "Vermelho" ? redName : blueName} · {play.color}</span>
-                      <span>{play.result} · Branca {play.whitePositionTo || play.whitePositionFrom}</span>
+                      <strong>{play.end} · {play.play}</strong>
+                      <span className="scout-history-player">{play.playerName || (play.color === "Vermelho" ? redName : blueName)} · {play.color}</span>
+                      <span>{play.ball} · {play.result} · Branca {positionLabel(play)} · Tempo: {formatDuration(durationOf(play))}</span>
                     </div>
                     <button type="button" onClick={() => removePlay(play.id)} aria-label={`Excluir jogada ${play.play}`}>Excluir</button>
                   </div>

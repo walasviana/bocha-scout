@@ -59,7 +59,7 @@ patch('src/components/AdminPanel.tsx',(src)=>{
 });
 
 patch('src/components/BochaScout.tsx',(src)=>{
-  if(src.includes('// PATCH: scout-approval-status-v18')) return src;
+  if(src.includes('// PATCH: scout-approval-status-v18') || src.includes('approvalStatus: row.approval_status')) return src;
   src=src.replace('// PATCH: super-admin-history-v17','// PATCH: super-admin-history-v17\n// PATCH: scout-approval-status-v18');
   src=src.replace(
     'select("id,owner_id,session_date,session_kind,game_type,athlete_id,opponent_id,athlete_name,opponent_name,payload,created_at,updated_at")',

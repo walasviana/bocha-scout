@@ -1,0 +1,25 @@
+const {setup,chromium}=require('./browser-check.cjs');const {draft,state}=require('./flow-test.cjs');const assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,channel:process.env.SCOUT_BROWSER_CHANNEL || 'chrome'});try{
+ const {page:p,context,errors}=await setup(b,{width:1280,height:900},{...draft,gameType:'Equipe BC1/BC2',stage:'color',whitePosition:'45'});
+ assert.equal(await p.getByRole('button',{name:'6ª',exact:true}).count(),1);
+ await p.getByRole('button',{name:/ATLETA VERMELHO TESTE VERMELHO/}).click();
+ await p.getByRole('button',{name:'Acerto',exact:true}).click();assert.equal((await state(p)).stage,'result');
+ await p.getByLabel('Atleta que vai lançar').selectOption('red-test');
+ await p.getByRole('button',{name:'Acerto',exact:true}).click();await p.getByRole('button',{name:'Aproximação',exact:true}).click();
+ assert.equal((await state(p)).playsHistory[0].playerId,'red-test');
+ await p.getByRole('button',{name:/ATLETA AZUL TESTE AZUL/}).click();
+ await p.getByLabel('Atleta que vai lançar').selectOption('blue-test');
+ await p.getByRole('button',{name:'Erro',exact:true}).click();await p.getByRole('button',{name:'Mover branca',exact:true}).click();
+ assert.equal((await state(p)).playsHistory[1].result,'Erro');assert.equal((await state(p)).stage,'color');
+ await p.getByRole('button',{name:/ATLETA VERMELHO TESTE VERMELHO/}).click();
+ await p.getByLabel('Atleta que vai lançar').selectOption('red-test');await p.getByRole('button',{name:'Funcional',exact:true}).click();await p.getByRole('button',{name:'Mover branca',exact:true}).click();
+ await p.getByRole('button',{name:'Selecionar posição 44',exact:true}).click();await p.getByRole('slider').press('ArrowRight');await p.getByRole('button',{name:'Confirmar posição',exact:true}).click();await p.getByRole('button',{name:'Confirmar mover branca',exact:true}).click();
+ const d=await state(p);assert.equal(d.playsHistory[2].result,'Funcional');assert.equal(d.whitePosition,'44');
+ assert.deepEqual(errors,[]);await context.close();console.log('PASS teams: six ends, player required, player ID, move-white error/no-map and functional/precise-map');
+ const start=await setup(b,{width:390,height:844},{...draft,started:false});const q=start.page;
+ await q.getByLabel('Modo do Scout').selectOption('recorded');assert.equal(await q.getByLabel('Data real da partida').inputValue(),'');
+ await q.getByRole('button',{name:'Iniciar Scout',exact:true}).click();assert.equal(await q.getByLabel('Data real da partida').count(),1);
+ await q.getByLabel('Data real da partida').fill('2026-08-21');await q.getByRole('button',{name:'Iniciar Scout',exact:true}).click();
+ const current=await q.evaluate(()=>{const k=Object.keys(localStorage).find(k=>k.startsWith('bocha-offline-v1:active:'));return JSON.parse(localStorage.getItem('bocha-offline-v1:11111111-1111-4111-8111-111111111111:'+localStorage.getItem(k))).payload;});
+ assert.equal(current.sessionDate,'2026-08-21');assert.equal(current.scoutMode,'recorded');assert.equal(current.started,true);assert.deepEqual(start.errors,[]);await start.context.close();console.log('PASS new recorded match: date required and preserved on start');
+}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});
