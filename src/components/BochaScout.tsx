@@ -11,7 +11,7 @@ import CourtPositionMap from "./CourtPositionMap";
 import { createMatchReport } from '../lib/matchReport';
 import PrecisePosition from './PrecisePosition';
 import PartialPerformance from './PartialPerformance';
-import { calcStats, regularEnds as getRegularEnds, formatDuration, durationOf, positionLabel, playName, modeLabel, playsForAthlete, removeAndRenumber, participants } from '../lib/scoutData';
+import { calcStats, regularEnds as getRegularEnds, formatDuration, durationOf, positionLabel, playName, modeLabel, playsForAthlete, removeAndRenumber, participants, foundationAllowed } from '../lib/scoutData';
 import { drawScorePartials } from "../lib/pdfPartials";
 import { appendHeatmapReport } from "../lib/courtHeatmap";
 import { supabase } from "../lib/supabase";
@@ -213,6 +213,9 @@ function buildPositionPerformance(plays) {
     if (!pos) return;
     if (!map[pos]) map[pos] = { total: 0, acertos: 0, funcionais: 0, erros: 0, saidas: 0 };
     const item = map[pos];
+    if(p.play==='Mover branca' && p.result!=='Erro' && p.whitePositionFrom && p.whitePositionTo) {
+      (item.movements ||= []).push({from:p.whitePositionFrom,to:p.whitePositionTo,fromPoint:p.whitePointFrom,toPoint:p.whitePointTo});
+    }
     item.total += 1;
     if (p.result === "Acerto") item.acertos += 1;
     if (p.result === "Funcional") item.funcionais += 1;
@@ -1787,6 +1790,7 @@ export default function BochaScout() {
   // =========================================================
 
   function selectPlay(play) {
+    if(!foundationAllowed(play,sessionKind,gameType,selectedColor===athleteColor?athleteClass:opponentClass))return;
     /*
       Saída de jogo só uma vez por End
     */
@@ -3337,7 +3341,7 @@ export default function BochaScout() {
                   styles.playGrid
                 }
               >
-                {PLAYS.map((play, playIndex) => {
+                {PLAYS.filter(play=>foundationAllowed(play,sessionKind,gameType,selectedColor===athleteColor?athleteClass:opponentClass)).map((play, playIndex) => {
                   if (!showMoreFundamentals && playIndex >= 6) return null;
                   const unavailable =
                     play ===

@@ -1,5 +1,7 @@
-export type PositionStats = { total: number; points?: Array<{x:number;y:number}>; acertos?: number; funcionais?: number; erros?: number; saidas: number; efficiency: number };
-export type CourtOptions = { data: Record<string, PositionStats>; mode?: string; color?: string; name?: string; selected?: string; showPositions?: boolean; selectionOnly?: boolean };
+type Point = {x:number;y:number};
+export type Movement = {from:string;to:string;fromPoint?:Point;toPoint?:Point};
+export type PositionStats = { total: number; points?: Point[]; movements?: Movement[]; acertos?: number; funcionais?: number; erros?: number; saidas: number; efficiency: number };
+export type CourtOptions = { data: Record<string, PositionStats>; mode?: string; color?: string; name?: string; selected?: string; showPositions?: boolean; showMovements?: boolean; selectionOnly?: boolean };
 export const CHART_WIDTH = 800, CHART_HEIGHT = 1360;
 const X = 100, Y = 200, BOX = 84, FIELD = Y + BOX;
 const navy = '#223e62';
@@ -7,6 +9,18 @@ export const courtCells = [
   { position: '14', x: X + 200, y: FIELD + 100 }, { position: '13', x: X + 300, y: FIELD + 100 },
   ...Array.from({ length: 8 }, (_, r) => Array.from({ length: 6 }, (_, c) => ({ position: `${r + 2}${6 - c}`, x: X + c * 100, y: FIELD + (r + 2) * 100 }))).flat(),
 ];
+export function movementVector(m: Movement) {
+  const valid=(p?:Point)=>p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x>=0 && p.x<=1 && p.y>=0 && p.y<=1;
+  const locate=(cell:string,p?:Point)=>{
+    if(cell==='TB')return {x:X+300,y:FIELD+500,precise:true};
+    const c=courtCells.find(c=>c.position===cell);if(!c)return null;
+    return {x:c.x+(valid(p)?p!.x:.5)*100,y:c.y+(valid(p)?p!.y:.5)*100,precise:!!valid(p)};
+  };
+  const from=locate(m.from,m.fromPoint),to=locate(m.to,m.toPoint);
+  if(!from||!to || (m.from===m.to && (!from.precise||!to.precise)))return null;
+  if(Math.hypot(to.x-from.x,to.y-from.y)<1)return null;
+  return {from,to,approximate:!from.precise||!to.precise};
+}
 export function cellMetric(options: CourtOptions, position: string) {
   const d = options.data[position];
   if (!d || !d.total || (options.mode === 'Saídas de jogo' && (!d.saidas || position === 'TB'))) return null;
@@ -75,6 +89,19 @@ export function drawCourtHeatmap(canvas: HTMLCanvasElement, options: CourtOption
   ctx.beginPath(); ctx.moveTo(X,FIELD);ctx.lineTo(X+600,FIELD);ctx.stroke();
   ctx.beginPath(); ctx.moveTo(X,FIELD+300);ctx.lineTo(X+300,FIELD+150);ctx.lineTo(X+600,FIELD+300);ctx.stroke();
   ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(X+283,FIELD+500);ctx.lineTo(X+317,FIELD+500);ctx.moveTo(X+300,FIELD+483);ctx.lineTo(X+300,FIELD+517);ctx.stroke();
+  if(!options.selectionOnly && options.showMovements!==false && options.mode!=='Saídas de jogo') {
+    for(const m of Object.values(options.data).flatMap(d=>d.movements || [])) {
+      if(options.selected && m.from!==options.selected && m.to!==options.selected)continue;
+      const v=movementVector(m);if(!v)continue;
+      const angle=Math.atan2(v.to.y-v.from.y,v.to.x-v.from.x);
+      const head=Math.min(11,Math.hypot(v.to.x-v.from.x,v.to.y-v.from.y)*.4);
+      ctx.save();ctx.globalAlpha=.8;ctx.strokeStyle=accent;ctx.fillStyle=accent;ctx.lineWidth=3;
+      ctx.setLineDash(v.approximate?[7,5]:[]);
+      ctx.beginPath();ctx.moveTo(v.from.x,v.from.y);ctx.lineTo(v.to.x,v.to.y);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(v.to.x,v.to.y);ctx.lineTo(v.to.x-head*Math.cos(angle-.5),v.to.y-head*Math.sin(angle-.5));ctx.lineTo(v.to.x-head*Math.cos(angle+.5),v.to.y-head*Math.sin(angle+.5));ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.arc(v.from.x,v.from.y,3,0,Math.PI*2);ctx.fill();ctx.restore();
+    }
+  }
   ctx.restore(); ctx.lineWidth=2.5; ctx.strokeStyle=navy;ctx.beginPath();ctx.roundRect(X,Y,600,1084,18);ctx.stroke();
   if(options.data.TB?.total) label(`Tie-break · ${options.data.TB.total} jogadas · ${Math.round(options.data.TB.efficiency)}%`,400,1328,24);
 }
@@ -84,5 +111,5 @@ export function appendHeatmapReport(doc: any, sides: Array<{ name: string; color
   doc.setFillColor(6,45,84);doc.rect(0,0,W,48,'F');doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(255,255,255);doc.text('MAPAS DE CALOR DA PARTIDA',26,31);
   const height=H-84,width=height*CHART_WIDTH/CHART_HEIGHT;
   sides.forEach((side,i)=>{const c=document.createElement('canvas');drawCourtHeatmap(c,{...side,mode:'Desempenho'});doc.addImage(c.toDataURL('image/png'),'PNG',W/4+i*W/2-width/2,54,width,height,undefined,'FAST');});
-  doc.setTextColor(70,87,107);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('Eficiencia: acerto = 100%, funcional = 50%, erro = 0%. Pontos = posicoes medidas nas saidas. Registros antigos mostram apenas o quadrado.',W/2,H-14,{align:'center'});
+  doc.setTextColor(70,87,107);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('Pontos = saidas. Setas = deslocamento da branca; tracejadas = aproximacao entre quadrados. Acerto 100%, Funcional 50%, Erro 0%.',W/2,H-14,{align:'center'});
 }
