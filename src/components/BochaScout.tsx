@@ -1,4 +1,8 @@
 // @ts-nocheck
+import FoundationRadar from './FoundationRadar';
+import AthleteComparison from './AthleteComparison';
+import AppIcon from './AppIcon';
+import {matchSeries} from '../lib/foundationRadar';
 import {useContext} from 'react';
 import {createPortal} from 'react-dom';
 import {DataPanelContext} from './DataPanelContext';
@@ -333,7 +337,7 @@ function TopNav({ view, setView, isSuperAdmin = false }) {
   const items = [
     ["dashboard", "Início"],
     ["history", "Histórico"],
-    ["athletes", "Atletas"],
+
 
   ];
 
@@ -349,7 +353,7 @@ function TopNav({ view, setView, isSuperAdmin = false }) {
             padding: "10px 14px",
           }}
         >
-          {label}
+          <AppIcon name={id==='dashboard'?'home':'history'} size={18}/> {label}
         </button>
       ))}
     </div>
@@ -423,77 +427,12 @@ function TinyBar({ value, suffix = "%", max = 100 }) {
   );
 }
 
-function DashboardScreen({ sessions, athletes, onNewTraining, onNewCompetition, onHistory }) {
-  const [classFilter, setClassFilter] = useState("Todos");
-  const [genderFilter, setGenderFilter] = useState("Todos");
-
-  const visibleSessions = sessions.filter((s) => {
-    const classOk = classFilter === "Todos" || s.athleteClass === classFilter || s.opponentClass === classFilter;
-    const genderOk = genderFilter === "Todos" || s.athleteGender === genderFilter || s.opponentGender === genderFilter;
-    return classOk && genderOk;
-  });
-
-  const performanceRows = visibleSessions.map((s) => ({
-    session: s,
-    efficiency: Number(s.stats?.efficiency ?? calcStats(getAthletePlays(s)).efficiency ?? 0),
-  }));
-  const best = [...performanceRows].sort((a, b) => b.efficiency - a.efficiency)[0];
-  const worst = [...performanceRows].sort((a, b) => a.efficiency - b.efficiency)[0];
-
-  const classCount = {};
-  visibleSessions.forEach((s) => {
-    if (!s.athleteClass) return;
-    classCount[s.athleteClass] = (classCount[s.athleteClass] || 0) + 1;
-  });
-  const mostAnalyzedClass = Object.entries(classCount).sort((a, b) => b[1] - a[1])[0];
-  const last = [...visibleSessions].sort((a, b) => String(b.createdAt || b.date || "").localeCompare(String(a.createdAt || a.date || "")))[0];
-
-  return (
-    <>
-      <div style={styles.card}>
-        <h2 style={{ marginBottom: 4 }}>Visão geral</h2>
-        <p style={{ ...styles.helpText, marginTop: 0 }}>Escolha o tipo de scout para iniciar. A seleção não será pedida novamente durante o cadastro da partida.</p>
-
-        <div style={{ ...styles.grid, marginBottom: 14 }}>
-          <Field label="Classe">
-            <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} style={styles.input}>
-              <option>Todos</option>
-              {CLASSES.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </Field>
-          <Field label="Gênero">
-            <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)} style={styles.input}>
-              <option>Todos</option>
-              {GENDERS.map((g) => <option key={g}>{g}</option>)}
-            </select>
-          </Field>
-        </div>
-
-        <div style={styles.miniStats}>
-          <MiniStat label="Total de scouts" value={visibleSessions.length} />
-          <MiniStat label="Melhor desempenho" value={best ? best.efficiency.toFixed(1) + "%" : "—"} />
-          <MiniStat label="Pior desempenho" value={worst ? worst.efficiency.toFixed(1) + "%" : "—"} />
-          <MiniStat label="Classe mais analisada" value={mostAnalyzedClass ? mostAnalyzedClass[0] + " · " + mostAnalyzedClass[1] : "—"} />
-          <MiniStat label="Último scout" value={last ? formatDateBR(last.date) : "—"} />
-        </div>
-
-        {(best || worst || last) && (
-          <div style={{ ...styles.grid, marginTop: 14 }}>
-            <InfoBox title="Melhor" value={best ? best.session.athlete + " · " + best.efficiency.toFixed(1) + "%" : "—"} />
-            <InfoBox title="Ponto de atenção" value={worst ? worst.session.athlete + " · " + worst.efficiency.toFixed(1) + "%" : "—"} />
-            <InfoBox title="Última análise" value={last ? last.athlete + " × " + last.opponent : "—"} />
-          </div>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10, marginTop: 16 }}>
-          <button onClick={onNewTraining} style={{ ...styles.button, ...styles.green }}>Novo Scout · Treino</button>
-          <button onClick={onNewCompetition} style={{ ...styles.button, background: "#2563eb" }}>Novo Scout · Campeonato</button>
-          <button onClick={onHistory} style={{ ...styles.button, background: "#475569" }}>Ver Histórico</button>
-        </div>
-      </div>
-    </>
-  );
-}
+function DashboardScreen({ onNewTraining, onNewCompetition, onHistory }) {
+ const [choosing,setChoosing]=useState(false);
+ return <section className="welcome-panel"><span className="welcome-eyebrow">BOCHA SCOUT</span><h2>Seu próximo resultado começa aqui.</h2><p>Registre a partida. Entenda o desempenho.</p>
+ <div className="welcome-actions"><button className="welcome-action primary" onClick={()=>setChoosing(!choosing)} aria-expanded={choosing}><span className="welcome-icon"><AppIcon name="play" size={30}/></span><strong>Iniciar Scout</strong><span>Ao vivo ou partida gravada</span></button><button className="welcome-action" onClick={onHistory}><span className="welcome-icon"><AppIcon name="history" size={30}/></span><strong>Histórico e Análises</strong><span>Reveja partidas e compare atletas</span></button></div>
+ {choosing&&<div className="partial-tabs"><button onClick={onNewTraining}>Treino</button><button onClick={onNewCompetition}>Campeonato</button></div>}</section>;
+ }
 
 function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
   const [search,setSearch]=useState('');
@@ -586,7 +525,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
   const ranking = Object.entries(fundamentals).sort((a,b) => b[1].total - a[1].total);
   const redName = item.athleteColor === "Vermelho" ? item.athlete : item.opponent;
   const blueName = item.athleteColor === "Azul" ? item.athlete : item.opponent;
-  const matchSides = participants(item).map((side) => {
+  const matchSides = matchSeries(item).map((side) => {
     const stats = calcStats(side.plays);
     const map = {};
     side.plays.forEach((p) => {
@@ -623,14 +562,13 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
       </div>
 
       <PartialPerformance plays={item.plays||[]} gameType={item.gameType} athlete={item.athlete} opponent={item.opponent} athleteColor={item.athleteColor} scoutMode={item.scoutMode} isHistory/>
+      <FoundationRadar series={matchSeries(item)} gameType={item.gameType}/>
       <h3 style={{ marginTop: 20 }}>Análise dos dois lados</h3>
       <div className="session-athlete-comparison">
         {matchSides.map((side) => (
-          <section key={side.id} className={`session-athlete-side is-${side.color.toLowerCase()}`}>
+          <section key={side.color} className={`session-athlete-side is-${side.color.toLowerCase()}`}>
             <div className="session-athlete-heading"><span>{side.color}</span><strong>{side.name}</strong></div>
             <div className="session-athlete-metrics"><MiniStat label="Jogadas" value={side.stats.total}/><MiniStat label="Eficiência" value={`${side.stats.efficiency.toFixed(1)}%`}/><MiniStat label="Erros" value={side.stats.erros}/></div>
-            <h4>Fundamentos</h4>
-            {side.ranking.length === 0 ? <p style={styles.empty}>Sem jogadas.</p> : side.ranking.map(([name,d]) => <div className="session-foundation-row" key={name}><span>{name}</span><strong>{d.total}x · {d.efficiency.toFixed(0)}%</strong></div>)}
             <h4>Mapa de calor</h4>
             <HistoricalHeatmap plays={side.plays} name={side.name} color={side.color}/>
           </section>
@@ -720,7 +658,7 @@ export function HistoricalHeatmap({ plays, sessions = [], playsForSession, name 
 }
 
 function EvolutionLineChart({ data, title, countMode, maxValue }) {
-  const width = Math.max(520, data.length * 84);
+  const width = Math.max(320, data.length * 76 + 70);
   const height = 230;
   const pad = { left: 42, right: 24, top: 30, bottom: 42 };
   const ceiling = countMode ? Math.max(1, maxValue) : 100;
@@ -733,7 +671,7 @@ function EvolutionLineChart({ data, title, countMode, maxValue }) {
     <h3>{title}</h3>
     <p>O gráfico acompanha a cor, o modo e a posição escolhidos no mapa de calor.</p>
     {data.length === 0 ? <div style={styles.empty}>Sem partidas com dados para esta seleção.</div> : <div className="history-evolution-scroll">
-      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label={title}>
+      <svg viewBox={`0 0 ${width} ${height}`} style={{width,maxWidth:'none'}} height={height} role="img" aria-label={title}>
         {[0, .25, .5, .75, 1].map((ratio) => {
           const y = pad.top + ratio * (height - pad.top - pad.bottom);
           const value = ceiling * (1 - ratio);
@@ -954,6 +892,8 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
 
     <div style={styles.card}><div style={styles.miniStats}><MiniStat label="Partidas" value={filtered.length}/><MiniStat label="Vitórias" value={wins}/><MiniStat label="Derrotas" value={losses}/><MiniStat label="Aproveitamento" value={`${winRate.toFixed(1)}%`}/></div></div>
 
+    <AthleteComparison sessions={sessions.filter(s=>accountFilter==='Todos'||s.ownerUserId===accountFilter)}/>
+    <FoundationRadar series={[{name:athletes.find(a=>a.id===athleteFilter)?.name || 'Atletas principais · filtros atuais',color:'Vermelho',plays}]}/>
     <div style={styles.card}><h2>Mapa de calor</h2><p style={styles.helpText}>Este mapa analisa somente as jogadas do atleta selecionado, em todas as partidas em que ele participou. Toque em uma posição para ver os detalhes.</p><HistoricalHeatmap plays={plays} sessions={filtered} playsForSession={playsForSelectedAthlete}/>
       {(() => {
         const tbPlays = plays.filter((p) => (p.whitePositionTo || p.whitePositionFrom) === "TB");
@@ -971,7 +911,6 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
       <div style={styles.card}><h3>Saída mais utilizada</h3><div style={{fontSize:32,fontWeight:900,color:"#15803d"}}>{topExit ? topExit[0] : "—"}</div><div>{topExit ? `${topExit[1]} saídas registradas` : "Sem saídas registradas"}</div></div>
       <div style={styles.card}><h3>Melhor posição</h3><div style={{fontSize:32,fontWeight:900,color:"#15803d"}}>{bestPosition ? bestPosition[0] : "—"}</div><div>{bestPosition ? `${bestPosition[1].efficiency.toFixed(1)}% eficiência · ${bestPosition[1].total} jogadas` : "Sem dados"}</div></div>
       <div style={styles.card}><h3>Posição de atenção</h3><div style={{fontSize:32,fontWeight:900,color:"#b91c1c"}}>{attentionPosition ? attentionPosition[0] : "—"}</div><div>{attentionPosition ? `${attentionPosition[1].errorRate.toFixed(1)}% de erro · ${attentionPosition[1].total} jogadas` : "Sem dados"}</div></div>
-      <div style={styles.card}><h3>Perfil técnico</h3><div><strong>Melhor fundamento:</strong> {best ? `${best[0]} · ${best[1].efficiency.toFixed(1)}%` : "—"}</div><div style={{marginTop:8}}><strong>Fundamento de atenção:</strong> {worst ? `${worst[0]} · ${worst[1].errorRate.toFixed(1)}% de erro` : "—"}</div><div style={{marginTop:8}}><strong>Eficiência geral:</strong> {combined.efficiency.toFixed(1)}%</div></div>
     </div>
 
     {selected && <SessionDetail item={selected} selectedAthleteId={athleteFilter} onClose={()=>setSelectedSessionId("")} onExportPdf={exportSavedSessionReport}/>} 
@@ -1773,7 +1712,6 @@ export default function BochaScout() {
   // =========================================================
 
   function selectResult(result) {
-    if(gameType!=='Individual' && !selectedPlayerId){alert('Selecione o atleta que fez o lançamento.');return;}
     pushUndoSnapshot();
     if(scoutMode==='live') {
       const elapsed=throwTimer.elapsed+(throwTimer.startedAt?Date.now()-throwTimer.startedAt:0);
@@ -1879,8 +1817,8 @@ export default function BochaScout() {
 
       time: scoutMode==='live' ? now.toLocaleTimeString('pt-BR') : null,
       durationMs: throwDuration, timingSource: throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
-      playerName: athletes.find(a=>a.id===selectedPlayerId)?.name || (selectedColor===athleteColor ? athlete : opponent),
-      playerId: selectedPlayerId || null,
+      playerName: (gameType==='Individual' ? athletes.find(a=>a.id===selectedPlayerId)?.name : '') || (selectedColor===athleteColor ? athlete : opponent),
+      playerId: gameType==='Individual' ? selectedPlayerId || null : null,
       whitePointFrom: whitePoint,
 
       athlete,
@@ -1948,8 +1886,8 @@ export default function BochaScout() {
 
       time: scoutMode==='live' ? now.toLocaleTimeString('pt-BR') : null,
       durationMs: throwDuration, timingSource: throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
-      playerName: athletes.find(a=>a.id===selectedPlayerId)?.name || (selectedColor===athleteColor ? athlete : opponent),
-      playerId: selectedPlayerId || null,
+      playerName: (gameType==='Individual' ? athletes.find(a=>a.id===selectedPlayerId)?.name : '') || (selectedColor===athleteColor ? athlete : opponent),
+      playerId: gameType==='Individual' ? selectedPlayerId || null : null,
       whitePointFrom: whitePoint,
 
       athlete,
@@ -2830,7 +2768,7 @@ export default function BochaScout() {
 
           <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />
 
-          {started && <div style={{...styles.card,display:"flex",gap:10,flexWrap:"wrap"}}><button style={{...styles.button,...styles.green}} onClick={()=>setMatchHome(false)}>Voltar à partida</button><button style={{...styles.button,background:"#b91c1c"}} onClick={abandonGame}>Abandonar partida</button></div>}
+          {started && <div style={{...styles.card,display:"flex",gap:10,flexWrap:"wrap"}}><button style={{...styles.button,...styles.green}} onClick={()=>setMatchHome(false)}>Continuar partida</button><button style={{...styles.button,background:"#b91c1c"}} onClick={abandonGame}>Abandonar partida</button></div>}
           {view === "dashboard" && (
             <DashboardScreen
               sessions={accountSessions}
@@ -3114,7 +3052,6 @@ export default function BochaScout() {
           )}
 
           {positionDraft && <PrecisePosition cell={positionDraft.cell} point={positionDraft.point} onPoint={point=>{pushUndoSnapshot();setPositionDraft({...positionDraft,point});}} onConfirm={confirmPosition} onBack={()=>{pushUndoSnapshot();setPositionDraft(null);}} />}
-          {stage==='result' && gameType!=='Individual' && <section className="throw-timer"><label>Atleta que vai lançar <select aria-label="Atleta que vai lançar" value={selectedPlayerId} onChange={e=>{pushUndoSnapshot();setSelectedPlayerId(e.target.value);}}><option value="">Selecione o atleta</option>{athletes.filter(a=>!playsHistory.some(p=>p.playerId===a.id&&p.color!==selectedColor)).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label></section>}
           {stage==='result' && <section className="throw-timer">
             <strong>{scoutMode==='recorded' ? 'Tempo do vídeo (opcional)' : 'Tempo do lançamento'}</strong>
             {scoutMode==='recorded' ? <label>Segundos observados no vídeo <input aria-label="Tempo no vídeo em segundos" type="number" min="0" step="0.1" value={throwDuration===null?'':throwDuration/1000} onChange={e=>{pushUndoSnapshot();setThrowDuration(e.target.value===''?null:Math.max(0,Number(e.target.value))*1000);}} /></label> : <><output>{formatDuration(elapsedThrow)}</output><button onClick={changeTimer}>{throwTimer.startedAt?'Pausar':throwTimer.elapsed?'Retomar cronômetro':'Iniciar cronômetro'}</button><small>Inicie quando o atleta começar. Ao marcar o resultado, o tempo para. Sem iniciar, fica não registrado.</small></>}

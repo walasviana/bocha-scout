@@ -24,7 +24,7 @@ await p.getByRole('button',{name:'Desfazer',exact:true}).click();d=await state(p
 await p.getByRole('button',{name:'Funcional',exact:true}).click();await p.getByRole('button',{name:'Aproximação',exact:true}).click();
 d=await state(p);assert.equal(d.playsHistory.length,2);assert.equal(d.playsHistory[1].durationMs,null);
 await p.getByRole('button',{name:'2ª',exact:true}).click();assert.match(await p.locator('.partial-performance').innerText(),/0 jogadas/);
-await p.getByRole('button',{name:'1ª',exact:true}).click();assert.match(await p.locator('.partial-performance').innerText(),/50.0%/);
+await p.getByRole('button',{name:'End 1',exact:true}).click();assert.match(await p.locator('.partial-performance').innerText(),/50.0%/);
 assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
 await p.screenshot({path:'tests/artifacts/mobile-flow.png',fullPage:true});
 await p.reload();await p.getByRole('button',{name:/ATLETA AZUL TESTE AZUL/}).waitFor();d=await state(p);assert.equal(d.playsHistory.length,2);assert.ok(d.whitePoint);

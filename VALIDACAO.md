@@ -36,3 +36,12 @@ Caso Playwright esteja em um runtime separado, informe seu caminho em `SCOUT_PLA
 Cobertura executada: desktop 1280 px e celular 390 px; posição exata, Desfazer por ação, cronômetro, tempo ausente, modo gravado e data obrigatória, filtro de parcial, recarga do rascunho, seis parciais de Equipes, identificação de atleta e Mover branca com Erro/Funcional. PDF fictício com 96 lançamentos, seis parciais e dois desempates teve texto e renderização conferidos. Na revisão compacta, as páginas de histórico foram removidas do PDF, preservando os registros no app.
 
 A validação de persistência no navegador usa respostas simuladas do Supabase. A homologação com uma conta real e a revisão visual pelo usuário continuam recomendadas antes da publicação. Hardening final de GitHub, Supabase e permissões permanece fora deste pacote.
+
+
+## Radar e interface (13/09/2026)
+- Home com ícones vetoriais e ações Iniciar Scout / Histórico e Análises; cadastros no menu Minha conta.
+- Radar usa calcStats: ausência null, erro zero; lacunas não são preenchidas como zero. PDF compara lados em três radares na primeira página, com placar e percentuais coloridos.
+- Comparador recebe as sessões autorizadas do Histórico; coleta coletiva sem playerId não é atribuída a um atleta. Cadastros existentes preservados.
+- RLS scout_sessions ativo, SELECT owner_id = auth.uid() OR is_admin(); is_admin consulta profiles. Não foi feito hardening geral.
+- TypeScript e build passaram. tests/browser/radar-interface.cjs valida Home/radar mobile, ausência vs zero, período sem jogadas, exclusão de coletivos sem identificação, PDF de duas páginas, seleção de jogador removida e confirmação expirada. Chamadas Supabase simuladas, sem envio real de e-mails.
+- Modelos e destinos do Supabase preparados em supabase/email-templates; aplicação no painel permanece pendente por indisponibilidade de acesso às configurações Auth.
