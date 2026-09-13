@@ -1,4 +1,4 @@
-export type PositionStats = { total: number; acertos?: number; funcionais?: number; erros?: number; saidas: number; efficiency: number };
+export type PositionStats = { total: number; points?: Array<{x:number;y:number}>; acertos?: number; funcionais?: number; erros?: number; saidas: number; efficiency: number };
 export type CourtOptions = { data: Record<string, PositionStats>; mode?: string; color?: string; name?: string; selected?: string; showPositions?: boolean; selectionOnly?: boolean };
 export const CHART_WIDTH = 800, CHART_HEIGHT = 1360;
 const X = 100, Y = 200, BOX = 84, FIELD = Y + BOX;
@@ -65,7 +65,10 @@ export function drawCourtHeatmap(canvas: HTMLCanvasElement, options: CourtOption
     if(options.showPositions !== false) label(cell.position,center,cell.y+47,26);
     if(m){
       label(m.label,center,cell.y+(options.showPositions === false?58:78),20,countMode ? accent : m.value>=60?'#347b57':m.value>=40?'#927220':'#ac435e');
-      if(m.starts){ctx.fillStyle=accent;ctx.beginPath();ctx.arc(center+21,cell.y+33,7,0,Math.PI*2);ctx.fill();}
+      if(m.starts){for(const point of options.data[cell.position]?.points || []){
+        if(!Number.isFinite(point.x)||!Number.isFinite(point.y)||point.x<0||point.x>1||point.y<0||point.y>1)continue;
+        ctx.fillStyle=accent;ctx.beginPath();ctx.arc(cell.x+point.x*100,cell.y+point.y*100,6,0,Math.PI*2);ctx.fill();
+      }}
     }else if(!options.selectionOnly && options.showPositions!==false && cell.position!=='14' && cell.position!=='13') label('–',center,cell.y+77,18,'#9fadb9');
   }
   ctx.strokeStyle = navy; ctx.lineWidth = 4; ctx.lineJoin = 'round';
@@ -81,5 +84,5 @@ export function appendHeatmapReport(doc: any, sides: Array<{ name: string; color
   doc.setFillColor(6,45,84);doc.rect(0,0,W,48,'F');doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(255,255,255);doc.text('MAPAS DE CALOR DA PARTIDA',26,31);
   const height=H-84,width=height*CHART_WIDTH/CHART_HEIGHT;
   sides.forEach((side,i)=>{const c=document.createElement('canvas');drawCourtHeatmap(c,{...side,mode:'Desempenho'});doc.addImage(c.toDataURL('image/png'),'PNG',W/4+i*W/2-width/2,54,width,height,undefined,'FAST');});
-  doc.setTextColor(70,87,107);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('Eficiencia: acerto = 100%, funcional = 50%, erro = 0%. Pontos indicam saidas de jogo. Sem mancha = sem jogadas.',W/2,H-14,{align:'center'});
+  doc.setTextColor(70,87,107);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('Eficiencia: acerto = 100%, funcional = 50%, erro = 0%. Pontos = posicoes medidas nas saidas. Registros antigos mostram apenas o quadrado.',W/2,H-14,{align:'center'});
 }

@@ -134,7 +134,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f1f5f9', padding: 20, fontFamily: 'Arial, sans-serif' }}>
+      <div className='hub-auth' style={{ minHeight: '100vh', background: '#f1f5f9', padding: 20, fontFamily: 'Arial, sans-serif' }}>
         <div style={{ maxWidth: 480, margin: '30px auto', background: '#fff', borderRadius: 20, padding: 'clamp(20px,4vw,28px)', border: '1px solid #e2e8f0', boxShadow: '0 18px 50px rgba(15,23,42,.10)' }}>
           <div style={{ color: '#0f172a', fontWeight: 900, fontSize: 28 }}>BOCHA SCOUT</div>
           <div style={{ color: '#64748b', marginTop: 4, marginBottom: 20 }}>Scout técnico de Bocha Paralímpica</div>
