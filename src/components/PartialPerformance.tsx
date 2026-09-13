@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import FoundationRadar from './FoundationRadar';
 import { calcStats, regularEnds, formatDuration, participants } from '../lib/scoutData';
 export default function PartialPerformance({plays, gameType, athlete, opponent, athleteColor, scoutMode, isHistory}: any) {
   const [filter, setFilter] = useState('Geral');
+  const [comparisonOpen,setComparisonOpen]=useState(false);
   const ends = [...new Set<string>([...regularEnds(gameType), ...plays.map((p: any) => p.end)])];
   const groups=['Vermelho','Azul'].map(color=>({id:color,color,name:color===athleteColor?athlete:opponent,plays:plays.filter((p:any)=>p.color===color)}));
   return <section className="partial-performance">
@@ -19,5 +21,9 @@ export default function PartialPerformance({plays, gameType, athlete, opponent, 
         <span>Tempo médio: {formatDuration(s.averageDurationMs)}{s.timedPlays ? ` (${s.timedPlays} jogadas)` : ''}</span>
       </article>;
     })}</div>
+    {!isHistory&&<details className="live-foundation-comparison" onToggle={e=>setComparisonOpen(e.currentTarget.open)}>
+      <summary>Comparar fundamentos <span>{filter} · vermelho e azul</span></summary>
+      {comparisonOpen&&<FoundationRadar series={groups} gameType={gameType} selectedEnd={filter} hideFilters/>}
+    </details>}
   </section>;
 }

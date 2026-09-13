@@ -1,4 +1,4 @@
-import {drawRadar,matchSeries} from './foundationRadar';
+import {drawRadar,matchSeries,usedFoundations} from './foundationRadar';
 import {calcStats, formatDuration, modeLabel, sessionEnds, sideName, participants} from './scoutData';
 import {appendHeatmapReport} from './courtHeatmap';
 
@@ -48,7 +48,8 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
   });
   section('FUNDAMENTOS · COMPARAÇÃO',26,304,W-52);
   const radarSides=matchSeries(session);
-  const addRadar=(series:any[],x:number,y:number,w:number)=>{const c=document.createElement('canvas');drawRadar(c,series);doc.addImage(c.toDataURL('image/png'),'PNG',x,y,w,w*570/720);};
+  const radarAxes=usedFoundations(radarSides);
+  const addRadar=(series:any[],x:number,y:number,w:number)=>{const c=document.createElement('canvas');drawRadar(c,series,radarAxes);doc.addImage(c.toDataURL('image/png'),'PNG',x,y,w,w*570/720);};
   text(fit(redName,190,8).slice(0,2).join(' '),130,342,8,true,red,'center');text('Vermelho × Azul',W/2,342,9,true,navy,'center');text(fit(blueName,190,8).slice(0,2).join(' '),W-130,342,8,true,blue,'center');
   addRadar([radarSides[0]],26,355,215);addRadar(radarSides,W/2-140,342,280);addRadar([radarSides[1]],W-241,355,215);
   text('Acerto = 100%, Funcional = 50%, Erro = 0%. Tempo ausente não entra na média. Histórico de jogadas disponível no aplicativo.',26,H-18,7,false,muted);
