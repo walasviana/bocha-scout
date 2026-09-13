@@ -6,7 +6,7 @@ import {matchSeries} from '../lib/foundationRadar';
 import {useContext} from 'react';
 import {createPortal} from 'react-dom';
 import {DataPanelContext} from './DataPanelContext';
-import {localUser,readDraft,saveDraft,queueSession,flushAutosave,listenAutosave} from '../lib/scoutAutosave';
+import {localUser,readDraft,saveDraft,queueSession,flushAutosave,listenAutosave,forgetSession} from '../lib/scoutAutosave';
 /* eslint-disable */
 import { useEffect, useLayoutEffect, useRef, useMemo, useState } from "react";
 // PATCH: heatmap-v2
@@ -429,6 +429,7 @@ function TinyBar({ value, suffix = "%", max = 100 }) {
 
 function DashboardScreen({ onNewTraining, onNewCompetition, onHistory }) {
  const [choosing,setChoosing]=useState(false);
+ if(choosing)return <section className="welcome-panel scout-kind-screen"><button className="friendly-button" onClick={()=>setChoosing(false)}>Voltar ao início</button><h2>Qual Scout vamos iniciar?</h2><p>Escolha o tipo da partida para continuar.</p><div className="scout-kind-options"><button autoFocus onClick={onNewTraining}><strong>Treino</strong><span>Registrar uma sessão de treinamento</span></button><button onClick={onNewCompetition}><strong>Campeonato</strong><span>Registrar uma partida de competição</span></button></div></section>;
  return <section className="welcome-panel"><span className="welcome-eyebrow">BOCHA SCOUT</span><h2>Seu próximo resultado começa aqui.</h2><p>Registre a partida. Entenda o desempenho.</p>
  <div className="welcome-actions"><button className="welcome-action primary" onClick={()=>setChoosing(!choosing)} aria-expanded={choosing}><span className="welcome-icon"><AppIcon name="play" size={30}/></span><strong>Iniciar Scout</strong><span>Ao vivo ou partida gravada</span></button><button className="welcome-action" onClick={onHistory}><span className="welcome-icon"><AppIcon name="history" size={30}/></span><strong>Histórico e Análises</strong><span>Reveja partidas e compare atletas</span></button></div>
  {choosing&&<div className="partial-tabs"><button onClick={onNewTraining}>Treino</button><button onClick={onNewCompetition}>Campeonato</button></div>}</section>;
@@ -684,7 +685,7 @@ function EvolutionLineChart({ data, title, countMode, maxValue }) {
   </div>;
 }
 
-function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdmin = false, ownerAccounts = [], favoriteAthleteIds = [], onToggleFavorite }) {
+function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false, isSuperAdmin = false, ownerAccounts = [], favoriteAthleteIds = [], onToggleFavorite }) {
   const [accountFilter, setAccountFilter] = useState("Todos");
   const [kind, setKind] = useState("Todos");
   const [athleteFilter, setAthleteFilter] = useState("Todos");
@@ -724,7 +725,8 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
       return;
     }
     if (selectedSessionId === item.id) setSelectedSessionId("");
-    window.location.reload();
+    forgetSession(item.id);
+    onDeleted?.(item.id);
   }
 
   async function exportSavedSessionReport(item) {
@@ -893,7 +895,7 @@ function HistoryScreen({ sessions, athletes, onBack, isAdmin = false, isSuperAdm
     <div style={styles.card}><div style={styles.miniStats}><MiniStat label="Partidas" value={filtered.length}/><MiniStat label="Vitórias" value={wins}/><MiniStat label="Derrotas" value={losses}/><MiniStat label="Aproveitamento" value={`${winRate.toFixed(1)}%`}/></div></div>
 
     <AthleteComparison sessions={sessions.filter(s=>accountFilter==='Todos'||s.ownerUserId===accountFilter)}/>
-    <FoundationRadar series={[{name:athletes.find(a=>a.id===athleteFilter)?.name || 'Atletas principais · filtros atuais',color:'Vermelho',plays}]}/>
+    <FoundationRadar series={[{name:athletes.find(a=>a.id===athleteFilter)?.name || 'Atletas principais · filtros atuais',color:'Roxo',plays}]}/>
     <div style={styles.card}><h2>Mapa de calor</h2><p style={styles.helpText}>Este mapa analisa somente as jogadas do atleta selecionado, em todas as partidas em que ele participou. Toque em uma posição para ver os detalhes.</p><HistoricalHeatmap plays={plays} sessions={filtered} playsForSession={playsForSelectedAthlete}/>
       {(() => {
         const tbPlays = plays.filter((p) => (p.whitePositionTo || p.whitePositionFrom) === "TB");
@@ -2792,6 +2794,7 @@ export default function BochaScout() {
           {view === "history" && (
             <HistoryScreen
               sessions={historySessions}
+              onDeleted={id=>setSessions(previous=>previous.filter(item=>item.id!==id))}
               athletes={athletes}
               isAdmin={currentUserIsAdmin}
               isSuperAdmin={currentUserIsSuperAdmin}

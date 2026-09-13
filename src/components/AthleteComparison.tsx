@@ -14,6 +14,6 @@ export default function AthleteComparison({sessions}:{sessions:any[]}){
  return <section className="comparison-panel"><button className="friendly-button" aria-expanded={open} onClick={()=>setOpen(!open)}><AppIcon name="compare"/> Analisar / Comparar atletas</button>{open&&<>
  <p>Selecione um atleta para analisar ou dois para comparar. Somente registros disponíveis nesta conta. Jogadas coletivas sem atleta identificado não entram no comparador individual.</p>
  <div className="comparison-fields"><label>De<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Até<input type="date" min={from} value={to} onChange={e=>setTo(e.target.value)}/></label>{[first,second].map((value,i)=><label key={i}>{i?'Comparar com (opcional)':'Atleta'}<select value={options.some(a=>a.id===value)?value:''} onChange={e=>i?setSecond(e.target.value):setFirst(e.target.value)}><option value="">{i?'Somente um atleta':'Selecione'}</option>{options.filter(a=>i===0||a.id!==first).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>)}</div>
- {selected.length>0?<FoundationRadar series={selected.map((a,i)=>({name:a!.name,plays:a!.plays,color:i?'Azul':'Vermelho'}))}/>:<p>Selecione um atleta com jogadas registradas no período.</p>}
+ {selected.length>0?<FoundationRadar series={selected.map((a,i)=>({name:a!.name,plays:a!.plays,color:selected.length===1?'Roxo':i?'Azul':'Roxo'}))}/>:<p>Selecione um atleta com jogadas registradas no período.</p>}
  </>}</section>;
 }

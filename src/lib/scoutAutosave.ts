@@ -25,6 +25,16 @@ export function saveDraft(owner:string,id:string,payload:any,state='active') {
 export function queueSession(owner:string,row:any) {
   localStorage.setItem(`${prefix}session:${owner}:${row.id}`,JSON.stringify(row));
 }
+export function forgetSession(id:string) {
+  for(const k of Object.keys(localStorage)) {
+    if(k.startsWith(`${prefix}session:`)) {
+      try{if(JSON.parse(localStorage.getItem(k)||'null')?.id===id)localStorage.removeItem(k);}catch{}
+    }
+    if(k==='bochaScout.sessions.v1'||k.startsWith('bochaScout.sessions.v1:')) {
+      try{const rows=JSON.parse(localStorage.getItem(k)||'[]');if(Array.isArray(rows))localStorage.setItem(k,JSON.stringify(rows.filter(row=>row.id!==id)));}catch{}
+    }
+  }
+}
 const running=new Set<string>();
 async function bounded<T>(request:PromiseLike<T>):Promise<T> {
   let timer:ReturnType<typeof setTimeout>;
