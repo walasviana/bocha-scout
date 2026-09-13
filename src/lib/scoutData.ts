@@ -1,4 +1,8 @@
 export type Point = { x: number; y: number };
+export function foundationAllowed(play: string, kind: string, gameType: string, athleteClass: string) {
+  const bc3 = gameType === 'Par BC3' || (gameType === 'Individual' && athleteClass === 'BC3');
+  return !(kind === 'Campeonato' && bc3 && ['Aérea', "Pingo d'água"].includes(play));
+}
 export function regularEnds(gameType: string) {
   return Array.from({length: gameType === 'Equipes' || gameType === 'Equipe BC1/BC2' ? 6 : 4}, (_, i) => `End ${i + 1}`);
 }
