@@ -3,11 +3,11 @@ import { calcStats, regularEnds, formatDuration, participants } from '../lib/sco
 export default function PartialPerformance({plays, gameType, athlete, opponent, athleteColor, scoutMode, isHistory}: any) {
   const [filter, setFilter] = useState('Geral');
   const ends = [...new Set<string>([...regularEnds(gameType), ...plays.map((p: any) => p.end)])];
-  const groups=participants({plays,athlete,opponent,athleteColor});
+  const groups=['Vermelho','Azul'].map(color=>({id:color,color,name:color===athleteColor?athlete:opponent,plays:plays.filter((p:any)=>p.color===color)}));
   return <section className="partial-performance">
     <h3>{isHistory ? 'Desempenho por parcial' : scoutMode === 'recorded' ? 'Desempenho da partida gravada' : 'Desempenho ao vivo'}</h3>
-    <div className="partial-tabs" aria-label="Filtrar desempenho por parcial">
-      {['Geral', ...ends].map(end => <button type="button" key={end} aria-pressed={filter === end} onClick={() => setFilter(end)}>{end.replace('End ', '')}{end.startsWith('End ') ? 'ª' : ''}</button>)}
+    <div className="partial-tabs end-filter" aria-label="Filtrar desempenho por parcial">
+      {['Geral', ...ends].map(end => <button type="button" key={end} aria-pressed={filter === end} onClick={() => setFilter(end)}>{end}</button>)}
     </div>
     <div className="partial-sides">{groups.map(group => {
       const s = calcStats(filter==='Geral'?group.plays:group.plays.filter(p=>p.end===filter));

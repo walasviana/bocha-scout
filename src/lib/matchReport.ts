@@ -1,3 +1,4 @@
+import {drawRadar,matchSeries} from './foundationRadar';
 import {calcStats, formatDuration, modeLabel, sessionEnds, sideName, participants} from './scoutData';
 import {appendHeatmapReport} from './courtHeatmap';
 
@@ -31,8 +32,8 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
     const bs=calcStats((session.plays||[]).filter((p:any)=>p.end===end&&p.color==='Azul'));
     text(end.replace('End ','E').replace('Tie-Break','TB'),x,139,7,true,muted,'center');
     const a=score?.athlete,o=score?.opponent;
-    text(score ? `${session.athleteColor==='Vermelho'?a:o} - ${session.athleteColor==='Azul'?a:o}`:'—',x,153,9,true,navy,'center');
-    text(`V ${rs.total?rs.efficiency.toFixed(0)+'%':'—'} · A ${bs.total?bs.efficiency.toFixed(0)+'%':'—'}`,x,168,7,false,navy,'center');
+    text(score ? session.athleteColor==='Vermelho'?a:o : '—',x-9,153,9,true,red,'right');text('×',x,153,8,false,muted,'center');text(score ? session.athleteColor==='Azul'?a:o : '—',x+9,153,9,true,blue);
+    text(rs.total?rs.efficiency.toFixed(0)+'%':'—',x-6,168,7,true,red,'right');text(bs.total?bs.efficiency.toFixed(0)+'%':'—',x+6,168,7,true,blue);
   });
   text('Eficiência por parcial · V = vermelho · A = azul · — = sem jogadas',W/2,182,6,false,muted,'center');
   const gap=12,cw=(W-52-gap)/2;
@@ -44,32 +45,14 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
     const counts=[['Acerto',s.acertos],['Funcional',s.funcionais],['Erro',s.erros]];
     counts.forEach(([label,count],i)=>{const cx=x+9+i*(cw-18)/3;text(label,cx,258,8,true);text(`${count} · ${s.total?(Number(count)/s.total*100).toFixed(1):'0.0'}%`,cx,273,10);});
     text(`Tempo médio: ${formatDuration(s.averageDurationMs)} · ${s.timedPlays} medições`,x+9,291,8,false,muted);
-    section('FUNDAMENTOS UTILIZADOS',x,304,cw,tone);
-    const names=[...new Set<string>(plays.map((p:any)=>p.play))];
-    names.forEach((name,i)=>{const st=calcStats(plays.filter((p:any)=>p.play===name)),y=341+i*16;
-      text(name,x+9,y,7.5);text(`${st.total}x · ${st.acertos}A / ${st.funcionais}F / ${st.erros}E · ${st.efficiency.toFixed(0)}%`,x+cw-9,y,7.5,true,muted,'right');
-    });
   });
+  section('FUNDAMENTOS · COMPARAÇÃO',26,304,W-52);
+  const radarSides=matchSeries(session);
+  const addRadar=(series:any[],x:number,y:number,w:number)=>{const c=document.createElement('canvas');drawRadar(c,series);doc.addImage(c.toDataURL('image/png'),'PNG',x,y,w,w*570/720);};
+  text(fit(redName,190,8).slice(0,2).join(' '),130,342,8,true,red,'center');text('Vermelho × Azul',W/2,342,9,true,navy,'center');text(fit(blueName,190,8).slice(0,2).join(' '),W-130,342,8,true,blue,'center');
+  addRadar([radarSides[0]],26,355,215);addRadar(radarSides,W/2-140,342,280);addRadar([radarSides[1]],W-241,355,215);
   text('Acerto = 100%, Funcional = 50%, Erro = 0%. Tempo ausente não entra na média. Histórico de jogadas disponível no aplicativo.',26,H-18,7,false,muted);
-  const groups=participants(session);
-  const individualGroups=session.gameType!=='Individual' && groups.some(g=>g.plays.some(p=>p.playerId));
-  if(individualGroups) {
-    for(let offset=0;offset<groups.length;offset+=2) {
-      doc.addPage();section('ATLETAS · DESEMPENHO POR PARCIAL',26,24,W-52);
-      groups.slice(offset,offset+2).forEach((g,i)=>{
-        const x=26+i*(cw+gap),tone=g.color==='Vermelho'?red:blue,st=calcStats(g.plays);
-        text(fit(g.name,cw-18,11).slice(0,2).join('\n'),x+9,66,11,true,tone);
-        text(`${g.color} · Eficiência ${st.efficiency.toFixed(1)}% · ${st.total} jogadas`,x+9,98,9,true);
-        text(`Acerto ${st.acertos} (${st.total?(st.acertos/st.total*100).toFixed(1):0}%) · Funcional ${st.funcionais} (${st.total?(st.funcionais/st.total*100).toFixed(1):0}%) · Erro ${st.erros} (${st.total?(st.erros/st.total*100).toFixed(1):0}%)`,x+9,115,8);
-        text(`Tempo médio: ${formatDuration(st.averageDurationMs)}`,x+9,132,8);
-        ends.forEach((end,j)=>{const es=calcStats(g.plays.filter(p=>p.end===end));text(`${end}: ${es.total?es.efficiency.toFixed(1)+'%':'—'} · ${es.total} jogadas`,x+9,154+j*14,8);});
-        const fy=170+ends.length*14;
-        section('FUNDAMENTOS DO ATLETA',x,fy,cw,tone);
-        [...new Set<string>(g.plays.map(p=>p.play))].forEach((name,j)=>{const ps=calcStats(g.plays.filter(p=>p.play===name));text(`${name} · ${ps.total}x · ${ps.efficiency.toFixed(1)}%`,x+9,fy+38+j*15,8);});
-      });
-    }
-  }
-  const maps=individualGroups ? groups.map(g=>({name:g.name,color:g.color,data:positionStats(g.plays)})) : ['Vermelho','Azul'].map(color=>({name:sideName(session,color),color,data:positionStats((session.plays||[]).filter((p:any)=>p.color===color))}));
+  const maps=matchSeries(session).map(g=>({name:g.name,color:g.color,data:positionStats(g.plays)}));
   for(let i=0;i<maps.length;i+=2)appendHeatmapReport(doc,maps.slice(i,i+2));
   for(let i=1;i<=doc.getNumberOfPages();i++){doc.setPage(i);text(`${i} / ${doc.getNumberOfPages()}`,W-26,H-8,6,false,muted,'right');}
   return doc;

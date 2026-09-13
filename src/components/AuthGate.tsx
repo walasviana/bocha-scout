@@ -1,3 +1,4 @@
+import EmailConfirmation, {confirmationRequested,confirmationURL} from './EmailConfirmation';
 import {localUser} from '../lib/scoutAutosave';
 import AccountNotifications from './AccountNotifications';
 import PasswordRecovery from './PasswordRecovery';
@@ -45,6 +46,8 @@ function fieldStyle(): React.CSSProperties {
 }
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
+  const [confirmEmail,setConfirmEmail]=useState(confirmationRequested);
+  const [pendingEmail,setPendingEmail]=useState('');
   const [user, setUser] = useState<User | null>(()=>localUser());
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(()=>!localUser());
@@ -107,6 +110,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           email: form.email.trim(),
           password: form.password,
           options: {
+            emailRedirectTo: confirmationURL(),
             data: {
               full_name: form.fullName.trim(),
               username: form.username.trim(),
@@ -119,7 +123,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           },
         });
         if (error) throw error;
-        if (!data.session) setMessage('Conta criada. Se o projeto estiver exigindo confirmação de e-mail, confirme para entrar.');
+        if (!data.session) {setPendingEmail(form.email.trim());setConfirmEmail(true);}
       }
     } catch (err: any) {
       setMessage(err?.message || 'Não foi possível concluir.');
@@ -127,6 +131,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       setBusy(false);
     }
   }
+
+  if(confirmEmail) return <EmailConfirmation pendingEmail={pendingEmail} onClose={()=>{setConfirmEmail(false);setPendingEmail('');setMode('login');window.history.replaceState(null,'','/');}}/>;
 
   if (recovery || requestRecovery) return <PasswordRecovery reset={recovery} onClose={() => {setRecovery(false);setRequestRecovery(false);window.history.replaceState(null,'',window.location.pathname);}}/>;
 
@@ -195,14 +201,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           {(profile?.club || meta.club) ? ` · ${profile?.club || meta.club}` : ''} {(profile?.country || meta.country) ? ` · ${profile?.country || meta.country}` : ''}
           {isSuperAdmin ? ' · Super Admin' : isAdmin ? ' · Administrador' : ''}
         </div>
-        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        <details className="account-menu"><summary>Minha conta</summary><div className="account-menu-actions">
           <button onClick={() => setShowAthleteRegistration(true)} style={{ border: '1px solid #16a34a', background: '#15803d', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar atleta</button>
           <button onClick={() => setShowTeamRegistration(true)} style={{ border: '1px solid #60a5fa', background: '#2563eb', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Cadastrar Pares/Equipes</button>
           <AccountNotifications key={user.id} userId={user.id} role={profile?.role || 'user'}/>
           {isAdmin && <button onClick={() => { setAdminInitialTab('overview'); setShowAdmin(true); }} style={{ border: '1px solid #93c5fd', background: '#1d4ed8', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Painel Admin</button>}
           <button onClick={() => setShowProfile(true)} style={{ border: '1px solid #94a3b8', background: '#334155', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Meu perfil</button>
           <button onClick={() => supabase.auth.signOut()} style={{ border: '1px solid #475569', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Sair</button>
-        </div>
+        </div></details>
       </div>
       <DataPanelContext.Provider key={user.id} value={dataHost}>{children}</DataPanelContext.Provider>
       {showAthleteRegistration && <AthleteRegistrationPanel user={user} onClose={() => setShowAthleteRegistration(false)} />}
