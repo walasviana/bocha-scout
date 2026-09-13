@@ -1,4 +1,4 @@
-import {calcStats, durationOf, formatDuration, modeLabel, playName, positionLabel, sessionEnds, sideName, participants} from './scoutData';
+import {calcStats, formatDuration, modeLabel, sessionEnds, sideName, participants} from './scoutData';
 import {appendHeatmapReport} from './courtHeatmap';
 
 /** One report renderer for saved sessions and the match just completed. */
@@ -50,7 +50,7 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
       text(name,x+9,y,7.5);text(`${st.total}x · ${st.acertos}A / ${st.funcionais}F / ${st.erros}E · ${st.efficiency.toFixed(0)}%`,x+cw-9,y,7.5,true,muted,'right');
     });
   });
-  text('Acerto = 100%, Funcional = 50%, Erro = 0%. Tempo ausente não entra na média. Histórico completo nas próximas páginas.',26,H-18,7,false,muted);
+  text('Acerto = 100%, Funcional = 50%, Erro = 0%. Tempo ausente não entra na média. Histórico de jogadas disponível no aplicativo.',26,H-18,7,false,muted);
   const groups=participants(session);
   const individualGroups=session.gameType!=='Individual' && groups.some(g=>g.plays.some(p=>p.playerId));
   if(individualGroups) {
@@ -69,20 +69,6 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
       });
     }
   }
-  let y=0;
-  const widths=[32,66,151,42,139,67,190,100];
-  const cols=['Nº','Parcial','Atleta / lado','Bola','Fundamento','Resultado','Posição da branca','Tempo'];
-  const newHistoryPage=()=>{doc.addPage();section('HISTÓRICO COMPLETO DA PARTIDA',26,24,W-52);y=66;let x=26;cols.forEach((c,i)=>{text(c,x+4,y,8,true);x+=widths[i];});y+=18;};
-  newHistoryPage();
-  (session.plays||[]).forEach((p:any,i:number)=>{
-    const values=[String(i+1),p.end,`${playName(session,p)} · ${p.color}`,p.ball,p.play,p.result,positionLabel(p),formatDuration(durationOf(p))];
-    const lines=values.map((v,i)=>fit(v,widths[i]-8,8));
-    const height=Math.max(...lines.map(l=>l.length))*10+10;
-    if(y+height>H-30)newHistoryPage();
-    let x=26;lines.forEach((l,i)=>{text(l.join('\n'),x+4,y,8);x+=widths[i];});
-    y+=height;doc.setDrawColor(225,232,240);doc.line(26,y-7,W-26,y-7);
-  });
-  if(!session.plays?.length)text('Nenhuma jogada registrada.',30,y);
   const maps=individualGroups ? groups.map(g=>({name:g.name,color:g.color,data:positionStats(g.plays)})) : ['Vermelho','Azul'].map(color=>({name:sideName(session,color),color,data:positionStats((session.plays||[]).filter((p:any)=>p.color===color))}));
   for(let i=0;i<maps.length;i+=2)appendHeatmapReport(doc,maps.slice(i,i+2));
   for(let i=1;i<=doc.getNumberOfPages();i++){doc.setPage(i);text(`${i} / ${doc.getNumberOfPages()}`,W-26,H-8,6,false,muted,'right');}

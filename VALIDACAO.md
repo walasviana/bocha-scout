@@ -9,7 +9,7 @@ Implementação incremental sobre a versão existente, sem migração de banco o
 - Scout de Partida Gravada exige data real. O tempo, opcional, é digitado em segundos observados no vídeo.
 - Após escolher o quadrado, marque/arraste a branca na ampliação de 1 m. Um arraste completo é uma ação do Desfazer; confirmar, escolher cor, atleta e resultado também são ações independentes. O botão Excluir continua separado.
 - A posição usa coordenadas normalizadas de 0 a 1 a partir do canto superior esquerdo, mantendo a orientação da quadra. Mapas antigos continuam por quadrado, sem inventar pontos.
-- O PDF conserva cabeçalho, cores e comparação dos dois lados. Inclui porcentagens por parcial junto ao placar, os três resultados com quantidades e porcentagens, todos os fundamentos, histórico paginado e mapas. Em equipes, inclui análises dos atletas identificados.
+- O PDF conserva cabeçalho, cores e comparação dos dois lados. Inclui porcentagens por parcial junto ao placar, os três resultados com quantidades e porcentagens, todos os fundamentos e mapas. O histórico de jogadas fica exclusivamente no aplicativo para manter o PDF compacto. Em equipes, inclui análises dos atletas identificados.
 - Metadados novos ficam no JSON já salvo em `scout_sessions.payload` e no rascunho. Não há novas colunas. Campos ausentes são tratados como não registrados.
 
 ## Verificação
@@ -33,6 +33,6 @@ node tests/browser/finish-test.cjs
 
 Caso Playwright esteja em um runtime separado, informe seu caminho em `SCOUT_PLAYWRIGHT_MODULE`. `SCOUT_BROWSER_CHANNEL` permite selecionar outro canal instalado. Capturas vão para `tests/artifacts/`.
 
-Cobertura executada: desktop 1280 px e celular 390 px; posição exata, Desfazer por ação, cronômetro, tempo ausente, modo gravado e data obrigatória, filtro de parcial, recarga do rascunho, seis parciais de Equipes, identificação de atleta e Mover branca com Erro/Funcional. PDF fictício com 96 lançamentos, seis parciais e dois desempates teve texto e renderização conferidos.
+Cobertura executada: desktop 1280 px e celular 390 px; posição exata, Desfazer por ação, cronômetro, tempo ausente, modo gravado e data obrigatória, filtro de parcial, recarga do rascunho, seis parciais de Equipes, identificação de atleta e Mover branca com Erro/Funcional. PDF fictício com 96 lançamentos, seis parciais e dois desempates teve texto e renderização conferidos. Na revisão compacta, as páginas de histórico foram removidas do PDF, preservando os registros no app.
 
 A validação de persistência no navegador usa respostas simuladas do Supabase. A homologação com uma conta real e a revisão visual pelo usuário continuam recomendadas antes da publicação. Hardening final de GitHub, Supabase e permissões permanece fora deste pacote.
