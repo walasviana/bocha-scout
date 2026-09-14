@@ -184,3 +184,8 @@ body .scout-live-page .scout-undo-button>svg{width:32px;height:32px}
 @media(max-width:360px){body .scout-live-page .scout-brand-emblem{display:none}body .scout-live-page .scout-brand strong{font-size:18px}body .scout-live-page .scout-brand{padding-left:32px}}
 body:has(.scout-live-page) .hub-modern-header.account-toolbar:not(.is-scrolled){position:absolute!important}
 body:has(.scout-live-page) .hub-modern-header.account-toolbar.is-scrolled{position:fixed!important}
+/* Scores must keep all digits visible at intermediate widths as well. */
+body .scout-live-page .scout-score{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:clamp(4px,1vw,12px);min-width:0;width:100%;text-align:center;overflow:visible}
+body .scout-live-page .scout-score b{display:block;min-width:0;max-width:100%;font-size:clamp(24px,4.2vw,44px);line-height:1.25;letter-spacing:0;font-variant-numeric:tabular-nums;white-space:nowrap;word-break:normal;overflow-wrap:normal;overflow:visible}
+body .scout-live-page .scout-score span{font-size:clamp(18px,2.4vw,28px);line-height:1.25}
+@media(max-width:600px){body .scout-live-page .scout-score{padding:6px 12px;gap:12px}body .scout-live-page .scout-score b{font-size:36px}body .scout-live-page .scout-score span{font-size:22px}}
