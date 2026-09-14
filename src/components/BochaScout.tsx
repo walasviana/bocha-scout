@@ -1,5 +1,6 @@
 // @ts-nocheck
 import FoundationRadar from './FoundationRadar';
+import './LiveTimerBridge.css';
 import AthleteComparison from './AthleteComparison';
 import AppIcon from './AppIcon';
 import {matchSeries} from '../lib/foundationRadar';
@@ -1390,12 +1391,21 @@ export default function BochaScout() {
   const [whitePoint, setWhitePoint] = useState(null);
   const [newWhitePoint, setNewWhitePoint] = useState(null);
   const [positionDraft, setPositionDraft] = useState(null);
+  const [timerEnabled, setTimerEnabled] = useState(true);
   const [throwTimer, setThrowTimer] = useState({startedAt:null, elapsed:0});
   const [throwDuration, setThrowDuration] = useState(null);
   const [clockTick, setClockTick] = useState(Date.now());
   useEffect(() => { if(!throwTimer.startedAt)return; const id=setInterval(()=>setClockTick(Date.now()),250);return()=>clearInterval(id); },[throwTimer.startedAt]);
   const elapsedThrow = throwTimer.elapsed + (throwTimer.startedAt ? Math.max(0,clockTick-throwTimer.startedAt) : 0);
+  function toggleTimerEnabled() {
+    pushUndoSnapshot();
+    const enabled=!timerEnabled;
+    setTimerEnabled(enabled);setThrowDuration(null);
+    const now=Date.now();setClockTick(now);
+    setThrowTimer({startedAt:enabled && stage==='result' ? now : null,elapsed:0});
+  }
   function changeTimer() {
+    if(!timerEnabled)return;
     pushUndoSnapshot();
     const now=Date.now();setClockTick(now);
     setThrowTimer(t=>t.startedAt ? {startedAt:null,elapsed:t.elapsed+now-t.startedAt} : {...t,startedAt:now});
@@ -1420,7 +1430,7 @@ export default function BochaScout() {
 
   function pushUndoSnapshot() {
     const snapshot = {
-      whitePoint, newWhitePoint, positionDraft, endScoreDraft, throwDuration, selectedPlayerId,
+      whitePoint, newWhitePoint, positionDraft, endScoreDraft, throwDuration, selectedPlayerId, timerEnabled,
       throwTimer: {startedAt:null,elapsed:throwTimer.elapsed+(throwTimer.startedAt?Date.now()-throwTimer.startedAt:0)},
       playsHistory: structuredClone(playsHistory),
       commandHistory: structuredClone(commandHistory),
@@ -1449,7 +1459,7 @@ export default function BochaScout() {
     setUndoStack((prev) => prev.slice(0, -1));
     setSelectedPlayerId(snapshot.selectedPlayerId || '');
     setWhitePoint(snapshot.whitePoint || null);setNewWhitePoint(snapshot.newWhitePoint || null);
-    setPositionDraft(snapshot.positionDraft || null);setThrowTimer(snapshot.throwTimer || {startedAt:null,elapsed:0});
+    setTimerEnabled(snapshot.timerEnabled ?? true);setPositionDraft(snapshot.positionDraft || null);setThrowTimer(snapshot.throwTimer || {startedAt:null,elapsed:0});
     setThrowDuration(snapshot.throwDuration ?? null);setEndScoreDraft(snapshot.endScoreDraft || {athlete:'',opponent:''});
     setPlaysHistory(snapshot.playsHistory);
     setCommandHistory(snapshot.commandHistory);
@@ -1487,7 +1497,7 @@ export default function BochaScout() {
       setCompetitionScope(d.competitionScope);
       setSessionDate(d.sessionDate);setScoutMode(d.scoutMode || 'live');
       setWhitePoint(d.whitePoint || null);setNewWhitePoint(d.newWhitePoint || null);setPositionDraft(d.positionDraft || null);
-      setThrowDuration(d.throwDuration ?? null);
+      setTimerEnabled(d.timerEnabled ?? true);setThrowDuration(d.throwDuration ?? null);
       // Reloading cannot measure time while the app was closed.
       setThrowTimer({startedAt:null,elapsed:0});
       setSelectedAthleteId(d.selectedAthleteId);
@@ -1522,7 +1532,7 @@ export default function BochaScout() {
     setDraftReady(true);
     return listenAutosave(currentUserId);
   },[currentUserId]);
-  const draftSnapshot={version:1,selectedPlayerId,scoutMode,whitePoint,newWhitePoint,positionDraft,throwDuration,endScoreDraft,sessionKind,competitionName,competitionPhase,competitionLevel,competitionScope,sessionDate,selectedAthleteId,selectedOpponentId,selectedRedTeamEntryId,selectedBlueTeamEntryId,gameType,athlete,opponent,athleteClass,opponentClass,gender,athleteColor,started,finished,tieBreak,tieBreakRound,currentEnd,stage,whitePosition,newWhitePosition,selectedColor,selectedResult,playsHistory,commandHistory,discardedBalls,scores,matchHome,view};
+  const draftSnapshot={version:1,timerEnabled,selectedPlayerId,scoutMode,whitePoint,newWhitePoint,positionDraft,throwDuration,endScoreDraft,sessionKind,competitionName,competitionPhase,competitionLevel,competitionScope,sessionDate,selectedAthleteId,selectedOpponentId,selectedRedTeamEntryId,selectedBlueTeamEntryId,gameType,athlete,opponent,athleteClass,opponentClass,gender,athleteColor,started,finished,tieBreak,tieBreakRound,currentEnd,stage,whitePosition,newWhitePosition,selectedColor,selectedResult,playsHistory,commandHistory,discardedBalls,scores,matchHome,view};
   useLayoutEffect(()=>{
     if(!draftReady || !currentUserId || !draftId || (!started && !finished))return;
     const encoded=JSON.stringify(draftSnapshot);
@@ -1700,7 +1710,7 @@ export default function BochaScout() {
     }
 
     pushUndoSnapshot();
-    setThrowDuration(null);setThrowTimer({startedAt:null,elapsed:0});
+    setThrowDuration(null);const now=Date.now();setClockTick(now);setThrowTimer({startedAt:scoutMode==='live' && timerEnabled ? now : null,elapsed:0});
     setSelectedPlayerId(gameType==='Individual' ? (color===athleteColor?selectedAthleteId:selectedOpponentId) : '');
     setSelectedColor(color);
 
@@ -1717,7 +1727,7 @@ export default function BochaScout() {
     pushUndoSnapshot();
     if(scoutMode==='live') {
       const elapsed=throwTimer.elapsed+(throwTimer.startedAt?Date.now()-throwTimer.startedAt:0);
-      setThrowDuration(throwTimer.startedAt || throwTimer.elapsed>0 ? elapsed : null);
+      setThrowDuration(timerEnabled && (throwTimer.startedAt || throwTimer.elapsed>0) ? elapsed : null);
       setThrowTimer({startedAt:null,elapsed});
     }
     setSelectedResult(result);
@@ -1818,7 +1828,7 @@ export default function BochaScout() {
       result,
 
       time: scoutMode==='live' ? now.toLocaleTimeString('pt-BR') : null,
-      durationMs: throwDuration, timingSource: throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
+      durationMs: scoutMode==='live' && !timerEnabled ? null : throwDuration, timingSource: (scoutMode==='live' && !timerEnabled) || throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
       playerName: (gameType==='Individual' ? athletes.find(a=>a.id===selectedPlayerId)?.name : '') || (selectedColor===athleteColor ? athlete : opponent),
       playerId: gameType==='Individual' ? selectedPlayerId || null : null,
       whitePointFrom: whitePoint,
@@ -1887,7 +1897,7 @@ export default function BochaScout() {
       result: selectedResult,
 
       time: scoutMode==='live' ? now.toLocaleTimeString('pt-BR') : null,
-      durationMs: throwDuration, timingSource: throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
+      durationMs: scoutMode==='live' && !timerEnabled ? null : throwDuration, timingSource: (scoutMode==='live' && !timerEnabled) || throwDuration===null ? null : scoutMode==='recorded' ? 'manual-video' : 'stopwatch',
       playerName: (gameType==='Individual' ? athletes.find(a=>a.id===selectedPlayerId)?.name : '') || (selectedColor===athleteColor ? athlete : opponent),
       playerId: gameType==='Individual' ? selectedPlayerId || null : null,
       whitePointFrom: whitePoint,
@@ -3031,6 +3041,7 @@ export default function BochaScout() {
               <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
             </div>
             <div className="scout-end-pill">{currentEndName}</div>
+            {scoutMode==='live' && <button type="button" className={`scout-auto-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><span aria-hidden="true">⏱</span><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}
             <div className="scout-player scout-player-red">
               <strong title={redName}>{redName}</strong><span>VERMELHO</span>
               <div className="scout-ball-dots" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
