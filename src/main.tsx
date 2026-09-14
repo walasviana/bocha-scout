@@ -2,10 +2,11 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import BochaScout from "./components/BochaScout";
 import AuthGate from "./components/AuthGate";
+import LiveTimerBridge from "./components/LiveTimerBridge";
 import "./styles.css";
 
 function App() {
-  return <BochaScout />;
+  return <><BochaScout /><LiveTimerBridge /></>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
