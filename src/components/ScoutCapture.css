@@ -158,3 +158,29 @@ body .scout-live-page .scout-undo-button>svg{width:32px;height:32px}
  body:has(.scout-live-page) .home-notification>span{font-size:10px;line-height:12px;padding:2px 4px}
 }
 @media(max-width:380px){body .scout-live-page .scout-brand strong{font-size:17px}body .scout-live-page .scout-brand-emblem{width:30px;height:30px;flex-basis:30px}body:has(.scout-live-page) .home-header-actions{gap:8px}body:has(.scout-live-page) .hub-modern-header.account-toolbar:not(.is-scrolled){right:22px}}
+/* Phone refinements: full names, dedicated score row and compact timer state. */
+@media(max-width:600px){
+ body .scout-live-page .performance-athlete-heading{grid-template-columns:minmax(0,1fr);gap:0}
+ body .scout-live-page .performance-athlete-heading>svg{display:none}
+ body .scout-live-page .performance-athlete-heading>div{font-size:18px;line-height:1.35}
+ body .scout-live-page .performance-athlete-heading strong{word-break:normal;overflow-wrap:anywhere;white-space:normal}
+ body .scout-live-page .scout-scoreboard{grid-template-rows:72px auto auto auto 60px 44px;gap:0 8px}
+ body .scout-live-page .scout-player{display:grid;grid-template-rows:subgrid;grid-row:2/5;min-height:0;height:auto;align-self:stretch;padding:16px 12px 14px;row-gap:0}
+ body .scout-live-page .scout-player-red{grid-column:1/4}
+ body .scout-live-page .scout-player-blue{grid-column:4/7}
+ body .scout-live-page .scout-player strong{font-size:14px;line-height:1.35;min-height:2.7em;padding:0 6px;letter-spacing:-.2px;word-break:normal;overflow-wrap:anywhere}
+ body .scout-live-page .scout-player>span{margin:8px 0 14px;padding:0 6px;line-height:1.3}
+ body .scout-live-page .scout-ball-dots{align-self:end}
+ body .scout-live-page .scout-score{grid-area:5/1/6/7;display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:12px;align-items:center;text-align:center;width:100%;padding:8px 20px;min-width:0}
+ body .scout-live-page .scout-score b{font-size:34px;line-height:1.2;min-width:0;font-variant-numeric:tabular-nums;letter-spacing:-1px;overflow-wrap:anywhere}
+ body .scout-live-page .scout-score span{font-size:22px;line-height:1}
+ body .scout-live-page .scout-auto-timer{grid-area:6/1/7/4;gap:8px;padding:8px;min-width:0;max-width:100%;height:44px;margin:0}
+ body .scout-live-page .scout-auto-timer strong{font-size:18px;line-height:1.2;min-width:0;white-space:normal;overflow-wrap:anywhere}
+ body .scout-live-page .scout-auto-timer.is-off strong{font-size:14px;font-weight:600}
+ body .scout-live-page .scout-auto-timer svg{width:20px;height:20px;flex-shrink:0}
+ body .scout-live-page .scout-end-pill{grid-area:6/4/7/7;font-size:18px;height:44px;line-height:24px;padding:10px 4px}
+}
+@media(max-width:600px){body .scout-live-page .scout-auto-timer.is-off{background:#edf1f7;color:#52617a;border:1px solid #dce4f0}}
+@media(max-width:360px){body .scout-live-page .scout-brand-emblem{display:none}body .scout-live-page .scout-brand strong{font-size:18px}body .scout-live-page .scout-brand{padding-left:32px}}
+body:has(.scout-live-page) .hub-modern-header.account-toolbar:not(.is-scrolled){position:absolute!important}
+body:has(.scout-live-page) .hub-modern-header.account-toolbar.is-scrolled{position:fixed!important}
