@@ -4,6 +4,7 @@ import BochaScout from "./components/BochaScout";
 import AuthGate from "./components/AuthGate";
 
 import "./styles.css";
+import "./live-visual-v2.css";
 
 function App() {
   return <BochaScout />;
