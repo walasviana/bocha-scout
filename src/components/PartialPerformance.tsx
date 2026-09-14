@@ -14,15 +14,15 @@ export default function PartialPerformance({plays, gameType, athlete, opponent, 
     </div>
     <div className="partial-sides">{groups.map(group => {
       const s = calcStats(filter==='Geral'?group.plays:group.plays.filter(p=>p.end===filter));
-      return <article className={`performance-athlete performance-${group.color === "Vermelho" ? "red" : "blue"}`} key={group.id} style={{borderTop: `4px solid ${group.color === 'Vermelho' ? '#dc2626' : '#2563eb'}`}}>
+      return <article className={`performance-athlete performance-${group.color === "Vermelho" ? "red" : "blue"}`} key={group.id} style={{borderTop: `4px solid ${group.color === 'Vermelho' ? '#ff172c' : '#0075ff'}`}}>
         <header className="performance-athlete-heading"><div><strong>{group.name}</strong><small>{group.color} · {filter}</small></div><User weight="fill" aria-hidden="true" /></header>
         <div className="performance-metric"><Target aria-hidden="true"/><strong>Eficiência</strong><b>{s.total ? s.efficiency.toFixed(1)+'%' : '—'}</b></div>
         <div className="performance-metric"><ChartBar weight="fill" aria-hidden="true"/><strong>Precisão</strong><span>{s.total ? s.accuracy.toFixed(1)+'% · ' : ''}{s.total} jogadas</span></div>
         <div className="performance-results"><div><b>{s.acertos}</b><span>Acerto</span></div><div><b>{s.funcionais}</b><span>Funcional</span></div><div><b>{s.erros}</b><span>Erro</span></div></div>
-        <span className="performance-duration">Tempo médio: {formatDuration(s.averageDurationMs)}{s.timedPlays ? ' ('+s.timedPlays+' jogadas)' : ''}</span>
+        {s.timedPlays > 0 && <span className="performance-duration">Tempo médio: {formatDuration(s.averageDurationMs)}{s.timedPlays ? ' ('+s.timedPlays+' jogadas)' : ''}</span>}
       </article>;
     })}</div>
-    {!isHistory&&<details className="live-foundation-comparison" onToggle={e=>setComparisonOpen(e.currentTarget.open)}>
+    {!isHistory&&plays.length>0&&<details className="live-foundation-comparison" onToggle={e=>setComparisonOpen(e.currentTarget.open)}>
       <summary>Comparar fundamentos <span>{filter} · vermelho e azul</span></summary>
       {comparisonOpen&&<FoundationRadar series={groups} gameType={gameType} selectedEnd={filter} hideFilters/>}
     </details>}

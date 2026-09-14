@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { ArrowCounterClockwise, Clock, Timer } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CaretLeft, Clock, Timer } from '@phosphor-icons/react';
 import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
 import FoundationRadar from './FoundationRadar';
@@ -3012,8 +3012,7 @@ export default function BochaScout() {
         <div style={styles.container} className="scout-live-container">
           <nav className="scout-match-nav" aria-label="Navegação da partida">
               <button type="button" className="scout-home-button" onClick={()=>{setView("dashboard");setMatchHome(true);}}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v11h5v-6h4v6h5V9" /></svg>
-                Início
+                <CaretLeft aria-hidden="true"/><span className="scout-back-label">Início</span>
               </button>
               <details className="scout-match-menu" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))event.currentTarget.open=false;}} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.currentTarget.open=false;event.currentTarget.querySelector("summary")?.focus();}}}>
                 <summary aria-label="Opções da partida" title="Opções da partida"><span aria-hidden="true">⋮</span></summary>
@@ -3024,7 +3023,7 @@ export default function BochaScout() {
             </nav>
           <section className="scout-scoreboard" aria-label="Placar da partida">
             <div className="scout-brand">
-              <img src="/bocha-scout-emblem.png" alt="" className="scout-brand-emblem" />
+              <img src="/home-ball-logo.png" alt="" className="scout-brand-emblem" />
               <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
             </div>
             <div className="scout-end-pill">{currentEndName}</div>
@@ -3043,6 +3042,7 @@ export default function BochaScout() {
               </div>
             </div>
           </section>
+
 
           {whitePosition && (
             <div className="scout-white-position">
@@ -3443,6 +3443,7 @@ export default function BochaScout() {
             )}
           </section>
 
+
           <div className="scout-sticky-actions">
             <button
               onClick={undoLastAction}
@@ -3452,7 +3453,7 @@ export default function BochaScout() {
               <ArrowCounterClockwise aria-hidden="true" size={32}/> Desfazer
             </button>
             <div className="scout-last-action"><Clock aria-hidden="true" size={36}/>
-              <small>Última ação</small>
+              <small>Última ação</small><span className="scout-last-dash" aria-hidden="true">-</span>
               <strong>{lastRecordedPlay ? `${lastRecordedPlay.play} · ${lastRecordedPlay.result}` : "Nenhuma jogada registrada"}</strong>
             </div>
           </div>

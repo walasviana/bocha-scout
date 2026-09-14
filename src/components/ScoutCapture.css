@@ -1,13 +1,160 @@
-/* Capture visual theme. Existing event handlers and match state are preserved. */
-body .scout-live-page{background:#eff4fa!important;color:#0c1851;font-family:Inter,system-ui,sans-serif;padding:16px 16px 175px!important}
-body .scout-live-container{max-width:980px!important;background:#f9fbff;border:1px solid white;border-radius:28px;padding:20px!important;box-shadow:0 14px 45px #244d7c12}
-body .scout-scoreboard{position:relative;top:auto;background:transparent;box-shadow:none;color:#0c1851;border-radius:0;padding:4px 0 20px;grid-template-columns:minmax(0,1fr) minmax(100px,.58fr) minmax(0,1fr);grid-template-rows:70px 48px 45px 70px;grid-template-areas:"brand brand brand" "red timer blue" "red end blue" "red score blue";gap:10px 18px}
-body .scout-brand{letter-spacing:-.04em;gap:15px}.scout-live-page .scout-brand strong{font-size:34px}.scout-live-page .scout-brand strong span{color:#0075ff}.scout-live-page .scout-brand small{color:#506499;letter-spacing:.15em}.scout-live-page .scout-brand-emblem{width:60px;height:60px;flex-basis:60px}
-body .scout-auto-timer{grid-area:timer;position:static;min-width:0;width:100%;height:100%;background:#e8f0fd;color:#0c1851;border:0;border-radius:16px;box-shadow:none;padding:6px;gap:8px}.scout-live-page .scout-auto-timer strong{font-size:22px}.scout-live-page .scout-auto-timer.is-running{color:#006bed}
-body .scout-end-pill{justify-self:stretch;text-align:center;background:#e8f0fd;color:#0075ff;border:0;border-radius:14px;padding:10px 5px;font-size:22px}
-body .scout-player{height:100%;justify-content:space-between;padding:22px 16px;border-radius:22px;background:#ffe8eb;border:1px solid #f9dce2}.scout-live-page .scout-player-blue{background:#deebff;border-color:#d8e6fc}.scout-live-page .scout-player strong{white-space:normal;overflow-wrap:anywhere;max-width:100%;font-size:22px;line-height:1.15;letter-spacing:-.04em}.scout-live-page .scout-player>span{color:#49629d;font-size:17px;font-weight:500;letter-spacing:0;margin-bottom:auto;padding-top:7px}.scout-live-page .scout-ball-dots{width:100%;justify-content:space-between;gap:3px}.scout-live-page .scout-ball-dots img{width:calc((100% - 15px)/6);height:auto;aspect-ratio:1;max-width:40px;object-fit:contain}.scout-live-page .scout-score{gap:12px}.scout-live-page .scout-score b{font-size:54px}.scout-live-page .scout-score span{color:#9aabd0}
-.scout-live-page .scout-live-performance,.scout-live-page .partial-performance{max-width:none;margin:16px 0}.scout-live-page .partial-performance{padding:20px;border:1px solid #e0e9f8;border-radius:24px;background:#fff}.partial-performance h3{display:flex;gap:12px;align-items:center}.partial-performance h3>svg{color:#0075ff;width:30px;height:30px;flex-shrink:0}.scout-live-page .partial-performance h3{color:#0c1851;font-size:26px;letter-spacing:-.04em}
-.scout-live-page .partial-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:10px;margin:20px 0}.scout-live-page .partial-tabs button{flex:1;white-space:nowrap;border:0;border-radius:17px;background:#eaf1fc;color:#0c1851;min-height:60px;font-size:18px}.scout-live-page .partial-tabs button[aria-pressed=true]{color:white;background:#0075ff}
-.performance-athlete-heading{display:flex;justify-content:space-between;gap:12px;align-items:center}.performance-athlete-heading>div{min-width:0;display:flex;flex-direction:column;gap:7px}.performance-athlete-heading>svg{flex-shrink:0;width:52px;height:52px;border-radius:50%;padding:13px;background:#ffe8eb;color:#ff172c}.performance-blue .performance-athlete-heading>svg{background:#e7f0ff;color:#0075ff}.performance-metric{display:flex;align-items:center;gap:12px}.performance-metric>svg{width:26px;height:26px;flex-shrink:0}.performance-metric>b,.performance-metric>span{margin-left:auto;text-align:right}.performance-results{display:grid;grid-template-columns:repeat(3,1fr);padding:14px 6px;border-radius:18px;background:#f0f5fc}.performance-results>div{display:flex;flex-direction:column;align-items:center;gap:4px}.performance-results>div+div{border-left:1px solid #d4def1}.performance-results b{color:#008a43}.performance-results>div:nth-child(2) b{color:#e9a000}.performance-results>div:nth-child(3) b{color:#fa1025}.scout-live-page .partial-sides{gap:16px}.scout-live-page .partial-sides article{padding:22px 20px;background:#fff;border:1px solid #dde7f8;border-radius:22px;gap:22px;color:#0c1851}.scout-live-page .performance-athlete-heading strong{font-size:21px;line-height:1.2;letter-spacing:-.04em}.scout-live-page .performance-athlete-heading small{font-size:17px;color:#5166a2}.scout-live-page .performance-metric{font-size:18px}.scout-live-page .performance-metric b{font-size:22px}.scout-live-page .performance-metric span{font-size:16px;color:#5166a2}.scout-live-page .performance-results b{font-size:32px}.scout-live-page .performance-results span{font-size:16px;color:#5166a2}.scout-live-page .performance-duration{color:#5166a2}
-body .scout-sticky-actions{display:flex;flex-direction:column-reverse;gap:10px;padding:10px max(16px,calc((100vw - 900px)/2));background:#f4f8fff5;border-color:#e1e9f7}.scout-live-page .scout-last-action{display:grid;grid-template-columns:40px 1fr;column-gap:14px;border:1px solid #dbe5f6;border-radius:16px;padding:10px 18px;background:#fff}.scout-last-action>svg{grid-row:1/3;align-self:center;color:#0c1851}.scout-live-page .scout-last-action small{font-weight:700;font-size:16px;color:#0c1851}.scout-live-page .scout-last-action strong{color:#5166a2;font-weight:400;font-size:15px}.scout-live-page .scout-undo-button{display:flex;align-items:center;justify-content:center;gap:15px;background:#0758aa;border-radius:18px;min-height:58px;font-size:22px}.scout-live-page .scout-undo-button:disabled{opacity:.5}.scout-live-page .scout-action-card,.scout-live-page .precise-position,.scout-live-page .throw-timer,.scout-live-page .scout-partial-history{border:1px solid #dce6f7!important;border-radius:22px!important;background:#fff!important;color:#0c1851}.scout-live-page button:focus-visible{outline:3px solid #0075ff;outline-offset:3px}
-@media(max-width:640px){body .scout-live-page{padding:6px 6px 165px!important}body .scout-live-container{padding:10px!important;border-radius:20px}body .scout-scoreboard{grid-template-columns:minmax(0,1fr) 74px minmax(0,1fr);grid-template-rows:54px 36px 34px 46px;gap:7px}.scout-live-page .scout-brand strong{font-size:25px}.scout-live-page .scout-brand-emblem{width:44px;height:44px;flex-basis:44px}body .scout-player{padding:13px 8px;border-radius:16px}.scout-live-page .scout-player strong{font-size:14px}.scout-live-page .scout-player>span{font-size:12px}.scout-live-page .scout-score b{font-size:33px}.scout-live-page .scout-score{gap:5px}.scout-live-page .scout-score span{font-size:22px}body .scout-end-pill{font-size:16px;padding:7px 2px}.scout-live-page .scout-auto-timer strong{font-size:15px}.scout-auto-timer svg{width:20px}.scout-live-page .partial-performance{padding:12px}.scout-live-page .partial-performance h3{font-size:21px}.scout-live-page .partial-tabs{gap:6px}.scout-live-page .partial-tabs button{min-height:45px;padding:8px 10px;font-size:13px;border-radius:12px}.scout-live-page .partial-sides{gap:8px}.scout-live-page .partial-sides article{padding:13px 9px;gap:15px;border-radius:16px}.scout-live-page .performance-athlete-heading strong{font-size:14px}.scout-live-page .performance-athlete-heading small{font-size:12px}.performance-athlete-heading>svg{width:28px;height:28px;padding:6px}.performance-athlete-heading{gap:5px}.scout-live-page .performance-metric{gap:5px;font-size:12px;flex-wrap:wrap}.performance-metric>svg{width:18px;height:18px}.scout-live-page .performance-metric b,.scout-live-page .performance-metric span{font-size:12px}.scout-live-page .performance-results b{font-size:26px}.scout-live-page .performance-results span{font-size:11px}.scout-live-page .performance-duration{font-size:11px}.scout-live-page .scout-action-card{margin:12px 0!important}.scout-live-page .scout-live-performance{margin:12px 0}}
+/* Reference: selected Bocha Scout screen, 1024px wide. Scoped to live capture. */
+body:has(.scout-live-page){background:#edf2f7}
+body .scout-live-page{--s:clamp(.35px,calc((100vw - 104px)/920),1px);padding:15px 30px 30px!important;background:#edf2f7!important;color:#09144f;font-family:Arial,Helvetica,sans-serif!important}
+body .scout-live-container{position:relative;max-width:964px!important;padding:0 22px 24px!important;margin:auto!important;border:1px solid white;border-radius:30px;background:#f9fbff;box-shadow:0 18px 50px #244d7c13;box-sizing:border-box}
+.scout-live-page *{box-sizing:border-box}
+body:has(.scout-live-page) .hub-modern-header.account-toolbar{display:flex!important;position:absolute!important;top:calc(42 * var(--live-scale,1px));right:max(7.3vw,calc((100vw - 880px)/2));padding:0!important;min-height:0;background:transparent;border:0;width:auto;z-index:100}
+body:has(.scout-live-page) .home-brand{display:none}
+body:has(.scout-live-page) .home-header-actions{gap:70px}
+body:has(.scout-live-page) .home-account>summary{width:84px;height:84px;font-size:40px;background:#0075ff;font-weight:700}
+body:has(.scout-live-page) .home-notification{width:58px!important;height:70px}
+body:has(.scout-live-page) .home-notification svg{width:54px;height:54px}
+body:has(.scout-live-page) .home-notification>span{font-size:24px;line-height:30px;padding:4px 10px}
+body:has(.scout-live-page) .home-account-menu{top:90px}
+@media(max-width:1023px){body:has(.scout-live-page) .home-header-actions{gap:6vw}body:has(.scout-live-page) .home-account>summary{width:8.2vw;height:8.2vw;font-size:4vw}body:has(.scout-live-page) .home-notification{width:5.7vw!important;height:7vw}body:has(.scout-live-page) .home-notification svg{width:5.3vw;height:5.3vw}body:has(.scout-live-page) .home-notification>span{font-size:2.3vw;line-height:3vw;padding:2px 5px}body:has(.scout-live-page) .hub-modern-header.account-toolbar{top:4.2vw}}
+@media(max-width:640px){body .scout-live-page{--s:calc((100vw - 40px)/920);padding:6px!important}body .scout-live-container{padding:0 13px 14px!important;border-radius:18px}body:has(.scout-live-page) .hub-modern-header.account-toolbar{right:7vw;top:5vw}}
+body .scout-match-nav{position:absolute;left:calc(12 * var(--s));top:calc(28 * var(--s));padding:0;background:transparent;color:#09144f;width:calc(54 * var(--s));z-index:30}
+.scout-live-page .scout-home-button{border:0;background:transparent;color:inherit;padding:0;width:calc(54 * var(--s));height:calc(82 * var(--s))}.scout-home-button>svg{width:calc(48 * var(--s));height:calc(48 * var(--s))}.scout-back-label{position:absolute;width:calc(1 * var(--s));height:calc(1 * var(--s));overflow:hidden;clip-path:inset(50%)}
+.scout-live-page .scout-match-menu{position:absolute;top:calc(1415 * var(--s));left:0}.scout-live-page .scout-match-menu>summary{color:#09144f;background:#e8f0fd}
+body .scout-scoreboard{position:relative;top:auto;display:grid;grid-template-columns:minmax(0,338fr) minmax(0,196fr) minmax(0,334fr);grid-template-rows:calc(132 * var(--s)) calc(82 * var(--s)) calc(62 * var(--s)) calc(96 * var(--s));grid-template-areas:"brand brand brand" "red timer blue" "red end blue" "red score blue";gap:0 calc(26 * var(--s));align-items:center;padding:0;background:transparent;box-shadow:none;color:#09144f;border-radius:0}
+body .scout-brand{padding-left:calc(84 * var(--s));gap:calc(24 * var(--s));letter-spacing:calc(-1.5 * var(--s));align-self:start;height:calc(132 * var(--s))}.scout-live-page .scout-brand strong{font-size:calc(46 * var(--s));font-weight:800}.scout-live-page .scout-brand strong span{color:#0075ff}.scout-live-page .scout-brand small{display:none}.scout-live-page .scout-brand-emblem{width:calc(88 * var(--s));height:calc(88 * var(--s));flex-basis:calc(88 * var(--s));object-fit:cover}
+body .scout-player{height:calc(248 * var(--s));align-self:start;padding:calc(32 * var(--s)) calc(18 * var(--s)) calc(29 * var(--s));border-radius:calc(24 * var(--s));background:#ffe7ea;border:calc(1 * var(--s)) solid #dfe7f5;position:relative;display:flex;flex-direction:column;min-width:0}.scout-live-page .scout-player-blue{background:#deebff;border-color:#deebff}.scout-live-page .scout-player strong{font-size:calc(30 * var(--s));line-height:1.17;letter-spacing:calc(-1 * var(--s));white-space:normal;overflow-wrap:normal;max-width:100%;padding-left:calc(30 * var(--s));overflow:visible;text-overflow:clip}.scout-live-page .scout-player-blue strong{padding-left:0;padding-right:calc(30 * var(--s))}.scout-live-page .scout-player>span{color:#4964a1;font-size:calc(28 * var(--s));font-weight:400;letter-spacing:-.calc(5 * var(--s));margin:calc(4 * var(--s)) 0 auto;padding:0 0 0 calc(30 * var(--s))}.scout-live-page .scout-player-blue>span{padding:0 calc(30 * var(--s)) 0 0}.scout-player:before{content:"";position:absolute;top:calc(26 * var(--s));left:calc(16 * var(--s));width:calc(11 * var(--s));height:calc(112 * var(--s));background:#ff172c;border-radius:calc(8 * var(--s))}.scout-player-blue:before{left:auto;right:calc(18 * var(--s));background:#0075ff}
+.scout-live-page .scout-ball-dots{width:100%;display:flex;justify-content:space-between;gap:calc(4 * var(--s));margin:0}.scout-live-page .scout-ball-dots img{width:calc(45 * var(--s));height:calc(45 * var(--s));max-width:16%;object-fit:contain}.scout-live-page .scout-ball-dots .is-used{opacity:.22;filter:grayscale(1)}
+body .scout-auto-timer{grid-area:timer;position:static;width:100%;min-width:0;height:calc(63 * var(--s));padding:0;display:flex;align-items:center;justify-content:center;gap:calc(20 * var(--s));color:#09144f;background:#e8f0fc;border:0;border-radius:calc(21 * var(--s));box-shadow:none;align-self:end;margin-bottom:0}.scout-live-page .scout-auto-timer strong{font-size:calc(34 * var(--s))}.scout-live-page .scout-auto-timer svg{width:calc(40 * var(--s));height:calc(40 * var(--s))}.scout-live-page .scout-auto-timer.is-running{color:#0075ff}
+body .scout-end-pill{grid-area:end;width:100%;padding:calc(10 * var(--s)) 0;margin-top:calc(10 * var(--s));text-align:center;font-size:calc(34 * var(--s));font-weight:800;color:#0075ff;background:#e8f0fc;border:0;border-radius:calc(21 * var(--s));line-height:calc(40 * var(--s))}.scout-live-page .scout-score{display:flex;align-items:center;justify-content:space-between;gap:calc(12 * var(--s))}.scout-live-page .scout-score b{font-size:calc(78 * var(--s));line-height:1;font-weight:800}.scout-live-page .scout-score span{font-size:calc(52 * var(--s));color:#9eadd0;font-weight:500}
+.scout-live-page .scout-live-performance{margin:calc(26 * var(--s)) calc(-2 * var(--s)) 0}.scout-live-page .partial-performance{margin:0;padding:calc(24 * var(--s)) 0 0;background:#ffffff88;border:calc(1 * var(--s)) solid #e7eef9;border-radius:calc(26 * var(--s))}.scout-live-page .partial-performance h3{display:flex;align-items:center;gap:calc(30 * var(--s));padding:0 calc(14 * var(--s));margin:0 0 calc(22 * var(--s));font-size:calc(40 * var(--s));line-height:calc(48 * var(--s));color:#09144f;letter-spacing:calc(-1 * var(--s))}.scout-live-page .partial-performance h3>svg{width:calc(49 * var(--s));height:calc(49 * var(--s));flex-shrink:0;color:#0075ff}
+.scout-live-page .partial-tabs.end-filter{display:flex;gap:calc(12 * var(--s));padding:0 calc(14 * var(--s));margin:0 0 calc(21 * var(--s));background:transparent;border-radius:0;overflow-x:auto}.scout-live-page .partial-tabs.end-filter button{flex:1;height:calc(82 * var(--s));min-height:0;padding:0 calc(6 * var(--s));font-size:calc(27 * var(--s));line-height:1;border:0!important;border-radius:calc(22 * var(--s))!important;background:#e9f1fd!important;color:#09144f!important}.scout-live-page .partial-tabs.end-filter button[aria-pressed=true]{background:#0075ff!important;color:#fff!important}
+.scout-live-page .partial-sides{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:calc(18 * var(--s))}.scout-live-page .partial-sides article{display:flex;flex-direction:column;padding:calc(28 * var(--s)) calc(22 * var(--s)) calc(19 * var(--s));gap:0;border:calc(1 * var(--s)) solid #dce6fa;border-top-width:calc(8 * var(--s))!important;border-radius:calc(26 * var(--s));background:#fdfdff;color:#09144f;overflow-wrap:normal}
+.performance-athlete-heading{display:flex;align-items:center;justify-content:space-between;gap:calc(12 * var(--s));padding:0 calc(14 * var(--s)) calc(16 * var(--s));border-bottom:calc(1 * var(--s)) solid #dce4f4;min-height:calc(127 * var(--s))}.performance-athlete-heading>div{min-width:0}.scout-live-page .performance-athlete-heading strong{display:block;font-size:calc(30 * var(--s));line-height:1.19;letter-spacing:-.calc(8 * var(--s))}.scout-live-page .performance-athlete-heading small{display:block;font-size:calc(28 * var(--s));line-height:1.3;color:#5066a3;margin-top:calc(7 * var(--s));letter-spacing:-.calc(7 * var(--s))}.performance-athlete-heading>svg{flex-shrink:0;width:calc(94 * var(--s));height:calc(94 * var(--s));padding:calc(24 * var(--s));border-radius:50%;color:#ff172c;background:#ffe9ed}.performance-blue .performance-athlete-heading>svg{color:#0075ff;background:#e8f1ff}
+.performance-metric{display:flex;align-items:center;gap:calc(30 * var(--s));padding:calc(24 * var(--s)) calc(14 * var(--s)) calc(18 * var(--s));min-height:calc(89 * var(--s))}.performance-metric>svg{width:calc(42 * var(--s));height:calc(42 * var(--s));flex-shrink:0}.scout-live-page .performance-metric strong{font-size:calc(28 * var(--s));letter-spacing:-.calc(8 * var(--s))}.scout-live-page .performance-metric b{font-size:calc(30 * var(--s));margin-left:auto}.scout-live-page .performance-metric>span{font-size:calc(28 * var(--s));color:#5268a6;margin-left:auto;letter-spacing:calc(-1 * var(--s));white-space:nowrap}.performance-metric+ .performance-metric{padding-top:calc(16 * var(--s));padding-bottom:calc(23 * var(--s))}
+.performance-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:#f0f5fc;border-radius:calc(22 * var(--s));padding:calc(20 * var(--s)) 0 calc(22 * var(--s));margin-top:0}.performance-results>div{display:flex;flex-direction:column;align-items:center;position:relative}.performance-results>div+div:before{content:"";position:absolute;left:0;top:calc(17 * var(--s));bottom:0;border-left:calc(1 * var(--s)) solid #d1dcf1}.scout-live-page .performance-results b{font-size:calc(50 * var(--s));line-height:1.2;color:#078845}.scout-live-page .performance-results>div:nth-child(2) b{color:#ffaa00}.scout-live-page .performance-results>div:nth-child(3) b{color:#ff0d1d}.scout-live-page .performance-results span{font-size:calc(25 * var(--s));line-height:1.4;color:#455f9c;letter-spacing:-.calc(8 * var(--s))}.performance-duration{margin-top:calc(10 * var(--s))}.live-foundation-comparison{margin:calc(16 * var(--s))}
+body .scout-sticky-actions{position:static;display:flex;flex-direction:column-reverse;gap:calc(20 * var(--s));margin:calc(20 * var(--s)) calc(2 * var(--s)) 0;padding:0;background:transparent;border:0;box-shadow:none}.scout-live-page .scout-last-action{display:grid;grid-template-columns:calc(92 * var(--s)) 1fr calc(28 * var(--s));column-gap:calc(18 * var(--s));padding:calc(22 * var(--s)) calc(40 * var(--s));border:calc(1 * var(--s)) solid #d6e2f7;border-radius:calc(26 * var(--s));min-height:calc(125 * var(--s));background:#f9fbff}.scout-last-action>svg{grid-row:1/3;width:calc(72 * var(--s));height:calc(72 * var(--s));align-self:center;color:#09144f}.scout-live-page .scout-last-action small{font-size:calc(30 * var(--s));line-height:1.4;color:#09144f;font-weight:700}.scout-live-page .scout-last-action strong{grid-column:2;font-size:calc(28 * var(--s));line-height:1.4;color:#5268a6;font-weight:400}.scout-last-dash{grid-row:1/3;grid-column:3;align-self:center;font-size:calc(48 * var(--s));font-weight:800}.scout-live-page .scout-undo-button{display:flex;align-items:center;justify-content:center;gap:calc(45 * var(--s));min-height:calc(120 * var(--s));border:0;border-radius:calc(28 * var(--s));background:#0758aa;color:white;font-size:calc(36 * var(--s));font-weight:700}.scout-live-page .scout-undo-button>svg{width:calc(58 * var(--s));height:calc(58 * var(--s))}.scout-live-page .scout-undo-button:disabled{opacity:1;cursor:not-allowed}.scout-live-page .scout-undo-button:not(:disabled):hover{background:#064a91}.scout-live-page button:focus-visible{outline:calc(3 * var(--s)) solid #0075ff;outline-offset:calc(4 * var(--s))}
+.scout-capture-tools{margin-top:calc(55 * var(--s))}.scout-live-page .scout-action-card,.scout-live-page .precise-position,.scout-live-page .throw-timer,.scout-live-page .scout-partial-history{border:calc(1 * var(--s)) solid #dce6f7!important;border-radius:calc(22 * var(--s))!important;background:#fff!important;color:#09144f}
+/* Shared alignment and the same clear visual language throughout capture. */
+body .scout-live-page .scout-live-performance,body .scout-live-page .partial-performance{max-width:none;width:auto}
+body .scout-live-page .scout-live-performance{margin:24px 0}
+body .scout-live-page .performance-athlete-heading{position:relative;display:grid;grid-template-columns:minmax(0,1fr) calc(80 * var(--s));min-height:calc(140 * var(--s));padding-left:calc(14 * var(--s));padding-right:calc(8 * var(--s));align-items:start}
+body .scout-live-page .performance-athlete-heading>div{display:grid;grid-template-rows:3lh auto;font-size:calc(28 * var(--s));line-height:1.16}
+body .scout-live-page .performance-athlete-heading strong{font-size:inherit;line-height:inherit;overflow-wrap:anywhere;letter-spacing:calc(-1 * var(--s))}
+body .scout-live-page .performance-athlete-heading small{white-space:nowrap;font-size:calc(25 * var(--s));align-self:end}
+body .scout-live-page .performance-athlete-heading>svg{width:calc(80 * var(--s));height:calc(80 * var(--s));padding:calc(20 * var(--s));align-self:center}
+body .scout-live-page .performance-results{margin-top:auto}
+body .scout-live-page .scout-player strong{font-size:calc(28 * var(--s));min-height:3.51em;line-height:1.17;overflow-wrap:anywhere}
+body .scout-live-page .scout-player>span{margin-top:0;font-size:calc(25 * var(--s))}
+body .scout-live-page .scout-undo-button:disabled{background:#0758aa!important;color:#fff!important}
+body .scout-live-page .scout-last-action strong{white-space:normal;overflow-wrap:anywhere}
+body .scout-live-page .scout-match-menu{position:relative;top:auto;left:auto;margin-top:0}
+body .scout-live-page .scout-match-nav{width:auto;gap:0}
+body .scout-live-page .scout-match-menu>summary{width:24px;background:transparent;font-size:22px}
+body .scout-live-page .scout-partial-history{width:100%;max-width:none;margin:24px 0;padding:24px;background:#f9fbff!important;border:1px solid #dce6f7!important;border-radius:24px;box-shadow:none;color:#09144f}
+body .scout-live-page .scout-partial-history>label{display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:24px;font-weight:700;color:#09144f;margin-bottom:20px}
+body .scout-live-page .scout-partial-history select{min-height:44px;min-width:110px;border:1px solid #dbe6f8;border-radius:12px;padding:8px 14px;background:#e9f1fd;color:#09144f;font:inherit;font-size:16px}
+body .scout-live-page .scout-partial-history-title strong{font-size:22px;color:#09144f}
+body .scout-live-page .scout-partial-history-title span,body .scout-live-page .scout-partial-history>p{color:#5268a6;font-size:16px}
+body .scout-live-page .scout-partial-history-title b{background:#0075ff;color:#fff;border-radius:12px}
+body .scout-live-page .scout-partial-history-item{border:1px solid #dce6f7;border-left:5px solid #0075ff;background:#edf4ff;padding:16px;border-radius:16px;gap:16px}
+body .scout-live-page .scout-partial-history-item.is-vermelho{border-left-color:#ff172c;background:#fff0f2}
+body .scout-live-page .scout-partial-history-item strong{color:#09144f;font-size:17px}
+body .scout-live-page .scout-partial-history-item span{font-size:14px;color:#5268a6}
+body .scout-live-page .scout-partial-history-item .scout-history-player{color:#09144f;font-weight:700}
+body .scout-live-page .scout-partial-history-item button{min-height:44px;background:white;color:#c81830;border:1px solid #f3cad2;font-size:14px;font-weight:700}
+.hub-modern-header.account-toolbar{position:sticky!important;top:0;transition:transform .22s ease,opacity .22s ease;will-change:transform}
+.hub-modern-header.account-toolbar.is-retracted:not(:focus-within){transform:translateY(calc(-100% - 50px));opacity:0;pointer-events:none}
+body:has(.scout-live-page) .hub-modern-header.account-toolbar{position:fixed!important}
+body:has(.scout-live-page) .hub-modern-header.account-toolbar.is-scrolled{top:0;left:0;right:0;width:100%;padding:12px 24px!important;background:#f9fbfff5;border-bottom:1px solid #dce6f7;min-height:64px}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-brand{display:flex}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-account>summary{width:40px;height:40px;font-size:22px}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-notification{width:36px!important;height:40px}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-notification svg{width:28px;height:28px}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-notification>span{font-size:12px;line-height:16px;padding:2px 4px}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-header-actions{gap:24px}
+body:has(.scout-live-page) .hub-modern-header.is-scrolled .home-account-menu{top:48px}
+@media(prefers-reduced-motion:reduce){.hub-modern-header.account-toolbar{transition:none}}
+@media(max-width:640px){body .scout-live-page .scout-partial-history{padding:14px}body .scout-live-page .scout-partial-history>label{font-size:20px}body .scout-live-page .scout-partial-history-item{padding:10px;gap:8px;grid-template-columns:32px minmax(0,1fr) auto}body .scout-live-page .scout-partial-history-item img{width:30px;height:30px}body .scout-live-page .scout-partial-history-item strong{font-size:14px}body .scout-live-page .scout-partial-history-item span{font-size:12px}body .scout-live-page .scout-match-menu>summary{width:16px;font-size:16px}body .scout-live-page .scout-match-nav{left:4px}body .scout-live-page .performance-metric{gap:calc(14 * var(--s))}}
+/* Both athletes share row heights, including when one name wraps further. */
+body .scout-live-page .partial-sides{grid-template-rows:auto auto auto auto auto}
+body .scout-live-page .partial-sides article{display:grid;grid-template-rows:subgrid;grid-row:span 5;row-gap:0}
+body .scout-live-page .performance-athlete-heading{min-height:calc(130 * var(--s));align-items:stretch}
+body .scout-live-page .performance-athlete-heading>div{grid-template-rows:1fr auto}
+body .scout-live-page .performance-athlete-heading strong{min-height:2.34em}
+body .scout-live-page .performance-results{align-self:end;margin-top:0}
+/* Readable responsive cards: two columns on desktop, full-width on phones. */
+body .scout-live-page .partial-performance{padding:20px 0 0;border-radius:22px}
+body .scout-live-page .partial-performance h3{font-size:26px;line-height:1.25;gap:14px;padding:0 18px;margin-bottom:20px;letter-spacing:-.6px}
+body .scout-live-page .partial-performance h3>svg{width:30px;height:30px}
+body .scout-live-page .partial-tabs.end-filter{padding:0 16px;gap:8px;margin-bottom:18px}
+body .scout-live-page .partial-tabs.end-filter button{height:52px;min-height:44px;font-size:16px;border-radius:14px!important;flex:1 0 60px}
+body .scout-live-page .partial-sides{gap:0 16px}
+body .scout-live-page .partial-sides article{padding:20px;border-top-width:5px!important;border-radius:20px}
+body .scout-live-page .performance-athlete-heading{grid-template-columns:minmax(0,1fr) 48px;gap:14px;min-height:92px;padding:0 0 16px}
+body .scout-live-page .performance-athlete-heading>div{font-size:21px;line-height:1.25}
+body .scout-live-page .performance-athlete-heading strong{letter-spacing:-.45px;min-height:2.5em}
+body .scout-live-page .performance-athlete-heading small{font-size:15px;line-height:1.4;letter-spacing:0;margin-top:6px;white-space:normal}
+body .scout-live-page .performance-athlete-heading>svg{width:48px;height:48px;padding:12px}
+body .scout-live-page .performance-metric{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:12px;padding:18px 0;min-height:64px}
+body .scout-live-page .performance-metric+ .performance-metric{border-top:1px solid #edf1f8}
+body .scout-live-page .performance-metric>svg{width:24px;height:24px}
+body .scout-live-page .performance-metric strong{font-size:17px;line-height:1.35;letter-spacing:-.2px}
+body .scout-live-page .performance-metric b{font-size:20px;line-height:1.35;text-align:right;margin:0;overflow-wrap:anywhere}
+body .scout-live-page .performance-metric>span{font-size:15px;line-height:1.45;text-align:right;white-space:normal;letter-spacing:0;margin:0;overflow-wrap:anywhere}
+body .scout-live-page .performance-results{padding:14px 0;border-radius:15px;align-self:stretch}
+body .scout-live-page .performance-results b{font-size:34px;line-height:1.15}
+body .scout-live-page .performance-results span{font-size:14px;line-height:1.5;letter-spacing:0}
+body .scout-live-page .performance-results>div+div:before{top:5px;bottom:5px}
+body .scout-live-page .performance-duration{font-size:13px;color:#5268a6;margin-top:12px}
+body .scout-live-page .scout-last-action{min-height:90px;padding:18px 22px;grid-template-columns:48px minmax(0,1fr) 20px;gap:0 16px;border-radius:20px}
+body .scout-live-page .scout-last-action>svg{width:44px;height:44px}
+body .scout-live-page .scout-last-action small{font-size:19px}
+body .scout-live-page .scout-last-action strong{font-size:17px}
+body .scout-live-page .scout-last-dash{font-size:28px}
+body .scout-live-page .scout-undo-button{min-height:64px;font-size:22px;gap:18px;border-radius:18px}
+body .scout-live-page .scout-undo-button>svg{width:32px;height:32px}
+@media(max-width:600px){
+ body .scout-live-page .partial-performance h3{font-size:22px;gap:10px;padding:0 12px}
+ body .scout-live-page .partial-tabs.end-filter{padding:0 10px;gap:6px}
+ body .scout-live-page .partial-tabs.end-filter button{font-size:14px;flex-basis:52px}
+ body .scout-live-page .partial-sides{grid-template-columns:minmax(0,1fr);row-gap:14px}
+ body .scout-live-page .partial-sides article{display:flex;flex-direction:column;grid-row:auto;padding:18px;gap:0}
+ body .scout-live-page .performance-athlete-heading{min-height:0;grid-template-columns:minmax(0,1fr) 44px}
+ body .scout-live-page .performance-athlete-heading>div{font-size:19px}
+ body .scout-live-page .performance-athlete-heading strong{min-height:0;overflow-wrap:anywhere}
+ body .scout-live-page .performance-athlete-heading>svg{width:44px;height:44px;padding:11px}
+ body .scout-live-page .performance-metric{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr);gap:10px;min-height:58px;padding:14px 0}
+ body .scout-live-page .performance-metric strong{font-size:16px}
+ body .scout-live-page .performance-metric>span{font-size:14px}
+ body .scout-live-page .scout-last-action{grid-template-columns:36px minmax(0,1fr) 14px;padding:16px;gap:0 10px}
+ body .scout-live-page .scout-last-action>svg{width:34px;height:34px}
+ body .scout-live-page .scout-last-action small{font-size:17px}
+ body .scout-live-page .scout-last-action strong{font-size:14px}
+ body .scout-live-page .scout-scoreboard{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:72px auto 48px;grid-template-areas:none;gap:10px 6px}
+ body .scout-live-page .scout-brand{grid-area:1/1/2/7;height:72px;padding-left:32px;gap:8px}
+ body .scout-live-page .scout-brand-emblem{width:38px;height:38px;flex-basis:38px}
+ body .scout-live-page .scout-brand strong{font-size:20px;letter-spacing:-.8px}
+ body .scout-live-page .scout-player{height:auto;min-height:150px;padding:16px 10px 12px;border-radius:16px}
+ body .scout-live-page .scout-player-red{grid-area:2/1/3/4}
+ body .scout-live-page .scout-player-blue{grid-area:2/4/3/7}
+ body .scout-live-page .scout-player strong{font-size:14px;padding:0 8px;min-height:3.51em;line-height:1.17;width:100%}
+ body .scout-live-page .scout-player>span{font-size:12px;padding:0 8px;margin:6px 0 15px}
+ body .scout-live-page .scout-player:before{width:4px;height:56px;top:16px;left:8px}
+ body .scout-live-page .scout-player-blue:before{left:auto;right:8px}
+ body .scout-live-page .scout-ball-dots{gap:3px;margin-top:auto}
+ body .scout-live-page .scout-ball-dots img{width:calc((100% - 15px)/6);height:auto;aspect-ratio:1;max-width:none}
+ body .scout-live-page .scout-auto-timer{grid-area:3/1/4/3;height:44px;gap:8px;align-self:center;border-radius:12px}
+ body .scout-live-page .scout-auto-timer strong{font-size:20px}
+ body .scout-live-page .scout-auto-timer svg{width:23px;height:23px}
+ body .scout-live-page .scout-end-pill{grid-area:3/3/4/5;font-size:20px;line-height:24px;padding:10px 0;margin:0;border-radius:12px}
+ body .scout-live-page .scout-score{grid-area:3/5/4/7;justify-content:center;gap:10px}
+ body .scout-live-page .scout-score b{font-size:32px}
+ body .scout-live-page .scout-score span{font-size:23px}
+ body .scout-live-page .scout-match-nav{top:18px;left:4px}
+ body .scout-live-page .scout-home-button{width:28px;height:38px}
+ body .scout-live-page .scout-home-button>svg{width:26px;height:26px}
+ body .scout-live-page .scout-match-menu{position:absolute;top:38px;left:4px}
+ body:has(.scout-live-page) .hub-modern-header.account-toolbar:not(.is-scrolled){top:27px;right:28px}
+ body:has(.scout-live-page) .home-header-actions{gap:12px}
+ body:has(.scout-live-page) .home-account>summary{width:34px;height:34px;font-size:20px}
+ body:has(.scout-live-page) .home-notification{width:28px!important;height:34px}
+ body:has(.scout-live-page) .home-notification svg{width:26px;height:26px}
+ body:has(.scout-live-page) .home-notification>span{font-size:10px;line-height:12px;padding:2px 4px}
+}
+@media(max-width:380px){body .scout-live-page .scout-brand strong{font-size:17px}body .scout-live-page .scout-brand-emblem{width:30px;height:30px;flex-basis:30px}body:has(.scout-live-page) .home-header-actions{gap:8px}body:has(.scout-live-page) .hub-modern-header.account-toolbar:not(.is-scrolled){right:22px}}

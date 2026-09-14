@@ -2,7 +2,7 @@ import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-600.css';
 import '@fontsource/inter/latin-700.css';
 import '@fontsource/inter/latin-800.css';
-import {useContext,useState} from 'react';
+import {useContext,useEffect,useRef,useState} from 'react';
 import {PlayCircle} from '@phosphor-icons/react/dist/csr/PlayCircle';
 import {UserPlus} from '@phosphor-icons/react/dist/csr/UserPlus';
 import {UsersThree} from '@phosphor-icons/react/dist/csr/UsersThree';
@@ -14,7 +14,9 @@ import AthleteComparison from './AthleteComparison';
 import './HomeScreen.css';
 
 export function HomeHeader({notifications,account}:{notifications:React.ReactNode;account:React.ReactNode}){
- return <header className="account-toolbar hub-modern-header"><div className="home-brand"><img src="/home-ball-logo.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div></header>;
+ const [hidden,setHidden]=useState(false);const [scrolled,setScrolled]=useState(false);const headerRef=useRef<HTMLElement>(null);
+ useEffect(()=>{let previous=window.scrollY;let frame=0;const update=()=>{frame=0;const y=window.scrollY;setScrolled(y>140);if(y<70||headerRef.current?.contains(document.activeElement)||headerRef.current?.querySelector('details[open]'))setHidden(false);else if(Math.abs(y-previous)>6)setHidden(y>previous);previous=y;};const onScroll=()=>{if(!frame)frame=requestAnimationFrame(update)};window.addEventListener('scroll',onScroll,{passive:true});return()=>{window.removeEventListener('scroll',onScroll);cancelAnimationFrame(frame)}},[]);
+ return <header ref={headerRef} onFocusCapture={()=>setHidden(false)} className={`account-toolbar hub-modern-header${hidden?' is-retracted':''}${scrolled?' is-scrolled':''}`}><div className="home-brand"><img src="/home-ball-logo.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div></header>;
 }
 
 export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,sessions=[]}:{onNewTraining:()=>void;onNewCompetition:()=>void;onHistory:()=>void;sessions?:any[];athletes?:any[]}){
