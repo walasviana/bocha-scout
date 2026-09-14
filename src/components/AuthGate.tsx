@@ -1,3 +1,5 @@
+import {HomeHeader} from './HomeScreen';
+import {AccountActionsContext} from './AccountActionsContext';
 import EmailConfirmation, {confirmationRequested,confirmationURL} from './EmailConfirmation';
 import {localUser} from '../lib/scoutAutosave';
 import AccountNotifications from './AccountNotifications';
@@ -195,23 +197,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      <div className="account-toolbar" style={{ background: '#0f172a', color: '#fff', padding: '9px 14px', fontFamily: 'Inter, Arial, sans-serif', display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 9997, boxShadow: '0 5px 18px rgba(15,23,42,.18)' }}>
-        <div style={{ fontSize: 13 }}>
-          <strong>{profile?.name || meta.full_name || meta.username || user.email}</strong>
-          {(profile?.club || meta.club) ? ` · ${profile?.club || meta.club}` : ''} {(profile?.country || meta.country) ? ` · ${profile?.country || meta.country}` : ''}
-          {isSuperAdmin ? ' · Super Admin' : isAdmin ? ' · Administrador' : ''}
-        </div>
-        <div className="account-top-actions">
-          <button onClick={() => setShowAthleteRegistration(true)} style={{ border: '1px solid #16a34a', background: '#15803d', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>＋ Novo atleta</button>
-          <button onClick={() => setShowTeamRegistration(true)} style={{ border: '1px solid #60a5fa', background: '#2563eb', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>＋ Equipe/Par</button>
-          <AccountNotifications key={user.id} userId={user.id} role={profile?.role || 'user'}/>
-        <details className="account-menu"><summary>Minha conta</summary><div className="account-menu-actions">
-          {isAdmin && <button onClick={() => { setAdminInitialTab('overview'); setShowAdmin(true); }} style={{ border: '1px solid #93c5fd', background: '#1d4ed8', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Painel Admin</button>}
-          <button onClick={() => setShowProfile(true)} style={{ border: '1px solid #94a3b8', background: '#334155', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Meu perfil</button>
-          <button onClick={() => supabase.auth.signOut()} style={{ border: '1px solid #475569', background: '#1e293b', color: '#fff', borderRadius: 8, padding: '7px 10px', fontWeight: 700 }}>Sair</button>
-        </div></details></div>
-      </div>
-      <DataPanelContext.Provider key={user.id} value={dataHost}>{children}</DataPanelContext.Provider>
+      <HomeHeader notifications={<AccountNotifications key={user.id} userId={user.id} role={profile?.role || 'user'}/>} account={<details className="home-account"><summary aria-label="Minha conta" title="Minha conta">{(profile?.name || meta.full_name || user.email || 'U').charAt(0).toUpperCase()}</summary><div className="home-account-menu"><strong>{profile?.name || meta.full_name || user.email}</strong><p>{profile?.club || meta.club} · {profile?.country || meta.country}{isSuperAdmin?' · Super Admin':isAdmin?' · Administrador':''}</p><button onClick={()=>setShowAthleteRegistration(true)}>Cadastrar atleta</button><button onClick={()=>setShowTeamRegistration(true)}>Cadastrar Equipe/Par</button>{isAdmin&&<button onClick={()=>{setAdminInitialTab('overview');setShowAdmin(true);}}>Painel Admin</button>}<button onClick={()=>setShowProfile(true)}>Meu perfil</button><button onClick={()=>supabase.auth.signOut()}>Sair</button></div></details>}/>
+      <AccountActionsContext.Provider value={{name:profile?.name || meta.full_name || meta.username || '',newAthlete:()=>setShowAthleteRegistration(true),newTeam:()=>setShowTeamRegistration(true)}}><DataPanelContext.Provider key={user.id} value={dataHost}>{children}</DataPanelContext.Provider></AccountActionsContext.Provider>
       {showAthleteRegistration && <AthleteRegistrationPanel user={user} onClose={() => setShowAthleteRegistration(false)} />}
       {showTeamRegistration && <TeamRegistrationPanel user={user} onClose={() => setShowTeamRegistration(false)} />}
       {showAdmin && isAdmin && <AdminPanel isSuperAdmin={isSuperAdmin} onDataHost={setDataHost} initialTab={adminInitialTab} onClose={() => setShowAdmin(false)} />}

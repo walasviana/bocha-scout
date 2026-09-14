@@ -1,3 +1,4 @@
+import {Bell} from '@phosphor-icons/react/dist/csr/Bell';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -34,7 +35,7 @@ export default function AccountNotifications({userId,role}: {userId:string;role:
  }
  const btn={padding:'8px 12px',borderRadius:8,border:'1px solid #cbd5e1',cursor:'pointer'};
  return <>
- <button title={error || 'Notificações'} aria-label={`Notificações: ${count} pendentes ou não lidas`} onClick={()=>{setOpen(true);void load();}} style={{...btn,position:'relative',background:'#1e293b',color:'#fff',fontSize:18}}>🔔<span style={{position:'absolute',top:-7,right:-7,background:error?'#b45309':'#dc2626',color:'#fff',borderRadius:20,minWidth:19,fontSize:12,padding:'2px 4px'}}>{error?'!':count>99?'99+':count}</span></button>
+ <button className="home-notification" title={error || 'Notificações'} aria-label={`Notificações: ${count} pendentes ou não lidas`} onClick={()=>{setOpen(true);void load();}} style={{...btn,position:'relative',background:'#1e293b',color:'#fff',fontSize:18}}><Bell size={27} weight="regular"/><span style={{position:'absolute',top:-7,right:-7,background:error?'#b45309':'#dc2626',color:'#fff',borderRadius:20,minWidth:19,fontSize:12,padding:'2px 4px'}}>{error?'!':count>99?'99+':count}</span></button>
  {open && <div role="dialog" aria-modal="true" aria-label="Notificações" style={{position:'fixed',inset:0,zIndex:12000,background:'rgba(15,23,42,.7)',overflowY:'auto',padding:18,color:'#0f172a'}}><div style={{maxWidth:720,margin:'20px auto',background:'#fff',padding:22,borderRadius:16}}>
  <div style={{display:'flex',justifyContent:'space-between',gap:12}}><h2>Notificações</h2><button style={btn} onClick={()=>setOpen(false)}>Fechar</button></div>
  {error && <p role="alert" style={{color:'#b91c1c'}}>{error}</p>}

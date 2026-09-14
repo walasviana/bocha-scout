@@ -1,4 +1,5 @@
 // @ts-nocheck
+import HomeScreen from './HomeScreen';
 import FoundationRadar from './FoundationRadar';
 import './LiveTimerBridge.css';
 import AthleteComparison from './AthleteComparison';
@@ -427,14 +428,6 @@ function TinyBar({ value, suffix = "%", max = 100 }) {
     </div>
   );
 }
-
-function DashboardScreen({ onNewTraining, onNewCompetition, onHistory }) {
- const [choosing,setChoosing]=useState(false);
- if(choosing)return <section className="welcome-panel scout-kind-screen"><button className="friendly-button" onClick={()=>setChoosing(false)}>Voltar ao início</button><h2>Qual Scout vamos iniciar?</h2><p>Escolha o tipo da partida para continuar.</p><div className="scout-kind-options"><button autoFocus onClick={onNewTraining}><strong>Treino</strong><span>Registrar uma sessão de treinamento</span></button><button onClick={onNewCompetition}><strong>Campeonato</strong><span>Registrar uma partida de competição</span></button></div></section>;
- return <section className="welcome-panel"><span className="welcome-eyebrow">BOCHA SCOUT</span><h2>Seu próximo resultado começa aqui.</h2><p>Registre a partida. Entenda o desempenho.</p>
- <div className="welcome-actions"><button className="welcome-action primary" onClick={()=>setChoosing(!choosing)} aria-expanded={choosing}><span className="welcome-icon"><AppIcon name="play" size={30}/></span><strong>Iniciar Scout</strong><span>Ao vivo ou partida gravada</span></button><button className="welcome-action" onClick={onHistory}><span className="welcome-icon"><AppIcon name="history" size={30}/></span><strong>Histórico e Análises</strong><span>Reveja partidas e compare atletas</span></button></div>
- {choosing&&<div className="partial-tabs"><button onClick={onNewTraining}>Treino</button><button onClick={onNewCompetition}>Campeonato</button></div>}</section>;
- }
 
 function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
   const [search,setSearch]=useState('');
@@ -2768,21 +2761,13 @@ export default function BochaScout() {
   if(!draftReady)return <div style={{padding:24}}>Carregando Bocha Scout...</div>;
   if ((!started && !finished) || matchHome) {
     return (
-      <div style={styles.page} className="hub-scout-home">
+      <div style={styles.page} className={`hub-scout-home ${view==='dashboard'?'hub-dashboard':''}`}>
         <div style={styles.container}>
-          <div style={styles.brandHeader}>
-            <div>
-              <h1 style={styles.title}>BOCHA SCOUT</h1>
-              <p style={styles.subtitle}>Análise técnica de Bocha Paralímpica</p>
-            </div>
-            <div style={styles.brandTag}>SCOUT & PERFORMANCE</div>
-          </div>
-
-          <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />
+          {view !== "dashboard" && <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />}
 
           {started && <div style={{...styles.card,display:"flex",gap:10,flexWrap:"wrap"}}><button style={{...styles.button,...styles.green}} onClick={()=>setMatchHome(false)}>Continuar partida</button><button style={{...styles.button,background:"#b91c1c"}} onClick={abandonGame}>Abandonar partida</button></div>}
           {view === "dashboard" && (
-            <DashboardScreen
+            <HomeScreen
               sessions={accountSessions}
               athletes={athletes}
               onNewTraining={() => { if(started){setMatchHome(false);return;} setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}

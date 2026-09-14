@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/inter':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@phosphor-icons/react':
+        specifier: 2.1.10
+        version: 2.1.10(react@19.2.8)
       '@supabase/supabase-js':
         specifier: ^2.57.4
         version: 2.115.0
@@ -38,6 +44,14 @@ importers:
         version: 8.2.2
 
 packages:
+
+  '@fontsource/inter@5.3.0':
+    resolution: {integrity: sha512-RofMylZmjlJEfELXeNHFWBRcSs75rGU/6bV2S2jfnvv/3rPXPGe0LgUJTklcHZ9lM4OZmAVFhcJPnACfb91A3g==}
+
+  '@phosphor-icons/react@2.1.10':
+    resolution: {integrity: sha512-vt8Tvq8GLjheAZZYa+YG/pW7HDbov8El/MANW8pOAz4eGxrwhnbfrQZq0Cp4q8zBEu8NIhHdnr+r8thnfRSNYA==}
+    peerDependencies:
+      react: '>= 16.8'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -645,6 +659,12 @@ packages:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
 snapshots:
+
+  '@fontsource/inter@5.3.0': {}
+
+  '@phosphor-icons/react@2.1.10(react@19.2.8)':
+    dependencies:
+      react: 19.2.8
 
   '@babel/code-frame@7.29.7':
     dependencies:
