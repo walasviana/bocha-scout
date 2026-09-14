@@ -1,4 +1,5 @@
 import {useEffect} from 'react';
+import './LiveTimerBridge.css';
 
 export default function LiveTimerBridge(){
   useEffect(()=>{
