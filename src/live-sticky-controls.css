@@ -1,42 +1,26 @@
-/* Bocha Scout — controles essenciais sempre visíveis durante o Scout ao Vivo. */
-body .scout-live-page .scout-scoreboard {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 70 !important;
-  background: rgba(249, 251, 255, 0.97) !important;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 8px 20px rgba(9, 20, 79, 0.08) !important;
-}
-
-body .scout-live-page .scout-undo-button {
-  position: fixed !important;
-  left: 50% !important;
-  bottom: max(10px, env(safe-area-inset-bottom)) !important;
-  transform: translateX(-50%) !important;
-  z-index: 90 !important;
-  width: min(calc(100vw - 40px), 916px) !important;
-  box-shadow: 0 10px 28px rgba(7, 88, 170, 0.24) !important;
-}
-
-/* Reserva espaço para o botão fixo não cobrir o conteúdo final. */
-body .scout-live-page .scout-live-container {
-  padding-bottom: 110px !important;
-}
-
-@media (max-width: 600px) {
+/* Bocha Scout — controles fixos somente no desktop. No celular permanece o layout original. */
+@media (min-width: 601px) {
   body .scout-live-page .scout-scoreboard {
+    position: sticky !important;
     top: 0 !important;
-    border-radius: 0 0 16px 16px !important;
+    z-index: 70 !important;
+    background: rgba(249, 251, 255, 0.97) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 20px rgba(9, 20, 79, 0.08) !important;
   }
 
   body .scout-live-page .scout-undo-button {
-    width: calc(100vw - 24px) !important;
-    min-height: 58px !important;
-    border-radius: 16px !important;
+    position: fixed !important;
+    left: 50% !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    transform: translateX(-50%) !important;
+    z-index: 90 !important;
+    width: min(calc(100vw - 40px), 916px) !important;
+    box-shadow: 0 10px 28px rgba(7, 88, 170, 0.24) !important;
   }
 
   body .scout-live-page .scout-live-container {
-    padding-bottom: 92px !important;
+    padding-bottom: 110px !important;
   }
 }
