@@ -27,7 +27,8 @@ export default function LiveTimerBridge(){
       const output=document.querySelector<HTMLOutputElement>('.scout-live-page .throw-timer output');
       if(output?.textContent?.trim()) lastTime=output.textContent.trim();
       const value=current.querySelector('strong');
-      if(value)value.textContent=lastTime;
+      // Avoid observing our own unchanged text writes in an endless microtask loop.
+      if(value && value.textContent!==lastTime)value.textContent=lastTime;
       current.classList.toggle('is-running',Boolean(document.querySelector('.scout-live-page .throw-timer button')?.textContent?.includes('Pausar')));
     };
 
@@ -57,3 +58,4 @@ export default function LiveTimerBridge(){
 
   return null;
 }
+
