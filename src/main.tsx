@@ -4,8 +4,8 @@ import BochaScout from "./components/BochaScout";
 import AuthGate from "./components/AuthGate";
 
 import "./styles.css";
-import "./live-visual-v2.css";
-import "./live-visual-v3.css";
+
+import "./components/ScoutCapture.css";
 
 function App() {
   return <BochaScout />;
@@ -35,3 +35,4 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     }).catch(console.error);
   });
 }
+

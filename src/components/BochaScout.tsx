@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { ArrowCounterClockwise, Clock, Timer } from '@phosphor-icons/react';
+import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
 import FoundationRadar from './FoundationRadar';
 import './LiveTimerBridge.css';
@@ -3026,7 +3028,7 @@ export default function BochaScout() {
               <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
             </div>
             <div className="scout-end-pill">{currentEndName}</div>
-            {scoutMode==='live' && <button type="button" className={`scout-auto-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><span aria-hidden="true">⏱</span><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}
+            {scoutMode==='live' && <button type="button" className={`scout-auto-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><Timer aria-hidden="true" size={26}/><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}
             <div className="scout-player scout-player-red">
               <strong title={redName}>{redName}</strong><span>VERMELHO</span>
               <div className="scout-ball-dots" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
@@ -3447,11 +3449,11 @@ export default function BochaScout() {
               disabled={undoStack.length === 0}
               className="scout-undo-button"
             >
-              <span aria-hidden="true">↶</span> Desfazer
+              <ArrowCounterClockwise aria-hidden="true" size={32}/> Desfazer
             </button>
-            <div className="scout-last-action">
+            <div className="scout-last-action"><Clock aria-hidden="true" size={36}/>
               <small>Última ação</small>
-              <strong>{lastRecordedPlay ? `${lastRecordedPlay.play} · ${lastRecordedPlay.result}` : "Nenhuma jogada"}</strong>
+              <strong>{lastRecordedPlay ? `${lastRecordedPlay.play} · ${lastRecordedPlay.result}` : "Nenhuma jogada registrada"}</strong>
             </div>
           </div>
         </div>
@@ -5031,3 +5033,4 @@ const styles = {
     padding: 15,
   },
 };
+
