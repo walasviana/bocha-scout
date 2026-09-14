@@ -13,9 +13,10 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
   const section=(label:string,x:number,y:number,w:number,color=navy)=>{doc.setFillColor(color[0],color[1],color[2]);doc.roundedRect(x,y,w,22,5,5,'F');text(label,x+9,y+15,9,true,[255,255,255]);};
   doc.setFillColor(6,45,84);doc.rect(0,0,W,78,'F');
   text('BOCHA',26,31,23,true,[255,255,255]);text('SCOUT',112,31,23,true,[250,204,21]);
-  text('RELATÓRIO TÉCNICO DA PARTIDA',W-26,27,13,true,[255,255,255],'right');
-  text(`${session.date || 'Data não informada'} · ${session.sessionKind || ''} · ${session.gameType || ''} · ${modeLabel(session)}`,W-26,46,8,false,[184,200,218],'right');
-  text(`Conta: ${session.ownerDisplay || 'Conta responsável'}`,W-26,64,8,false,[184,200,218],'right');
+  text('RELATÓRIO TÉCNICO DA PARTIDA',W-26,24,13,true,[255,255,255],'right');
+  text(session.competitionName ? `PARTIDA · ${session.competitionName}` : 'PARTIDA',W-26,42,10,true,[255,255,255],'right');
+  text(`${session.date || 'Data não informada'} · ${session.sessionKind || ''} · ${session.gameType || ''} · ${modeLabel(session)}`,W-26,57,7,false,[184,200,218],'right');
+  text(`Conta: ${session.ownerDisplay || 'Conta responsável'}${session.competitionPhase ? ` · Fase: ${session.competitionPhase}` : ''}`,W-26,70,7,false,[184,200,218],'right');
   doc.setFillColor(244,247,250);doc.roundedRect(26,90,W-52,99,12,12,'F');
   const redName=sideName(session,'Vermelho'),blueName=sideName(session,'Azul');
   text(fit(redName,260,10).slice(0,2).join('\n'),48,110,10,true,red);
