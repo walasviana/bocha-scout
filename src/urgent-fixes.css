@@ -49,6 +49,11 @@ body .hub-scout-home.is-athlete-selection-screen .athlete-selection-white {
   background: #fff !important;
 }
 
+/* O retorno para a Home em Minhas partidas fica apenas no cabeçalho, sem botão duplicado. */
+body .hub-scout-home.my-matches-view .my-matches-back {
+  display: none !important;
+}
+
 @media (max-width: 600px) {
   body .hub-scout-home.is-athlete-selection-screen,
   body .hub-scout-home.is-athlete-selection-screen > div,
