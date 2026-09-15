@@ -54,6 +54,39 @@ body .hub-scout-home.my-matches-view .my-matches-back {
   display: none !important;
 }
 
+/* Confirmar a posição da branca é a ação principal dessa etapa. */
+body .scout-live-page .precise-position > .partial-tabs button:last-child:not(:disabled) {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+  color: #fff !important;
+}
+
+body .scout-live-page .precise-position > .partial-tabs button:last-child:disabled {
+  background: #94a3b8 !important;
+  border-color: #94a3b8 !important;
+  color: #fff !important;
+  opacity: .65 !important;
+}
+
+/* Entregar bola fica visualmente secundário para reduzir cliques acidentais. */
+body .scout-live-page .scout-deliver-ball-compact {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 36px !important;
+  padding: 7px 12px !important;
+  border: 1px solid #111827 !important;
+  border-radius: 10px !important;
+  background: #111827 !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  box-shadow: none !important;
+}
+
 @media (max-width: 600px) {
   body .hub-scout-home.is-athlete-selection-screen,
   body .hub-scout-home.is-athlete-selection-screen > div,
@@ -144,6 +177,35 @@ body .hub-scout-home.my-matches-view .my-matches-back {
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
+  }
+
+  /* O quadrado de posicionamento preciso fica menor e mais confortável no celular. */
+  body .scout-live-page .precise-square {
+    width: min(74vw, 270px) !important;
+    max-width: 270px !important;
+    margin: 12px auto !important;
+  }
+
+  body .scout-live-page .precise-position > p {
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+    font-size: 12px !important;
+  }
+
+  /* Acerto, Funcional e Erro ganham área de toque maior. */
+  body .scout-live-page .scout-result-grid button {
+    min-height: 106px !important;
+    padding: 20px 16px !important;
+    border-radius: 18px !important;
+    font-size: 20px !important;
+    font-weight: 900 !important;
+  }
+
+  body .scout-live-page .scout-deliver-ball-compact {
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+    border-radius: 9px !important;
+    font-size: 11px !important;
   }
 
   body .scout-live-page .scout-capture-tools {
