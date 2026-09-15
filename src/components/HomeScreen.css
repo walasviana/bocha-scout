@@ -6,7 +6,7 @@ body .hub-modern-header.account-toolbar {background:#09264b;color:#fff;border-bo
 body .hub-modern-header .home-brand b {color:#facc15;}
 body .hub-modern-header .home-header-actions .home-notification {color:#fff!important;}
 body .hub-modern-header .home-account-menu {color:#0a193e;}
-body .home-screen .home-greeting h1,body .home-screen .home-choose h1,body .home-screen .home-compare-heading h1 {color:#fff;}
+body .home-screen .home-greeting h1,body .home-screen .home-choose h1,body .home-screen .home-compare-heading h1 {color:#fff!important;}
 body .home-screen .home-greeting p,body .home-screen .home-choose>p,body .home-screen .home-compare-heading p {color:#b8c5d7;}
 body .home-screen .home-start {background:#16416b;border:1px solid #ffffff38;box-shadow:0 8px 24px #0002;}
 body .home-screen .home-start:hover {background:#1d527f;}
