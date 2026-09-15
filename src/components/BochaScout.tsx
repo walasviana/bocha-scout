@@ -4,6 +4,7 @@ import MobileDisclosure from './MobileDisclosure';
 import { ArrowCounterClockwise, CaretLeft, House, Clock, Timer, Circle, Crosshair, XCircle } from '@phosphor-icons/react';
 import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
+import HeaderNavigation from './HeaderNavigation';
 import FoundationRadar from './FoundationRadar';
 import './LiveTimerBridge.css';
 import AthleteComparison from './AthleteComparison';
@@ -338,33 +339,16 @@ function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds 
   );
 }
 
-function TopNav({ view, setView, isSuperAdmin = false }) {
-  const items = [
-    ["dashboard", "Início"],
-    ["history", "Histórico"],
-
-
-  ];
-
-  return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "nowrap", overflowX: "auto", marginBottom: 15, position: "sticky", top: 8, zIndex: 30, background: "rgba(255,255,255,.94)", backdropFilter: "blur(10px)", padding: 8, border: "1px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 24px rgba(15,23,42,.08)" }}>
-      {items.map(([id, label]) => (
-        <button
-          key={id}
-          onClick={() => setView(id)}
-          style={{
-            ...styles.button,
-            background: view === id ? "#0f172a" : "#64748b",
-            padding: "10px 14px",
-          }}
-        >
-          <AppIcon name={id==='dashboard'?'home':'history'} size={18}/> {label}
-        </button>
+function TopNav({ view, setView }) {
+  if (view !== 'history' && view !== 'compare') return null;
+  return <HeaderNavigation>
+    <nav className="home-section-nav" aria-label="Navegação de análises">
+      {[["dashboard", "Início"], ["history", "Histórico"], ["compare", "Comparar atletas"]].map(([id, label]) => (
+        <button key={id} type="button" aria-current={view === id ? 'page' : undefined} onClick={() => {setView(id);window.scrollTo(0, 0);}}>{label}</button>
       ))}
-    </div>
-  );
+    </nav>
+  </HeaderNavigation>;
 }
-
 function getRegularScoreTotals(scores = {}) {
   return Object.entries(scores || {}).reduce(
     (acc, [name, score]) => {
@@ -2764,7 +2748,7 @@ export default function BochaScout() {
   if(!draftReady)return <div style={{padding:24}}>Carregando Bocha Scout...</div>;
   if ((!started && !finished) || matchHome) {
     return (
-      <div style={styles.page} className={`hub-scout-home ${view==='dashboard'?'hub-dashboard':''}`}>
+      <div style={styles.page} className={`hub-scout-home ${view==='dashboard'||view==='compare'?'hub-dashboard':''}`}>
         <div style={styles.container}>
           {view !== "dashboard" && <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />}
 
@@ -2775,10 +2759,19 @@ export default function BochaScout() {
               athletes={athletes}
               onNewTraining={() => { if(started){setMatchHome(false);return;} setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
               onNewCompetition={() => { if(started){setMatchHome(false);return;} setSessionKind("Campeonato"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
-              onHistory={() => setView("history")}
+              onHistory={() => {setView("history");window.scrollTo(0,0);}}
+              onCompare={() => {setView('compare');window.scrollTo(0,0);}}
             />
           )}
 
+          {view === "compare" && (
+            <main className="home-screen home-compare-screen">
+              <section className="home-compare-view">
+                <div className="home-compare-heading"><h1>Comparar atletas</h1><p>Veja dois atletas lado a lado usando os scouts já registrados.</p></div>
+                <AthleteComparison sessions={accountSessions} standalone />
+              </section>
+            </main>
+          )}
           {view === "athletes" && (
             <AthletesScreen
               athletes={athletes}

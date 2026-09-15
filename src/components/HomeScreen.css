@@ -12,3 +12,14 @@ body .home-screen .home-start {background:#16416b;border:1px solid #ffffff38;box
 body .home-screen .home-start:hover {background:#1d527f;}
 body .home-screen .home-footer {color:#a9bad0;}
 body .home-screen .home-footer:before,body .home-screen .home-footer:after {background:#ffffff38;}
+/* Analysis navigation belongs to the navy header, only while a section supplies it. */
+body .hub-modern-header.account-toolbar:has(.home-section-nav) {flex-wrap:wrap;}
+.home-header-navigation:empty {display:none;}
+.home-header-navigation {flex:0 0 100%;min-width:0;}
+.home-section-nav {display:flex;gap:8px;padding-top:4px;}
+.home-section-nav button {flex:1;min-width:0;min-height:42px;padding:8px 10px;border:1px solid #ffffff38;border-radius:10px;background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.home-section-nav button[aria-current=page] {background:#facc15;color:#09264b;border-color:#facc15;}
+.home-section-nav button:hover {background:#ffffff20;}
+.home-section-nav button[aria-current=page]:hover {background:#facc15;}
+.home-section-nav button:focus-visible {outline:2px solid #fff;outline-offset:2px;}
+@media(max-width:360px){.home-section-nav{gap:5px}.home-section-nav button{font-size:11px;padding:8px 5px;}}
