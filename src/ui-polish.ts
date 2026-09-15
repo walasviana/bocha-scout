@@ -44,6 +44,13 @@ function polishResumeActions() {
   }
 }
 
+function resetHiddenTrainingFilter(field: HTMLElement | null) {
+  const select = field?.querySelector<HTMLSelectElement>('select');
+  if (!select || select.value === 'Todos') return;
+  select.value = 'Todos';
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function polishSelectionScreen() {
   const heading = Array.from(document.querySelectorAll('h2'))
     .find((item) => normalize(item.textContent).startsWith('Novo Scout ·'));
@@ -65,7 +72,9 @@ function polishSelectionScreen() {
       'Classe do atleta azul',
       'Gênero do atleta azul',
     ].some((text) => labelTextStartsWith(label, text))) {
-      label.parentElement?.classList.add('training-filter-hidden');
+      const field = label.parentElement;
+      field?.classList.add('training-filter-hidden');
+      resetHiddenTrainingFilter(field);
       return;
     }
 
