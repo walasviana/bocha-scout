@@ -275,3 +275,24 @@ body .scout-live-page .scout-scoreboard>.scout-white-position{grid-area:white;wi
 @media(max-width:600px){body .scout-live-page .scout-step-heading>div:first-child{display:none}body .scout-live-page .scout-result-symbol{display:block;width:26px;height:26px;flex-shrink:0;margin-right:14px}body .scout-live-page .scout-result-card .scout-step-heading{padding-right:78px}}
 @media(max-width:600px){body .scout-live-page .scout-step-heading>div:first-child{display:none!important}}
 @media(max-width:600px){body .scout-live-page .scout-result-grid button{flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;height:58px!important;min-height:58px!important;gap:0!important}body .scout-live-page .scout-result-grid button strong{margin:0!important}body .scout-live-page .scout-result-symbol{margin:0 14px 0 0!important}}
+/* Accessible equivalent of canvas data without another visible details panel. */
+.radar-accessible-values{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:600px){
+ body .scout-live-page{padding:0 0 14px!important}
+ body .scout-live-container{padding:0!important;border-radius:0!important;width:100%;max-width:none!important}
+ body .scout-live-page .scout-scoreboard{grid-template-rows:30px auto 76px 30px;grid-template-areas:none;padding:14px 12px 16px;border-radius:16px;gap:10px 8px}
+ body .scout-live-page .scout-end-pill{grid-area:1/1/2/2;justify-self:start;min-width:64px;font-size:12px;padding:5px 10px}
+ body .scout-live-page .scout-scoreboard>.scout-white-position{grid-area:1/2/2/4;justify-self:end;align-self:center;width:auto;min-height:0;height:26px;gap:5px;padding:0;border:0;margin:0}
+ body .scout-live-page .scout-white-position img{width:16px;height:16px}
+ body .scout-live-page .scout-white-position strong{font-size:12px;font-weight:500;white-space:nowrap}
+ body .scout-live-page .scout-white-position-label{display:none}
+ body .scout-live-page .scout-action-card{border-radius:16px!important;padding:16px!important;margin:12px 0!important}
+ body .scout-live-page .mobile-disclosure-toggle{border-radius:12px}
+ body .scout-live-page .scout-sticky-actions{margin-left:0;margin-right:0}
+ body .scout-live-page .scout-last-action{padding-left:10px;padding-right:10px}
+}
+.mobile-disclosure-always>.mobile-disclosure-toggle{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;padding:14px 16px;border:0;border-radius:12px;background:#c9d7e5;color:#10243b;text-align:left;font:inherit;cursor:pointer}
+.mobile-disclosure-always>.mobile-disclosure-toggle>svg{width:20px;height:20px;flex-shrink:0}
+.mobile-disclosure-always .history-quick{margin-left:auto;font-size:14px;color:#50647a}
+.mobile-disclosure-always[data-open=false]>.mobile-disclosure-body{display:none}
+.mobile-disclosure-always[data-open=true]>.mobile-disclosure-toggle>svg:last-child{transform:rotate(180deg)}

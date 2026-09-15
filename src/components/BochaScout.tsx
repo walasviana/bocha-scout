@@ -3045,7 +3045,7 @@ export default function BochaScout() {
           {whitePosition && (
             <div className="scout-white-position">
               <img className="scout-white-ball" src="/scout-assets/white-ball.png" alt="Bola branca" />
-              <strong>Branca · posição {whitePosition}</strong>
+              <strong>Branca <span className="scout-white-position-label">· posição </span>{whitePosition}</strong>
               <span>Posição atual</span>
             </div>
           )}
@@ -3410,7 +3410,7 @@ export default function BochaScout() {
             <PartialPerformance plays={playsHistory} gameType={gameType} athlete={athlete} opponent={opponent} athleteColor={athleteColor} scoutMode={scoutMode} />
           </div>
 
-          <MobileDisclosure summary={<><Clock aria-hidden="true"/><strong>Histórico</strong><span className="history-quick">{playsHistory.length} jogadas</span></>}>
+          <MobileDisclosure always summary={<><Clock aria-hidden="true"/><strong>Histórico</strong><span className="history-quick">{playsHistory.length} jogadas</span></>}>
           <section className="scout-partial-history" aria-label="Histórico de jogadas da partida">
             <label>Histórico <select aria-label="Parcial do histórico" value={historyEndFilter} onChange={e=>setHistoryEndFilter(e.target.value)}><option>Atual</option><option>Geral</option>{[...new Set([...regularEnds,...playsHistory.map(p=>p.end)])].map(end=><option key={end}>{end}</option>)}</select></label>
             <div className="scout-partial-history-title">
@@ -5028,5 +5028,6 @@ const styles = {
     padding: 15,
   },
 };
+
 
 
