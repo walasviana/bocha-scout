@@ -8,6 +8,7 @@ import "./styles.css";
 import "./components/ScoutCapture.css";
 import "./live-sticky-controls.css";
 import "./live-desktop-mobile.css";
+import "./live-mobile-photo.css";
 
 function App() {
   return <BochaScout />;
