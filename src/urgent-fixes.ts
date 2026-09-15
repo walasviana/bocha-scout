@@ -1,4 +1,5 @@
 import './urgent-fixes.css';
+import {localUser, readDraft, saveDraft} from './lib/scoutAutosave';
 
 const normalize = (value: string | null | undefined) =>
   String(value || '').replace(/\s+/g, ' ').trim();
@@ -42,6 +43,62 @@ function fixMyMatchesAnalysis() {
     .find((button) => ['Fechar', 'Voltar para minhas partidas'].includes(normalize(button.textContent)));
   if (closeButton) closeButton.textContent = 'Voltar para minhas partidas';
 }
+
+function persistLiveHomeState() {
+  const user = localUser();
+  if (!user?.id) return;
+
+  const draft = readDraft(user.id);
+  if (!draft?.id || !draft.payload) return;
+
+  try {
+    saveDraft(user.id, draft.id, {
+      ...draft.payload,
+      matchHome: true,
+      view: 'dashboard',
+    });
+  } catch {
+    // O onClick React continua sendo a rota principal; este salvamento é apenas fallback.
+  }
+}
+
+let liveHomeFallbackTimer = 0;
+function scheduleLiveHomeFallback() {
+  window.clearTimeout(liveHomeFallbackTimer);
+  liveHomeFallbackTimer = window.setTimeout(() => {
+    // Se o onClick React funcionou, a tela ao vivo já saiu do DOM e nada mais é necessário.
+    if (!document.querySelector('.scout-live-page .classic-home')) return;
+
+    // Fallback para navegadores/toques móveis que não concluíram a troca de tela.
+    persistLiveHomeState();
+    window.location.assign('/');
+  }, 180);
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target as Element | null;
+  if (!target?.closest('.scout-live-page .classic-home')) return;
+  scheduleLiveHomeFallback();
+}, true);
+
+// Em alguns celulares, um elemento sobreposto pode receber o toque no lugar do botão.
+// Se o toque terminar dentro da área visual da casinha, acionamos o botão real.
+document.addEventListener('pointerup', (event) => {
+  const homeButton = document.querySelector<HTMLButtonElement>('.scout-live-page .classic-home');
+  if (!homeButton) return;
+
+  const target = event.target as Element | null;
+  if (target?.closest('.classic-home')) return;
+
+  const rect = homeButton.getBoundingClientRect();
+  const inside = event.clientX >= rect.left && event.clientX <= rect.right &&
+    event.clientY >= rect.top && event.clientY <= rect.bottom;
+  if (!inside) return;
+
+  event.preventDefault();
+  homeButton.click();
+  scheduleLiveHomeFallback();
+}, true);
 
 function applyUrgentFixes() {
   fixMyMatchesAnalysis();
