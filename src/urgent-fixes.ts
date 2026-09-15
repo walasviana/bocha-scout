@@ -100,9 +100,17 @@ document.addEventListener('pointerup', (event) => {
   scheduleLiveHomeFallback();
 }, true);
 
+function markLiveActionButtons() {
+  document.querySelectorAll<HTMLButtonElement>('.scout-live-page button').forEach((button) => {
+    const label = normalize(button.textContent);
+    button.classList.toggle('scout-deliver-ball-compact', label.startsWith('Entregar Bola'));
+  });
+}
+
 function applyUrgentFixes() {
   fixMyMatchesAnalysis();
   renameFoundationLabels();
+  markLiveActionButtons();
 
   const selectionHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
     .find((heading) => normalize(heading.textContent).startsWith('Novo Scout ·'));
