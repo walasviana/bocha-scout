@@ -6,6 +6,7 @@ import AuthGate from "./components/AuthGate";
 import "./styles.css";
 
 import "./components/ScoutCapture.css";
+import "./live-sticky-controls.css";
 
 function App() {
   return <BochaScout />;
