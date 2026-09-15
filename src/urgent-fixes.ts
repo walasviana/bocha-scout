@@ -46,6 +46,26 @@ function fixMyMatchesAnalysis() {
 function applyUrgentFixes() {
   fixMyMatchesAnalysis();
   renameFoundationLabels();
+
+  const selectionHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
+    .find((heading) => normalize(heading.textContent).startsWith('Novo Scout ·'));
+  const selectionCard = selectionHeading?.parentElement as HTMLElement | null;
+
+  if (selectionCard && selectionCard.dataset.selectionFocusGuard !== '1') {
+    selectionCard.dataset.selectionFocusGuard = '1';
+    const searchInputs = Array.from(
+      selectionCard.querySelectorAll<HTMLInputElement>('input[placeholder*="atletas"]')
+    );
+
+    searchInputs.forEach((input) => input.removeAttribute('autofocus'));
+
+    window.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement && searchInputs.includes(active)) {
+        active.blur();
+      }
+    });
+  }
 }
 
 let frame = 0;
