@@ -12,6 +12,7 @@ import "./live-mobile-photo.css";
 import "./live-layout-compat.css";
 import "./ui-polish";
 import "./history-heatmap-disclosure.css";
+import "./analysis-back-arrow";
 
 function App() {
   return <BochaScout />;
