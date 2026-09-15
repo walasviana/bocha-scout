@@ -1,0 +1,48 @@
+import './urgent-fixes.css';
+
+const normalize = (value: string | null | undefined) =>
+  String(value || '').replace(/\s+/g, ' ').trim();
+
+function fixMyMatchesAnalysis() {
+  const detailHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
+    .find((heading) => normalize(heading.textContent) === 'Detalhes da sessão');
+  if (!detailHeading) return;
+
+  const headingRow = detailHeading.parentElement as HTMLElement | null;
+  const detailCard = headingRow?.parentElement as HTMLElement | null;
+  if (!detailCard) return;
+
+  detailCard.classList.add('history-session-detail-card');
+
+  const root = detailCard.closest<HTMLElement>('.hub-scout-home');
+  if (!root?.classList.contains('my-matches-view')) return;
+
+  detailCard.classList.add('my-match-analysis-card');
+  root.classList.add('my-match-analysis-open');
+
+  const closeButton = Array.from(detailCard.querySelectorAll<HTMLButtonElement>('button'))
+    .find((button) => ['Fechar', 'Voltar para minhas partidas'].includes(normalize(button.textContent)));
+  if (closeButton) closeButton.textContent = 'Voltar para minhas partidas';
+}
+
+function applyUrgentFixes() {
+  fixMyMatchesAnalysis();
+}
+
+let frame = 0;
+function scheduleUrgentFixes() {
+  if (frame) return;
+  frame = window.requestAnimationFrame(() => {
+    frame = 0;
+    applyUrgentFixes();
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', scheduleUrgentFixes, { once: true });
+} else {
+  scheduleUrgentFixes();
+}
+
+const observer = new MutationObserver(scheduleUrgentFixes);
+observer.observe(document.documentElement, { childList: true, subtree: true });

@@ -1,0 +1,115 @@
+/* Correções urgentes: análise de Minhas partidas e melhor aproveitamento do Scout no celular. */
+
+/* Garante que o card real da análise seja exibido, e não apenas a linha do título. */
+.hub-scout-home.my-matches-view.my-match-analysis-open .history-session-detail-card.my-match-analysis-card {
+  display: block !important;
+  width: 100% !important;
+  margin-top: 0 !important;
+}
+
+/* O painel de notificações portado para o body fica sempre acima da interface. */
+.account-notifications-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+}
+
+@media (max-width: 600px) {
+  /* A coleta usa a largura real da tela e deixa de empilhar caixas decorativas. */
+  body .scout-live-page {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  body .scout-live-container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 8px 12px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .scout-scoreboard {
+    margin-top: 0 !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .scout-player,
+  body .scout-live-page .scout-player-blue {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .scout-auto-timer,
+  body .scout-live-page .scout-end-pill {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .partial-performance {
+    margin-top: 8px !important;
+    padding-top: 6px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .partial-sides article {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .performance-results {
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body .scout-live-page .scout-last-action {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .scout-action-card,
+  body .scout-live-page .precise-position,
+  body .scout-live-page .throw-timer,
+  body .scout-live-page .scout-partial-history {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body .scout-live-page .scout-capture-tools {
+    margin-top: 12px !important;
+  }
+
+  body .scout-live-page .scout-live-performance {
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Botões continuam destacados: somente caixas informativas foram removidas. */
+  body .scout-live-page button {
+    touch-action: manipulation;
+  }
+}
