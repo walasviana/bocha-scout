@@ -1,0 +1,61 @@
+.hub-modern-header.account-toolbar.has-analysis-back {
+  position: relative !important;
+}
+
+.analysis-minimal-back {
+  position: absolute;
+  left: max(18px, calc((100vw - 960px) / 2));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 34px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.analysis-minimal-back svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hub-modern-header.account-toolbar.has-analysis-back .home-brand {
+  margin-left: 42px;
+}
+
+.analysis-minimal-back:hover {
+  opacity: .82;
+}
+
+.analysis-minimal-back:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 699px) {
+  .analysis-minimal-back {
+    left: 12px;
+    width: 32px;
+    height: 40px;
+  }
+
+  .analysis-minimal-back svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .hub-modern-header.account-toolbar.has-analysis-back .home-brand {
+    margin-left: 32px;
+  }
+}
