@@ -65,7 +65,7 @@
   flex: 0 0 19px;
   background: currentColor;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M128 136a56 56 0 1 0-56-56 56.06 56.06 0 0 0 56 56Zm0 16c-52.93 0-96 31.4-96 70a8 8 0 0 0 8 8h176a8 8 0 0 0 8-8c0-38.6-43.07-70-96-70Z'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M128 136a56 56 0 1 0-56-56 56.06 56.06 0 0 0 56 56Zm0 16c-52.93 0-96 31.4-96 70a8 8 0 0 0 8 8h176a8 8 0 0 0 8-8c0-38.6-43.07-70-96-70Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M128 136a56 56 0 1 0-56-56 56.06 56.06 0 0 0 56 56Zm0 16c-52.93 0-96 31.4-96 70a8 8 0 0 0 8-8c0-38.6-43.07-70-96-70Z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .ui-athlete-label span[style*="border-radius"] {
@@ -314,6 +314,66 @@
   display: block !important;
 }
 
+/* Novo atalho da Home para as partidas registradas pela própria conta. */
+.home-my-matches {
+  position: relative;
+}
+
+.home-my-matches strong {
+  color: inherit;
+}
+
+/* Em "Minhas partidas", a tela mostra somente a lista da conta. */
+.hub-scout-home.my-matches-view .my-matches-section {
+  display: none !important;
+}
+
+.hub-scout-home.my-matches-view .my-matches-list-card,
+.hub-scout-home.my-matches-view .my-matches-back {
+  display: block !important;
+}
+
+.my-matches-list-card {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .06) !important;
+}
+
+.my-matches-list-card > h2 {
+  margin-bottom: 4px !important;
+  color: #0f172a;
+}
+
+.my-matches-intro {
+  margin: 0 0 16px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.my-matches-back {
+  margin-top: 12px !important;
+}
+
+/* Ao abrir uma análise a lista desaparece, dando aparência de uma página dedicada. */
+.hub-scout-home.my-matches-view.my-match-analysis-open .my-matches-list-card,
+.hub-scout-home.my-matches-view.my-match-analysis-open .my-matches-back {
+  display: none !important;
+}
+
+.hub-scout-home.my-matches-view.my-match-analysis-open .my-match-analysis-card {
+  display: block !important;
+  width: 100%;
+  margin-top: 0 !important;
+}
+
+.my-match-analysis-card {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .07) !important;
+}
+
 /* O placar do Scout ao vivo deve encostar nas duas bordas do celular. */
 @media (max-width: 600px) {
   body .scout-live-page .scout-scoreboard {
@@ -372,5 +432,10 @@
 
   .is-history-live-performance .performance-results b {
     font-size: 20px;
+  }
+
+  .my-matches-list-card,
+  .my-match-analysis-card {
+    border-radius: 14px !important;
   }
 }
