@@ -12,11 +12,40 @@ import {ArrowLeft} from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import {AccountActionsContext} from './AccountActionsContext';
 
 import './HomeScreen.css';
+import '../header-back.css';
+
+function normalizedButtonText(button: HTMLButtonElement | null) {
+ return String(button?.textContent || '').replace(/\s+/g,' ').trim();
+}
+
+function goBackFromHeader() {
+ const buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('button'));
+ const detailBack=buttons.find(button=>['Voltar para minhas partidas','Fechar'].includes(normalizedButtonText(button)) && button.closest('.history-session-detail'));
+ if(detailBack){detailBack.click();return;}
+
+ const chooseBack=document.querySelector<HTMLButtonElement>('.home-back');
+ if(chooseBack){chooseBack.click();return;}
+
+ const liveBack=document.querySelector<HTMLButtonElement>('.classic-home');
+ if(liveBack){liveBack.click();return;}
+
+ const myMatchesBack=document.querySelector<HTMLButtonElement>('.my-matches-back');
+ if(myMatchesBack){myMatchesBack.click();return;}
+
+ const analysisHome=Array.from(document.querySelectorAll<HTMLButtonElement>('.home-section-nav button'))
+  .find(button=>normalizedButtonText(button)==='Início');
+ if(analysisHome){analysisHome.click();return;}
+
+ const brand=document.querySelector<HTMLElement>('.home-brand');
+ if(brand){brand.click();return;}
+
+ window.location.assign('/');
+}
 
 export function HomeHeader({notifications,account}:{notifications:React.ReactNode;account:React.ReactNode}){
  const [hidden,setHidden]=useState(false);const [scrolled,setScrolled]=useState(false);const headerRef=useRef<HTMLElement>(null);
  useEffect(()=>{let previous=window.scrollY;let frame=0;const update=()=>{frame=0;const y=window.scrollY;setScrolled(y>140);if(y<70||headerRef.current?.contains(document.activeElement)||headerRef.current?.querySelector('details[open]'))setHidden(false);else if(Math.abs(y-previous)>6){setHidden(y>previous);previous=y;}if(y<70)previous=y;};const onScroll=()=>{if(!frame)frame=requestAnimationFrame(update)};window.addEventListener('scroll',onScroll,{passive:true});return()=>{window.removeEventListener('scroll',onScroll);cancelAnimationFrame(frame)}},[]);
- return <header ref={headerRef} onFocusCapture={()=>setHidden(false)} className={`account-toolbar hub-modern-header${hidden?' is-retracted':''}${scrolled?' is-scrolled':''}`}><div className="home-brand"><img src="/bocha-scout-emblem.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div><div className="home-header-navigation" data-header-navigation /></header>;
+ return <header ref={headerRef} onFocusCapture={()=>setHidden(false)} className={`account-toolbar hub-modern-header${hidden?' is-retracted':''}${scrolled?' is-scrolled':''}`}><button type="button" className="home-global-back" aria-label="Voltar" title="Voltar" onClick={goBackFromHeader}><ArrowLeft weight="bold" aria-hidden="true"/></button><div className="home-brand"><img src="/bocha-scout-emblem.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div><div className="home-header-navigation" data-header-navigation /></header>;
 }
 
 export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,onCompare,sessions=[]}:{onNewTraining:()=>void;onNewCompetition:()=>void;onHistory:()=>void;onCompare:()=>void;sessions?:any[];athletes?:any[]}){
