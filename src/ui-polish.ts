@@ -110,6 +110,38 @@ function polishHistoryAthleteFilter() {
   });
 }
 
+function polishSessionHeatmaps(card: HTMLElement) {
+  card.querySelectorAll<HTMLElement>('.session-athlete-side').forEach((side) => {
+    const heading = Array.from(side.querySelectorAll<HTMLHeadingElement>('h4'))
+      .find((item) => normalize(item.textContent).startsWith('Mapa de calor'));
+    if (!heading || heading.dataset.disclosureReady === '1') return;
+
+    const heatmap = heading.nextElementSibling as HTMLElement | null;
+    if (!heatmap) return;
+
+    const athleteName = normalize(side.querySelector('.session-athlete-heading strong')?.textContent);
+    heading.textContent = athleteName ? `Mapa de calor · ${athleteName}` : 'Mapa de calor';
+    heading.classList.add('history-heatmap-toggle');
+    heading.dataset.disclosureReady = '1';
+    heading.setAttribute('role', 'button');
+    heading.setAttribute('tabindex', '0');
+    heading.setAttribute('aria-expanded', 'false');
+    heatmap.classList.add('history-heatmap-body');
+
+    const toggle = () => {
+      const open = side.classList.toggle('history-heatmap-open');
+      heading.setAttribute('aria-expanded', String(open));
+    };
+
+    heading.addEventListener('click', toggle);
+    heading.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      toggle();
+    });
+  });
+}
+
 function polishSessionDetail() {
   const detailHeading = Array.from(document.querySelectorAll('h2'))
     .find((item) => normalize(item.textContent) === 'Detalhes da sessão');
@@ -117,6 +149,8 @@ function polishSessionDetail() {
   if (!card) return;
 
   card.classList.add('history-session-detail');
+  polishSessionHeatmaps(card);
+
   const playsHeading = Array.from(card.querySelectorAll<HTMLHeadingElement>('h3'))
     .find((item) => normalize(item.textContent) === 'Jogadas da partida');
   if (!playsHeading) return;
