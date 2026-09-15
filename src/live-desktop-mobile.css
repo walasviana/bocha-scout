@@ -1,0 +1,379 @@
+/* Mobile parity: use the approved desktop Scout ao vivo composition on phones.
+   This file is visual-only and intentionally loads after the existing live styles. */
+@media (max-width: 600px) {
+  body .scout-live-page {
+    --s: calc((100vw - 40px) / 920);
+  }
+
+  /* Keep the desktop scoreboard hierarchy on mobile. */
+  body .scout-live-page .scout-scoreboard {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 80 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 338fr) minmax(0, 196fr) minmax(0, 334fr) !important;
+    grid-template-rows:
+      calc(132 * var(--s))
+      calc(82 * var(--s))
+      calc(62 * var(--s))
+      calc(96 * var(--s)) !important;
+    grid-template-areas:
+      "brand brand brand"
+      "red timer blue"
+      "red end blue"
+      "red score blue" !important;
+    gap: 0 calc(26 * var(--s)) !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: rgba(249, 251, 255, 0.98) !important;
+    box-shadow: 0 8px 18px rgba(9, 20, 79, 0.08) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  body .scout-live-page .scout-brand {
+    display: flex !important;
+    grid-area: brand !important;
+    height: calc(132 * var(--s)) !important;
+    padding-left: calc(84 * var(--s)) !important;
+    gap: calc(24 * var(--s)) !important;
+    align-items: center !important;
+    align-self: start !important;
+  }
+
+  body .scout-live-page .scout-brand-emblem {
+    display: block !important;
+    width: calc(88 * var(--s)) !important;
+    height: calc(88 * var(--s)) !important;
+    flex: 0 0 calc(88 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-brand strong {
+    font-size: calc(46 * var(--s)) !important;
+    letter-spacing: calc(-1.5 * var(--s)) !important;
+    white-space: nowrap !important;
+  }
+
+  body .scout-live-page .scout-player {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-row: auto !important;
+    min-height: 0 !important;
+    height: calc(248 * var(--s)) !important;
+    align-self: start !important;
+    padding: calc(32 * var(--s)) calc(18 * var(--s)) calc(29 * var(--s)) !important;
+    border-radius: calc(24 * var(--s)) !important;
+    row-gap: 0 !important;
+  }
+
+  body .scout-live-page .scout-player-red {
+    grid-area: red !important;
+    align-items: stretch !important;
+  }
+
+  body .scout-live-page .scout-player-blue {
+    grid-area: blue !important;
+    align-items: stretch !important;
+  }
+
+  body .scout-live-page .scout-player strong {
+    width: auto !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    padding-left: calc(30 * var(--s)) !important;
+    padding-right: 0 !important;
+    font-size: calc(30 * var(--s)) !important;
+    line-height: 1.17 !important;
+    letter-spacing: calc(-1 * var(--s)) !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  body .scout-live-page .scout-player-blue strong {
+    padding-left: 0 !important;
+    padding-right: calc(30 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-player > span {
+    margin: calc(4 * var(--s)) 0 auto !important;
+    padding-left: calc(30 * var(--s)) !important;
+    padding-right: 0 !important;
+    font-size: calc(28 * var(--s)) !important;
+    line-height: 1.2 !important;
+  }
+
+  body .scout-live-page .scout-player-blue > span {
+    padding-left: 0 !important;
+    padding-right: calc(30 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-player::before {
+    width: calc(11 * var(--s)) !important;
+    height: calc(112 * var(--s)) !important;
+    top: calc(26 * var(--s)) !important;
+    left: calc(16 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-player-blue::before {
+    left: auto !important;
+    right: calc(18 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-ball-dots {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: calc(4 * var(--s)) !important;
+    margin: 0 !important;
+  }
+
+  body .scout-live-page .scout-ball-dots img {
+    width: calc(45 * var(--s)) !important;
+    height: calc(45 * var(--s)) !important;
+    max-width: 16% !important;
+  }
+
+  body .scout-live-page .scout-auto-timer {
+    grid-area: timer !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: calc(63 * var(--s)) !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    gap: calc(20 * var(--s)) !important;
+    border: 0 !important;
+    border-radius: calc(21 * var(--s)) !important;
+    align-self: end !important;
+  }
+
+  body .scout-live-page .scout-auto-timer strong,
+  body .scout-live-page .scout-auto-timer.is-off strong {
+    min-width: 0 !important;
+    font-size: calc(34 * var(--s)) !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  body .scout-live-page .scout-auto-timer svg {
+    width: calc(40 * var(--s)) !important;
+    height: calc(40 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-end-pill {
+    grid-area: end !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin-top: calc(10 * var(--s)) !important;
+    padding: calc(10 * var(--s)) 0 !important;
+    border: 0 !important;
+    border-radius: calc(21 * var(--s)) !important;
+    font-size: calc(34 * var(--s)) !important;
+    line-height: calc(40 * var(--s)) !important;
+  }
+
+  body .scout-live-page .scout-score {
+    grid-area: score !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    gap: calc(12 * var(--s)) !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  body .scout-live-page .scout-score b {
+    font-size: calc(78 * var(--s)) !important;
+    line-height: 1 !important;
+  }
+
+  body .scout-live-page .scout-score span {
+    font-size: calc(52 * var(--s)) !important;
+    line-height: 1 !important;
+  }
+
+  /* Desktop-style white-ball strip, scaled instead of redesigned. */
+  body .scout-live-page .scout-white-position {
+    position: relative !important;
+    z-index: auto !important;
+    width: min(calc(620 * var(--s)), calc(100% - 32px)) !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: calc(20 * var(--s)) auto calc(14 * var(--s)) !important;
+    padding: calc(15 * var(--s)) calc(20 * var(--s)) !important;
+    gap: calc(12 * var(--s)) !important;
+    border-radius: calc(22 * var(--s)) !important;
+    box-shadow: 0 calc(7 * var(--s)) calc(24 * var(--s)) rgba(15, 23, 42, 0.07) !important;
+  }
+
+  body .scout-live-page .scout-white-position::before {
+    display: none !important;
+  }
+
+  body .scout-live-page .scout-white-ball {
+    width: max(calc(36 * var(--s)), 16px) !important;
+    height: max(calc(36 * var(--s)), 16px) !important;
+    flex: 0 0 max(calc(36 * var(--s)), 16px) !important;
+  }
+
+  body .scout-live-page .scout-white-position strong {
+    font-size: max(calc(20 * var(--s)), 9px) !important;
+  }
+
+  body .scout-live-page .scout-white-position > span:last-child {
+    display: block !important;
+    margin-left: auto !important;
+    font-size: max(calc(13 * var(--s)), 7px) !important;
+  }
+
+  /* Fundamentals keep the same three-column desktop composition. */
+  body .scout-live-page .scout-play-grid,
+  body .scout-live-page .scout-play-card .scout-play-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  body .scout-live-page .scout-play-card {
+    padding: 14px 12px 16px !important;
+    border-radius: 18px !important;
+  }
+
+  body .scout-live-page .scout-play-card .scout-play-grid button {
+    min-height: 72px !important;
+    padding: 9px 6px !important;
+    border-radius: 12px !important;
+  }
+
+  body .scout-live-page .scout-play-card .scout-play-grid button img {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  body .scout-live-page .scout-play-card .scout-play-grid button span,
+  body .scout-live-page .scout-play-card .scout-play-grid button strong {
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Keep live performance as the desktop two-column comparison. */
+  body .scout-live-page .partial-performance h3 {
+    font-size: calc(40 * var(--s)) !important;
+    gap: calc(30 * var(--s)) !important;
+    padding: 0 calc(14 * var(--s)) !important;
+  }
+
+  body .scout-live-page .partial-tabs.end-filter {
+    padding: 0 calc(14 * var(--s)) !important;
+    gap: calc(12 * var(--s)) !important;
+  }
+
+  body .scout-live-page .partial-tabs.end-filter button {
+    height: calc(82 * var(--s)) !important;
+    flex: 1 1 0 !important;
+    flex-basis: 0 !important;
+    font-size: calc(27 * var(--s)) !important;
+  }
+
+  body .scout-live-page .partial-sides {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto auto auto !important;
+    gap: calc(18 * var(--s)) !important;
+    row-gap: calc(18 * var(--s)) !important;
+  }
+
+  body .scout-live-page .partial-sides article {
+    display: grid !important;
+    grid-template-rows: subgrid !important;
+    grid-row: span 5 !important;
+    padding: calc(28 * var(--s)) calc(22 * var(--s)) calc(19 * var(--s)) !important;
+    gap: 0 !important;
+    border-radius: calc(26 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-athlete-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) calc(80 * var(--s)) !important;
+    gap: calc(12 * var(--s)) !important;
+    min-height: calc(140 * var(--s)) !important;
+    padding: 0 calc(8 * var(--s)) calc(16 * var(--s)) calc(14 * var(--s)) !important;
+    align-items: start !important;
+  }
+
+  body .scout-live-page .performance-athlete-heading > svg {
+    display: block !important;
+    width: calc(80 * var(--s)) !important;
+    height: calc(80 * var(--s)) !important;
+    padding: calc(20 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-athlete-heading > div {
+    font-size: calc(28 * var(--s)) !important;
+    line-height: 1.16 !important;
+  }
+
+  body .scout-live-page .performance-athlete-heading strong {
+    font-size: calc(30 * var(--s)) !important;
+    line-height: 1.19 !important;
+    overflow-wrap: normal !important;
+  }
+
+  body .scout-live-page .performance-athlete-heading small,
+  body .scout-live-page .performance-metric strong,
+  body .scout-live-page .performance-metric > span {
+    font-size: calc(28 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-metric {
+    gap: calc(30 * var(--s)) !important;
+    padding: calc(24 * var(--s)) calc(14 * var(--s)) calc(18 * var(--s)) !important;
+    min-height: calc(89 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-metric > svg {
+    width: calc(42 * var(--s)) !important;
+    height: calc(42 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-metric b {
+    font-size: calc(30 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-results {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    padding: calc(20 * var(--s)) 0 calc(22 * var(--s)) !important;
+    border-radius: calc(22 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-results b {
+    font-size: calc(50 * var(--s)) !important;
+  }
+
+  body .scout-live-page .performance-results span {
+    font-size: calc(25 * var(--s)) !important;
+  }
+
+  /* Same fixed undo behavior as desktop, simply constrained to phone width. */
+  body .scout-live-page .scout-undo-button {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    transform: translateX(-50%) !important;
+    z-index: 95 !important;
+    width: min(calc(100vw - 24px), 916px) !important;
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 22px rgba(7, 88, 170, 0.22) !important;
+  }
+
+  body .scout-live-page .scout-live-container {
+    padding-bottom: 78px !important;
+  }
+}
