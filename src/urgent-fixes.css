@@ -14,7 +14,49 @@
   z-index: 20000;
 }
 
+/* O atalho de início do Scout ao vivo permanece visível e minimalista. */
+body .scout-live-page .classic-home {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body .scout-live-page .classic-home svg {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Minhas partidas usa um símbolo próprio, diferente do gráfico do Histórico. */
+.home-my-matches .home-icon svg {
+  display: none !important;
+}
+
+.home-my-matches .home-icon::before {
+  content: "";
+  width: 34px;
+  height: 34px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3h6v1M8 9h8M8 13h8M8 17h5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3h6v1M8 9h8M8 13h8M8 17h5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* A seleção de atleta deve ser integralmente branca, inclusive acima de regras antigas mais específicas. */
+body .hub-scout-home.is-athlete-selection-screen,
+body .hub-scout-home.is-athlete-selection-screen > div,
+body .hub-scout-home.is-athlete-selection-screen > div > div:first-child,
+body .hub-scout-home.is-athlete-selection-screen .athlete-selection-white {
+  background: #fff !important;
+}
+
 @media (max-width: 600px) {
+  body .hub-scout-home.is-athlete-selection-screen,
+  body .hub-scout-home.is-athlete-selection-screen > div,
+  body .hub-scout-home.is-athlete-selection-screen > div > div:first-child,
+  body .hub-scout-home.is-athlete-selection-screen .athlete-selection-white {
+    background: #fff !important;
+  }
+
   /* A coleta usa a largura real da tela e deixa de empilhar caixas decorativas. */
   body .scout-live-page {
     padding-left: 0 !important;
