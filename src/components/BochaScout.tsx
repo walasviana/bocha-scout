@@ -1,7 +1,7 @@
 // @ts-nocheck
 import './ClassicScoreboard.css';
 import MobileDisclosure from './MobileDisclosure';
-import { ArrowCounterClockwise, CaretLeft, Clock, Timer, Circle, Crosshair, XCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CaretLeft, House, Clock, Timer, Circle, Crosshair, XCircle } from '@phosphor-icons/react';
 import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
 import FoundationRadar from './FoundationRadar';
@@ -3011,21 +3011,21 @@ export default function BochaScout() {
     return (
       <div style={styles.page} className="scout-live-page">
         <div style={styles.container} className="scout-live-container">
-          <nav className="scout-match-nav" aria-label="Navegação da partida">
-              <button type="button" className="scout-home-button" onClick={()=>{setView("dashboard");setMatchHome(true);}}>
-                <CaretLeft aria-hidden="true"/><span className="scout-back-label">Início</span>
+          <nav className="classic-topbar" aria-label="Navegação da partida">
+              <button type="button" className="classic-home" aria-label="Início" title="Início" onClick={()=>{setView("dashboard");setMatchHome(true);}}>
+                <House aria-hidden="true"/>
               </button>
-              <details className="scout-match-menu" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))event.currentTarget.open=false;}} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.currentTarget.open=false;event.currentTarget.querySelector("summary")?.focus();}}}>
+              <div className="classic-brand">
+                <img src="/bocha-scout-emblem.png" alt="" />
+                <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
+              </div>
+              <details className="classic-menu" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))event.currentTarget.open=false;}} onKeyDown={event=>{if(event.key==="Escape"){event.preventDefault();event.currentTarget.open=false;event.currentTarget.querySelector("summary")?.focus();}}}>
                 <summary aria-label="Opções da partida" title="Opções da partida"><span aria-hidden="true">⋮</span></summary>
-                <div className="scout-match-menu-panel">
+                <div className="classic-menu-panel">
                   <button type="button" onClick={event=>{event.currentTarget.closest("details")?.removeAttribute("open");abandonGame();}}>Abandonar partida</button>
                 </div>
               </details>
             </nav>
-            <div className="scout-brand">
-              <img src="/home-ball-logo.png" alt="" className="scout-brand-emblem" />
-              <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
-            </div>
           <section className="classic-scoreboard" aria-label="Placar da partida">
             <div className="classic-end">{currentEndName}</div>
             {scoutMode==='live' && <button type="button" className={`classic-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><Timer aria-hidden="true" size={26}/><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}

@@ -1,5 +1,53 @@
 /* Cloudflare scoreboard colors and side-by-side hierarchy, with current live controls.
    Independent class names prevent legacy mobile overrides from changing this layout. */
+/* The navigation scrolls away in normal flow; only the scoreboard sticks. */
+body:has(.scout-live-page .classic-topbar) .hub-modern-header.account-toolbar {
+  display: none !important;
+}
+body .scout-live-page:has(.classic-topbar) {padding-top:0 !important;}
+body .scout-live-page .scout-live-container:has(.classic-topbar) {border-top:0;border-top-left-radius:0!important;border-top-right-radius:0!important;}
+.classic-topbar {
+  position:relative;
+  z-index:81;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) 44px;
+  align-items:center;
+  gap:8px;
+  min-height:68px;
+  padding:8px 16px;
+  background:#09264b;
+  color:#fff;
+}
+.classic-home,.classic-menu > summary {
+  display:flex;align-items:center;justify-content:center;
+  width:44px;height:44px;padding:0;border:0;border-radius:10px;
+  background:transparent;color:#fff;cursor:pointer;list-style:none;
+}
+.classic-home svg {width:25px;height:25px;}
+.classic-menu > summary {font-size:30px;line-height:1;}
+.classic-menu > summary::-webkit-details-marker {display:none;}
+.classic-home:hover,.classic-menu > summary:hover {background:#ffffff14;}
+.classic-home:focus-visible,.classic-menu > summary:focus-visible {outline:2px solid #facc15;outline-offset:2px;}
+.classic-brand {display:flex;justify-content:center;align-items:center;gap:10px;min-width:0;}
+.classic-brand img {width:40px;height:40px;object-fit:contain;border-radius:50%;}
+.classic-brand > div {display:flex;flex-direction:column;}
+.classic-brand strong {font-size:21px;white-space:nowrap;letter-spacing:.04em;}
+.classic-brand strong span {color:#facc15;}
+.classic-brand small {font-size:7px;color:#a9bad0;letter-spacing:.22em;margin-top:3px;}
+.classic-menu {position:relative;}
+.classic-menu-panel {position:absolute;top:48px;right:0;width:210px;padding:8px;border:1px solid #ffffff38;border-radius:12px;background:#09264b;box-shadow:0 10px 28px #0004;}
+.classic-menu-panel button {width:100%;min-height:44px;border:0;border-radius:8px;padding:10px 12px;text-align:left;background:#ffffff0d;color:#fff;font:inherit;cursor:pointer;}
+@media(max-width:600px) {
+  .classic-topbar {padding:6px 8px;gap:4px;min-height:60px;}
+  .classic-brand {gap:6px;}
+  .classic-brand img {width:30px;height:30px;}
+  .classic-brand strong {font-size:17px;letter-spacing:0;}
+  .classic-brand small {font-size:6px;}
+}
+@media(max-width:350px) {
+  .classic-brand img {width:24px;height:24px;}
+  .classic-brand strong {font-size:15px;}
+}
 .scout-live-page .classic-scoreboard {
   position: sticky;
   top: 0;
