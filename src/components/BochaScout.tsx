@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { ArrowCounterClockwise, CaretLeft, Clock, Timer } from '@phosphor-icons/react';
+import MobileDisclosure from './MobileDisclosure';
+import { ArrowCounterClockwise, CaretLeft, Clock, Timer, Circle, Crosshair, XCircle } from '@phosphor-icons/react';
 import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
 import FoundationRadar from './FoundationRadar';
@@ -3021,11 +3022,11 @@ export default function BochaScout() {
                 </div>
               </details>
             </nav>
-          <section className="scout-scoreboard" aria-label="Placar da partida">
             <div className="scout-brand">
               <img src="/home-ball-logo.png" alt="" className="scout-brand-emblem" />
               <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
             </div>
+          <section className="scout-scoreboard" aria-label="Placar da partida">
             <div className="scout-end-pill">{currentEndName}</div>
             {scoutMode==='live' && <button type="button" className={`scout-auto-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><Timer aria-hidden="true" size={26}/><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}
             <div className="scout-player scout-player-red">
@@ -3041,16 +3042,16 @@ export default function BochaScout() {
                 {Array.from({ length: 6 }, (_, i) => <img key={i} src="/scout-assets/blue-ball.png" alt="" className={i < blueBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
-          </section>
-
-
           {whitePosition && (
             <div className="scout-white-position">
               <img className="scout-white-ball" src="/scout-assets/white-ball.png" alt="Bola branca" />
-              <strong>Branca: {whitePosition}</strong>
+              <strong>Branca · posição {whitePosition}</strong>
               <span>Posição atual</span>
             </div>
           )}
+
+          </section>
+
 
           {positionDraft && <PrecisePosition cell={positionDraft.cell} point={positionDraft.point} onPoint={point=>{pushUndoSnapshot();setPositionDraft({...positionDraft,point});}} onConfirm={confirmPosition} onBack={()=>{pushUndoSnapshot();setPositionDraft(null);}} />}
           {stage==='result' && <section className="throw-timer">
@@ -3167,12 +3168,9 @@ export default function BochaScout() {
                 title="Resultado da jogada"
               />
 
-              <div style={styles.selectedInfo}>
-                {selectedColor}{" "}
-                <strong>{selectedColor}</strong>
-              </div>
+              <div className={`scout-selected-color is-${selectedColor.toLowerCase()}`}><strong>{selectedColor}</strong></div>
 
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+              <div className="scout-deliver-action" style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
                 <button
                   onClick={deliverSelectedBalls}
                   style={{
@@ -3209,9 +3207,7 @@ export default function BochaScout() {
                   }}
                 >
                   
-                  <strong>
-                    Acerto
-                  </strong>
+                  <Circle className="scout-result-symbol" aria-hidden="true"/><strong>Acerto</strong>
                 </button>
 
                 <button
@@ -3227,9 +3223,7 @@ export default function BochaScout() {
                   }}
                 >
                   
-                  <strong>
-                    Funcional
-                  </strong>
+                  <Crosshair className="scout-result-symbol" aria-hidden="true"/><strong>Funcional</strong>
                 </button>
 
                 <button
@@ -3245,9 +3239,7 @@ export default function BochaScout() {
                   }}
                 >
                   
-                  <strong>
-                    Erro
-                  </strong>
+                  <XCircle className="scout-result-symbol" aria-hidden="true"/><strong>Erro</strong>
                 </button>
               </div>
             </div>
@@ -3418,6 +3410,7 @@ export default function BochaScout() {
             <PartialPerformance plays={playsHistory} gameType={gameType} athlete={athlete} opponent={opponent} athleteColor={athleteColor} scoutMode={scoutMode} />
           </div>
 
+          <MobileDisclosure summary={<><Clock aria-hidden="true"/><strong>Histórico</strong><span className="history-quick">{playsHistory.length} jogadas</span></>}>
           <section className="scout-partial-history" aria-label="Histórico de jogadas da partida">
             <label>Histórico <select aria-label="Parcial do histórico" value={historyEndFilter} onChange={e=>setHistoryEndFilter(e.target.value)}><option>Atual</option><option>Geral</option>{[...new Set([...regularEnds,...playsHistory.map(p=>p.end)])].map(end=><option key={end}>{end}</option>)}</select></label>
             <div className="scout-partial-history-title">
@@ -3442,6 +3435,7 @@ export default function BochaScout() {
               </div>
             )}
           </section>
+          </MobileDisclosure>
 
 
           <div className="scout-sticky-actions">
@@ -3940,7 +3934,7 @@ function StepHeader({
   title,
 }) {
   return (
-    <div
+    <div className="scout-step-heading"
       style={{
         display: "flex",
         alignItems: "center",
@@ -5034,4 +5028,5 @@ const styles = {
     padding: 15,
   },
 };
+
 

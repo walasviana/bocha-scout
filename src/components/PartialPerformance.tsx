@@ -1,3 +1,4 @@
+import MobileDisclosure from './MobileDisclosure';
 import { ChartBar, Target, User } from '@phosphor-icons/react';
 import { useState } from 'react';
 import FoundationRadar from './FoundationRadar';
@@ -7,7 +8,7 @@ export default function PartialPerformance({plays, gameType, athlete, opponent, 
   const [comparisonOpen,setComparisonOpen]=useState(false);
   const ends = [...new Set<string>([...regularEnds(gameType), ...plays.map((p: any) => p.end)])];
   const groups=['Vermelho','Azul'].map(color=>({id:color,color,name:color===athleteColor?athlete:opponent,plays:plays.filter((p:any)=>p.color===color)}));
-  return <section className="partial-performance">
+  return <MobileDisclosure enabled={!isHistory} summary={<><ChartBar aria-hidden="true"/><strong>Desempenho</strong><span className="performance-quick">{groups.map(group=>{const stats=calcStats(group.plays);return <span key={group.id} aria-label={group.color+': eficiência '+(stats.total?Math.round(stats.efficiency)+'%':'sem jogadas')}><img src={'/scout-assets/'+(group.color==='Vermelho'?'red':'blue')+'-ball.png'} alt=""/><b>{stats.total?Math.round(stats.efficiency)+'%':'—'}</b></span>})}</span></>}><section className="partial-performance">
     <h3><ChartBar weight="fill" aria-hidden="true" />{isHistory ? 'Desempenho por parcial' : scoutMode === 'recorded' ? 'Desempenho da partida gravada' : 'Desempenho ao vivo'}</h3>
     <div className="partial-tabs end-filter" aria-label="Filtrar desempenho por parcial">
       {['Geral', ...ends].map(end => <button type="button" key={end} aria-pressed={filter === end} onClick={() => setFilter(end)}>{end}</button>)}
@@ -26,5 +27,5 @@ export default function PartialPerformance({plays, gameType, athlete, opponent, 
       <summary>Comparar fundamentos <span>{filter} · vermelho e azul</span></summary>
       {comparisonOpen&&<FoundationRadar series={groups} gameType={gameType} selectedEnd={filter} hideFilters/>}
     </details>}
-  </section>;
+  </section></MobileDisclosure>;
 }
