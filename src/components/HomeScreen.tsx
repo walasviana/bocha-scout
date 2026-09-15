@@ -16,7 +16,7 @@ import './HomeScreen.css';
 export function HomeHeader({notifications,account}:{notifications:React.ReactNode;account:React.ReactNode}){
  const [hidden,setHidden]=useState(false);const [scrolled,setScrolled]=useState(false);const headerRef=useRef<HTMLElement>(null);
  useEffect(()=>{let previous=window.scrollY;let frame=0;const update=()=>{frame=0;const y=window.scrollY;setScrolled(y>140);if(y<70||headerRef.current?.contains(document.activeElement)||headerRef.current?.querySelector('details[open]'))setHidden(false);else if(Math.abs(y-previous)>6){setHidden(y>previous);previous=y;}if(y<70)previous=y;};const onScroll=()=>{if(!frame)frame=requestAnimationFrame(update)};window.addEventListener('scroll',onScroll,{passive:true});return()=>{window.removeEventListener('scroll',onScroll);cancelAnimationFrame(frame)}},[]);
- return <header ref={headerRef} onFocusCapture={()=>setHidden(false)} className={`account-toolbar hub-modern-header${hidden?' is-retracted':''}${scrolled?' is-scrolled':''}`}><div className="home-brand"><img src="/home-ball-logo.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div></header>;
+ return <header ref={headerRef} onFocusCapture={()=>setHidden(false)} className={`account-toolbar hub-modern-header${hidden?' is-retracted':''}${scrolled?' is-scrolled':''}`}><div className="home-brand"><img src="/bocha-scout-emblem.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div></header>;
 }
 
 export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,sessions=[]}:{onNewTraining:()=>void;onNewCompetition:()=>void;onHistory:()=>void;sessions?:any[];athletes?:any[]}){
@@ -65,4 +65,3 @@ export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,ses
  <footer className="home-footer">BOCHA SCOUT · DADOS QUE INCLUEM</footer>
  </main>;
 }
-
