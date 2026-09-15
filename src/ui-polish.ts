@@ -110,6 +110,42 @@ function polishHistoryAthleteFilter() {
   });
 }
 
+function polishSessionDetail() {
+  const detailHeading = Array.from(document.querySelectorAll('h2'))
+    .find((item) => normalize(item.textContent) === 'Detalhes da sessão');
+  const card = findCardFromHeading(detailHeading) as HTMLElement | null;
+  if (!card) return;
+
+  card.classList.add('history-session-detail');
+  const playsHeading = Array.from(card.querySelectorAll<HTMLHeadingElement>('h3'))
+    .find((item) => normalize(item.textContent) === 'Jogadas da partida');
+  if (!playsHeading) return;
+
+  playsHeading.classList.add('history-plays-toggle');
+  let sibling = playsHeading.nextElementSibling as HTMLElement | null;
+  while (sibling) {
+    sibling.classList.add('history-play-row');
+    sibling = sibling.nextElementSibling as HTMLElement | null;
+  }
+
+  if (playsHeading.dataset.disclosureReady === '1') return;
+  playsHeading.dataset.disclosureReady = '1';
+  playsHeading.setAttribute('role', 'button');
+  playsHeading.setAttribute('tabindex', '0');
+  playsHeading.setAttribute('aria-expanded', 'false');
+
+  const toggle = () => {
+    const open = card.classList.toggle('history-plays-open');
+    playsHeading.setAttribute('aria-expanded', String(open));
+  };
+  playsHeading.addEventListener('click', toggle);
+  playsHeading.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    toggle();
+  });
+}
+
 function polishBrand() {
   document.querySelectorAll<HTMLElement>('.home-brand').forEach((brand) => {
     brand.classList.add('ui-home-brand');
@@ -133,8 +169,6 @@ function goToHome() {
     return;
   }
 
-  // Na seleção de uma nova partida ainda não existe partida em andamento,
-  // então recarregar volta com segurança ao dashboard inicial.
   window.location.assign('/');
 }
 
@@ -143,6 +177,7 @@ function applyPolish() {
   polishResumeActions();
   polishSelectionScreen();
   polishHistoryAthleteFilter();
+  polishSessionDetail();
 }
 
 let frame = 0;
