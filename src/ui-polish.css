@@ -1,0 +1,441 @@
+/* Ajustes visuais acumulados antes da próxima publicação do Bocha Scout. */
+
+/* A navegação de análises agora usa a marca no cabeçalho para voltar ao início. */
+.home-section-nav {
+  display: none !important;
+}
+
+.home-brand.ui-home-brand {
+  appearance: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-brand.ui-home-brand:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, .35);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+/* Continuar/abandonar partida sem a caixa azul/card ao redor. */
+.resume-actions-plain {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Seleção de atletas clara e com melhor contraste. */
+.hub-scout-home.is-athlete-selection-screen {
+  background: #fff !important;
+}
+
+.athlete-selection-white {
+  background: #fff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .06) !important;
+}
+
+.athlete-selection-white input,
+.athlete-selection-white select {
+  background: #fff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* No Treino, classe e gênero deixam de ocupar espaço na seleção dos dois atletas. */
+.training-filter-hidden,
+.training-athlete-heading-duplicate {
+  display: none !important;
+}
+
+/* Mesmo símbolo de atleta usado no Scout ao vivo (silhueta de usuário). */
+.ui-athlete-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.ui-athlete-label::before {
+  content: "";
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M128 136a56 56 0 1 0-56-56 56.06 56.06 0 0 0 56 56Zm0 16c-52.93 0-96 31.4-96 70a8 8 0 0 0 8 8h176a8 8 0 0 0 8-8c0-38.6-43.07-70-96-70Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M128 136a56 56 0 1 0-56-56 56.06 56.06 0 0 0 56 56Zm0 16c-52.93 0-96 31.4-96 70a8 8 0 0 0 8-8c0-38.6-43.07-70-96-70Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.ui-athlete-label span[style*="border-radius"] {
+  display: none !important;
+}
+
+/* Histórico: desempenho por parcial com o mesmo padrão visual do Scout ao vivo. */
+.is-history-live-performance {
+  margin: 16px 0 20px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  color: #09144f;
+  background: #fff !important;
+  border: 1px solid #e7eef9 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 8px 24px rgba(9, 20, 79, .05);
+}
+
+.history-performance-toggle {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 18px;
+  border: 0;
+  background: #fff;
+  color: #09144f;
+  cursor: pointer;
+  text-align: left;
+}
+
+.history-performance-toggle > span:first-child {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.history-performance-toggle > span:first-child svg {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  color: #0075ff;
+}
+
+.history-performance-toggle strong {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.history-performance-summary {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.history-performance-caret {
+  transition: transform .2s ease;
+}
+
+.is-history-live-performance[data-open="true"] .history-performance-caret {
+  transform: rotate(180deg);
+}
+
+.history-performance-body {
+  padding: 0 14px 16px;
+  border-top: 1px solid #edf2f7;
+}
+
+.is-history-live-performance .performance-toolbar {
+  padding-top: 14px;
+}
+
+.is-history-live-performance .partial-tabs.end-filter {
+  display: flex !important;
+  gap: 8px !important;
+  margin: 0 0 14px !important;
+  padding: 0 !important;
+  overflow-x: auto;
+  background: transparent !important;
+}
+
+.is-history-live-performance .partial-tabs.end-filter button {
+  min-width: 72px;
+  min-height: 44px;
+  padding: 8px 12px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #e9f1fd !important;
+  color: #09144f !important;
+  font-weight: 800;
+}
+
+.is-history-live-performance .partial-tabs.end-filter button[aria-pressed="true"] {
+  background: #0075ff !important;
+  color: #fff !important;
+}
+
+.is-history-live-performance .partial-sides {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 12px !important;
+}
+
+.is-history-live-performance .performance-athlete {
+  min-width: 0;
+  padding: 16px 14px 14px !important;
+  border: 1px solid #dce6fa !important;
+  border-top-width: 5px !important;
+  border-radius: 18px !important;
+  background: #fdfdff !important;
+  color: #09144f;
+}
+
+.is-history-live-performance .performance-athlete-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 74px;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid #dce4f4;
+}
+
+.is-history-live-performance .performance-athlete-heading strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.is-history-live-performance .performance-athlete-heading small {
+  display: block;
+  margin-top: 4px;
+  color: #5066a3;
+  font-size: 13px;
+}
+
+.is-history-live-performance .performance-athlete-heading > svg {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  padding: 11px;
+  border-radius: 50%;
+  color: #ff172c;
+  background: #ffe9ed;
+}
+
+.is-history-live-performance .performance-blue .performance-athlete-heading > svg {
+  color: #0075ff;
+  background: #e8f1ff;
+}
+
+.is-history-live-performance .performance-kpis {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.is-history-live-performance .performance-kpi {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.is-history-live-performance .performance-kpi svg {
+  width: 22px;
+  height: 22px;
+}
+
+.is-history-live-performance .performance-kpi span {
+  color: #5268a6;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.is-history-live-performance .performance-kpi b {
+  font-size: 17px;
+}
+
+.is-history-live-performance .performance-results {
+  display: grid !important;
+  grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+  margin-top: 10px !important;
+  padding: 12px 0 !important;
+  border-radius: 14px !important;
+  background: #f0f5fc !important;
+}
+
+.is-history-live-performance .performance-results > div {
+  text-align: center;
+}
+
+.is-history-live-performance .performance-results b {
+  display: block;
+  color: #078845;
+  font-size: 24px;
+}
+
+.is-history-live-performance .performance-results > div:nth-child(2) b { color: #f59e0b; }
+.is-history-live-performance .performance-results > div:nth-child(3) b { color: #ef233c; }
+
+.is-history-live-performance .performance-results span {
+  color: #455f9c;
+  font-size: 12px;
+}
+
+/* Lista de jogadas da análise fica fechada e abre somente quando solicitada. */
+.history-session-detail .history-plays-toggle {
+  position: relative;
+  margin: 18px 0 0 !important;
+  padding: 14px 42px 14px 14px;
+  border: 1px solid #dce6fa;
+  border-radius: 14px;
+  background: #f8fbff;
+  color: #09144f;
+  cursor: pointer;
+  user-select: none;
+}
+
+.history-session-detail .history-plays-toggle::after {
+  content: "⌄";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-52%);
+  color: #5268a6;
+  font-size: 22px;
+  transition: transform .2s ease;
+}
+
+.history-session-detail.history-plays-open .history-plays-toggle::after {
+  transform: translateY(-42%) rotate(180deg);
+}
+
+.history-session-detail .history-play-row {
+  display: none !important;
+}
+
+.history-session-detail.history-plays-open .history-play-row {
+  display: block !important;
+}
+
+/* Novo atalho da Home para as partidas registradas pela própria conta. */
+.home-my-matches {
+  position: relative;
+}
+
+.home-my-matches strong {
+  color: inherit;
+}
+
+/* Em "Minhas partidas", a tela mostra somente a lista da conta. */
+.hub-scout-home.my-matches-view .my-matches-section {
+  display: none !important;
+}
+
+.hub-scout-home.my-matches-view .my-matches-list-card,
+.hub-scout-home.my-matches-view .my-matches-back {
+  display: block !important;
+}
+
+.my-matches-list-card {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .06) !important;
+}
+
+.my-matches-list-card > h2 {
+  margin-bottom: 4px !important;
+  color: #0f172a;
+}
+
+.my-matches-intro {
+  margin: 0 0 16px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.my-matches-back {
+  margin-top: 12px !important;
+}
+
+/* Ao abrir uma análise a lista desaparece, dando aparência de uma página dedicada. */
+.hub-scout-home.my-matches-view.my-match-analysis-open .my-matches-list-card,
+.hub-scout-home.my-matches-view.my-match-analysis-open .my-matches-back {
+  display: none !important;
+}
+
+.hub-scout-home.my-matches-view.my-match-analysis-open .my-match-analysis-card {
+  display: block !important;
+  width: 100%;
+  margin-top: 0 !important;
+}
+
+.my-match-analysis-card {
+  background: #fff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .07) !important;
+}
+
+/* O placar do Scout ao vivo deve encostar nas duas bordas do celular. */
+@media (max-width: 600px) {
+  body .scout-live-page .scout-scoreboard {
+    width: 100vw !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    margin-left: calc(50% - 50vw) !important;
+    margin-right: calc(50% - 50vw) !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .history-performance-toggle {
+    grid-template-columns: minmax(0,1fr) auto;
+  }
+
+  .history-performance-summary {
+    display: none;
+  }
+
+  .is-history-live-performance .partial-sides {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .is-history-live-performance .performance-athlete {
+    padding: 12px 9px 10px !important;
+  }
+
+  .is-history-live-performance .performance-athlete-heading strong {
+    font-size: 14px;
+  }
+
+  .is-history-live-performance .performance-athlete-heading small,
+  .is-history-live-performance .performance-kpi span,
+  .is-history-live-performance .performance-results span {
+    font-size: 10px;
+  }
+
+  .is-history-live-performance .performance-athlete-heading > svg {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    padding: 9px;
+  }
+
+  .is-history-live-performance .performance-kpi {
+    grid-template-columns: auto 1fr;
+  }
+
+  .is-history-live-performance .performance-kpi b {
+    grid-column: 2;
+    font-size: 15px;
+  }
+
+  .is-history-live-performance .performance-results b {
+    font-size: 20px;
+  }
+
+  .my-matches-list-card,
+  .my-match-analysis-card {
+    border-radius: 14px !important;
+  }
+}

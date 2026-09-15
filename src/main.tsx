@@ -10,6 +10,8 @@ import "./live-sticky-controls.css";
 import "./live-desktop-mobile.css";
 import "./live-mobile-photo.css";
 import "./live-layout-compat.css";
+import "./ui-polish";
+import "./history-heatmap-disclosure.css";
 
 function App() {
   return <BochaScout />;

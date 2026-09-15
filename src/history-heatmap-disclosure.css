@@ -1,0 +1,50 @@
+/* Mapas de calor da análise completa ficam recolhidos por padrão. */
+.history-session-detail .history-heatmap-toggle {
+  position: relative;
+  margin: 14px 0 0 !important;
+  padding: 13px 40px 13px 14px;
+  border: 1px solid #dce6fa;
+  border-radius: 13px;
+  background: #f8fbff;
+  color: #09144f;
+  font-size: 14px;
+  line-height: 1.25;
+  cursor: pointer;
+  user-select: none;
+}
+
+.history-session-detail .history-heatmap-toggle::after {
+  content: "⌄";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-52%);
+  color: #5268a6;
+  font-size: 21px;
+  transition: transform .2s ease;
+}
+
+.history-session-detail .session-athlete-side.history-heatmap-open .history-heatmap-toggle::after {
+  transform: translateY(-42%) rotate(180deg);
+}
+
+.history-session-detail .history-heatmap-body {
+  display: none !important;
+  padding-top: 12px;
+}
+
+.history-session-detail .session-athlete-side.history-heatmap-open .history-heatmap-body {
+  display: block !important;
+}
+
+.history-session-detail .history-heatmap-toggle:focus-visible {
+  outline: 3px solid rgba(0,117,255,.2);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .history-session-detail .history-heatmap-toggle {
+    font-size: 12px;
+    padding: 12px 34px 12px 11px;
+  }
+}

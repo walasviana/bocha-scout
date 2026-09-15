@@ -6,14 +6,15 @@ import { calcStats, regularEnds, formatDuration } from '../lib/scoutData';
 export default function PartialPerformance({plays, gameType, athlete, opponent, athleteColor, scoutMode, isHistory}: any) {
   const [filter, setFilter] = useState('Geral');
   const [comparisonOpen,setComparisonOpen]=useState(false);
+  const [historyOpen,setHistoryOpen]=useState(false);
   const ends = [...new Set<string>([...regularEnds(gameType), ...plays.map((p: any) => p.end)])];
   const groups=['Vermelho','Azul'].map(color=>({id:color,color,name:color===athleteColor?athlete:opponent,plays:plays.filter((p:any)=>p.color===color)}));
   const isLive = !isHistory && scoutMode !== 'recorded';
   const title = isHistory ? 'Desempenho por parcial' : scoutMode === 'recorded' ? 'Desempenho da partida gravada' : 'Desempenho ao vivo';
 
-  return <section className={`partial-performance${isLive ? ' is-live-performance' : ''}`}>
+  const performanceBody = <>
     <div className="performance-toolbar">
-      <h3><ChartBar weight="fill" aria-hidden="true" /><span className="performance-title">{title}</span></h3>
+      {!isHistory && <h3><ChartBar weight="fill" aria-hidden="true" /><span className="performance-title">{title}</span></h3>}
       <div className="partial-tabs end-filter" aria-label="Filtrar desempenho por parcial">
         {['Geral', ...ends].map(end => <button type="button" key={end} aria-pressed={filter === end} onClick={() => setFilter(end)}>{end}</button>)}
       </div>
@@ -36,5 +37,20 @@ export default function PartialPerformance({plays, gameType, athlete, opponent, 
     {!isHistory && comparisonOpen && <div className="live-foundation-comparison is-open">
       <FoundationRadar series={groups} gameType={gameType} selectedEnd={filter} hideFilters/>
     </div>}
+  </>;
+
+  if (isHistory) {
+    return <section className="partial-performance is-history-live-performance" data-open={historyOpen}>
+      <button type="button" className="history-performance-toggle" aria-expanded={historyOpen} onClick={()=>setHistoryOpen(open=>!open)}>
+        <span><ChartBar weight="fill" aria-hidden="true" /><strong>{title}</strong></span>
+        <span className="history-performance-summary">{filter} · {plays.length} jogadas</span>
+        <CaretDown className="history-performance-caret" aria-hidden="true" weight="bold" />
+      </button>
+      {historyOpen && <div className="history-performance-body">{performanceBody}</div>}
+    </section>;
+  }
+
+  return <section className={`partial-performance${isLive ? ' is-live-performance' : ''}`}>
+    {performanceBody}
   </section>;
 }
