@@ -1,0 +1,20 @@
+/* Reconcile the current performance toolbar with the existing capture layout. */
+body .scout-live-page .performance-toolbar .partial-tabs.end-filter {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+}
+body .scout-live-page .performance-toolbar .partial-tabs.end-filter button {
+  width: auto;
+}
+body .scout-live-page .scout-sticky-actions .scout-last-action {
+  margin-bottom: 72px;
+}
+@media(max-width:600px) {
+  body .scout-live-page .scout-sticky-actions .scout-last-action {
+    grid-template-columns: 36px minmax(0,1fr) 12px !important;
+  }
+  body .scout-live-page .scout-sticky-actions .scout-last-action small,
+  body .scout-live-page .scout-sticky-actions .scout-last-action strong {
+    grid-column: 2 !important;
+  }
+}

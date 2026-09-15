@@ -1,4 +1,5 @@
 // @ts-nocheck
+import './ClassicScoreboard.css';
 import MobileDisclosure from './MobileDisclosure';
 import { ArrowCounterClockwise, CaretLeft, Clock, Timer, Circle, Crosshair, XCircle } from '@phosphor-icons/react';
 import './ScoutCapture.css';
@@ -47,7 +48,6 @@ import { supabase } from "../lib/supabase";
 // PATCH: remove-end-history-v6
 // PATCH: history-redblue-v4
 // PATCH: athlete-selection-v3
-
 /*
 ============================================================
 BOCHA SCOUT
@@ -3026,27 +3026,27 @@ export default function BochaScout() {
               <img src="/home-ball-logo.png" alt="" className="scout-brand-emblem" />
               <div><strong>BOCHA <span>SCOUT</span></strong><small>DADOS QUE INCLUEM</small></div>
             </div>
-          <section className="scout-scoreboard" aria-label="Placar da partida">
-            <div className="scout-end-pill">{currentEndName}</div>
-            {scoutMode==='live' && <button type="button" className={`scout-auto-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><Timer aria-hidden="true" size={26}/><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}
-            <div className="scout-player scout-player-red">
+          <section className="classic-scoreboard" aria-label="Placar da partida">
+            <div className="classic-end">{currentEndName}</div>
+            {scoutMode==='live' && <button type="button" className={`classic-timer ${timerEnabled?'is-enabled':'is-off'} ${throwTimer.startedAt?'is-running':''}`} aria-pressed={timerEnabled} aria-label={timerEnabled?'Desativar cronômetro':'Ativar cronômetro'} title={timerEnabled?'Clique para desativar a cronometragem':'Clique para ativar a cronometragem'} onClick={toggleTimerEnabled}><Timer aria-hidden="true" size={26}/><strong>{timerEnabled?formatDuration(elapsedThrow):'Desligado'}</strong></button>}
+            <div className="classic-player classic-player-red">
               <strong title={redName}>{redName}</strong><span>VERMELHO</span>
-              <div className="scout-ball-dots" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
+              <div className="classic-balls" aria-label={`${redBallsAvailable} bolas vermelhas restantes`}>
                 {Array.from({ length: 6 }, (_, i) => <img key={i} src="/scout-assets/red-ball.png" alt="" className={i < redBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
-            <div className="scout-score"><b>{redScore}</b><span>×</span><b>{blueScore}</b></div>
-            <div className="scout-player scout-player-blue">
+            <div className="classic-score"><b>{redScore}</b><span>×</span><b>{blueScore}</b></div>
+            <div className="classic-player classic-player-blue">
               <strong title={blueName}>{blueName}</strong><span>AZUL</span>
-              <div className="scout-ball-dots" aria-label={`${blueBallsAvailable} bolas azuis restantes`}>
+              <div className="classic-balls" aria-label={`${blueBallsAvailable} bolas azuis restantes`}>
                 {Array.from({ length: 6 }, (_, i) => <img key={i} src="/scout-assets/blue-ball.png" alt="" className={i < blueBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
           {whitePosition && (
-            <div className="scout-white-position">
-              <img className="scout-white-ball" src="/scout-assets/white-ball.png" alt="Bola branca" />
-              <strong>Branca <span className="scout-white-position-label">· posição </span>{whitePosition}</strong>
-              <span>Posição atual</span>
+            <div className="classic-white" aria-label={`Posição da branca: ${whitePosition}`}>
+              <img className="classic-white-ball" src="/scout-assets/white-ball.png" alt="Bola branca" />
+              <strong>{whitePosition}</strong>
+              
             </div>
           )}
 
