@@ -3,6 +3,24 @@ import './urgent-fixes.css';
 const normalize = (value: string | null | undefined) =>
   String(value || '').replace(/\s+/g, ' ').trim();
 
+const FOUNDATION_LABELS: Record<string, string> = {
+  'Empurrar bola na ZP': 'Empurrar bola para a ZP',
+  'Tirar bola da ZP': 'Retirar bola da ZP',
+};
+
+function renameFoundationLabels() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+
+  nodes.forEach((node) => {
+    const current = normalize(node.nodeValue);
+    const replacement = FOUNDATION_LABELS[current];
+    if (replacement) node.nodeValue = replacement;
+  });
+}
+
 function fixMyMatchesAnalysis() {
   const detailHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
     .find((heading) => normalize(heading.textContent) === 'Detalhes da sessão');
@@ -27,6 +45,7 @@ function fixMyMatchesAnalysis() {
 
 function applyUrgentFixes() {
   fixMyMatchesAnalysis();
+  renameFoundationLabels();
 }
 
 let frame = 0;
