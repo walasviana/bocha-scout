@@ -7,6 +7,7 @@ import "./styles.css";
 
 import "./components/ScoutCapture.css";
 import "./live-sticky-controls.css";
+import "./live-desktop-mobile.css";
 
 function App() {
   return <BochaScout />;
@@ -36,4 +37,3 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     }).catch(console.error);
   });
 }
-
