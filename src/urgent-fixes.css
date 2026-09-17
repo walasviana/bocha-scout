@@ -41,12 +41,65 @@ body .scout-live-page .classic-home svg {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3h6v1M8 9h8M8 13h8M8 17h5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* A seleção de atleta deve ser integralmente branca, inclusive acima de regras antigas mais específicas. */
+/* Seleção de atleta integralmente branca. */
 body .hub-scout-home.is-athlete-selection-screen,
 body .hub-scout-home.is-athlete-selection-screen > div,
 body .hub-scout-home.is-athlete-selection-screen > div > div:first-child,
 body .hub-scout-home.is-athlete-selection-screen .athlete-selection-white {
   background: #fff !important;
+}
+
+/* Novo Scout: indicadores simples e consistentes para os dois lados. */
+body .athlete-label-blue,
+body .athlete-label-neutral {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+body .athlete-label-blue::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+  background: #2563eb;
+  display: inline-block;
+}
+
+body .athlete-label-neutral::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border-radius: 50%;
+  background: #64748b;
+  display: inline-block;
+}
+
+body .athlete-label-red-dot {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border-radius: 50%;
+  background: #dc2626;
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: -1px;
+}
+
+/* Histórico / Análise completa: filtro sem emoji de lupa e com fundo branco. */
+body .history-performance-card {
+  background: #fff !important;
+}
+
+body .history-performance-card .history-performance-card,
+body .history-performance-card > div {
+  background-color: #fff !important;
+}
+
+body .history-performance-card .athlete-label-neutral {
+  color: #334155 !important;
 }
 
 /* O retorno para a Home em Minhas partidas fica apenas no cabeçalho, sem botão duplicado. */
@@ -95,7 +148,6 @@ body .scout-live-page .scout-deliver-ball-compact {
     background: #fff !important;
   }
 
-  /* A coleta usa a largura real da tela e deixa de empilhar caixas decorativas. */
   body .scout-live-page {
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -179,7 +231,6 @@ body .scout-live-page .scout-deliver-ball-compact {
     box-shadow: none !important;
   }
 
-  /* O quadrado de posicionamento preciso fica menor e mais confortável no celular. */
   body .scout-live-page .precise-square {
     width: min(74vw, 270px) !important;
     max-width: 270px !important;
@@ -192,7 +243,6 @@ body .scout-live-page .scout-deliver-ball-compact {
     font-size: 12px !important;
   }
 
-  /* Acerto, Funcional e Erro ganham área de toque maior. */
   body .scout-live-page .scout-result-grid button {
     min-height: 106px !important;
     padding: 20px 16px !important;
@@ -217,7 +267,6 @@ body .scout-live-page .scout-deliver-ball-compact {
     margin-bottom: 10px !important;
   }
 
-  /* Botões continuam destacados: somente caixas informativas foram removidas. */
   body .scout-live-page button {
     touch-action: manipulation;
   }
