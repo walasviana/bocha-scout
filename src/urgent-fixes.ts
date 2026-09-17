@@ -22,6 +22,38 @@ function renameFoundationLabels() {
   });
 }
 
+function fixAthleteLabels() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+
+  nodes.forEach((node) => {
+    const current = normalize(node.nodeValue);
+    if (current === '🔵 Atleta Azul') {
+      node.nodeValue = 'Atleta Azul';
+      (node.parentElement as HTMLElement | null)?.classList.add('athlete-label-blue');
+    } else if (current === '🔎 Atleta') {
+      node.nodeValue = 'Atleta';
+      (node.parentElement as HTMLElement | null)?.classList.add('athlete-label-neutral');
+    }
+  });
+
+  Array.from(document.querySelectorAll<HTMLElement>('h2')).forEach((heading) => {
+    if (normalize(heading.textContent) !== 'Histórico do atleta') return;
+    const card = heading.closest<HTMLElement>('.hub-scout-home') || heading.parentElement?.parentElement;
+    if (card) card.classList.add('history-performance-card');
+  });
+
+  Array.from(document.querySelectorAll<HTMLElement>('div')).forEach((el) => {
+    if (normalize(el.textContent) !== 'Atleta Vermelho') return;
+    if (el.querySelector('.athlete-label-red-dot')) return;
+    const dot = document.createElement('span');
+    dot.className = 'athlete-label-red-dot';
+    el.insertBefore(dot, el.firstChild);
+  });
+}
+
 function fixMyMatchesAnalysis() {
   const detailHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
     .find((heading) => normalize(heading.textContent) === 'Detalhes da sessão');
@@ -66,10 +98,7 @@ let liveHomeFallbackTimer = 0;
 function scheduleLiveHomeFallback() {
   window.clearTimeout(liveHomeFallbackTimer);
   liveHomeFallbackTimer = window.setTimeout(() => {
-    // Se o onClick React funcionou, a tela ao vivo já saiu do DOM e nada mais é necessário.
     if (!document.querySelector('.scout-live-page .classic-home')) return;
-
-    // Fallback para navegadores/toques móveis que não concluíram a troca de tela.
     persistLiveHomeState();
     window.location.assign('/');
   }, 180);
@@ -81,8 +110,6 @@ document.addEventListener('click', (event) => {
   scheduleLiveHomeFallback();
 }, true);
 
-// Em alguns celulares, um elemento sobreposto pode receber o toque no lugar do botão.
-// Se o toque terminar dentro da área visual da casinha, acionamos o botão real.
 document.addEventListener('pointerup', (event) => {
   const homeButton = document.querySelector<HTMLButtonElement>('.scout-live-page .classic-home');
   if (!homeButton) return;
@@ -110,6 +137,7 @@ function markLiveActionButtons() {
 function applyUrgentFixes() {
   fixMyMatchesAnalysis();
   renameFoundationLabels();
+  fixAthleteLabels();
   markLiveActionButtons();
 
   const selectionHeading = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2'))
