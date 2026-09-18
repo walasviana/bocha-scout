@@ -13,7 +13,6 @@ import "./live-layout-compat.css";
 import "./ui-polish";
 import "./history-heatmap-disclosure.css";
 import "./urgent-fixes";
-import "./foundation-order";
 
 function App() {
   return <BochaScout />;

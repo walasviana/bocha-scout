@@ -110,6 +110,33 @@ const PLAYS = [
   "Falta",
 ];
 
+// Ordem de exibicao dos fundamentos na Etapa 4
+const FOUNDATION_DISPLAY_ORDER = [
+  "Saída de jogo",
+  "Aproximação",
+  "Batida",
+  "Tirar bola da ZP",
+  "Empurrar bola na ZP",
+  "Mover branca",
+  "Bola de defesa",
+  "Tabela",
+  "Aérea",
+  "Dobrar bola",
+  "Sobrepor",
+  "Pingo d'água",
+  "Falta",
+];
+
+function sortFoundations(plays) {
+  const rank = (play) => {
+    const index = FOUNDATION_DISPLAY_ORDER.indexOf(play);
+    return index === -1 ? FOUNDATION_DISPLAY_ORDER.length : index;
+  };
+  return [...plays].sort((a, b) => rank(a) - rank(b));
+}
+
+const VISIBLE_FOUNDATIONS = 6;
+
 function playAsset(play) {
   if (play === "Saída de jogo") return "/scout-assets/start.png";
   if (play === "Aproximação") return "/scout-assets/approach.png";
@@ -3258,14 +3285,22 @@ export default function BochaScout() {
                 </strong>
               </div>
 
+              {(() => {
+              const allowedPlays = sortFoundations(
+                PLAYS.filter(play=>foundationAllowed(play,sessionKind,gameType,selectedColor===athleteColor?athleteClass:opponentClass))
+              );
+              const visiblePlays = showMoreFundamentals
+                ? allowedPlays
+                : allowedPlays.slice(0, VISIBLE_FOUNDATIONS);
+              return (
+              <>
               <div
                 className="scout-play-grid"
                 style={
                   styles.playGrid
                 }
               >
-                {PLAYS.filter(play=>foundationAllowed(play,sessionKind,gameType,selectedColor===athleteColor?athleteClass:opponentClass)).map((play, playIndex) => {
-                  if (!showMoreFundamentals && playIndex >= 6) return null;
+                {visiblePlays.map((play) => {
                   const unavailable =
                     play ===
                       "Saída de jogo" &&
@@ -3276,6 +3311,7 @@ export default function BochaScout() {
                   return (
                     <button
                       key={play}
+                      type="button"
                       disabled={
                         unavailable
                       }
@@ -3292,24 +3328,21 @@ export default function BochaScout() {
                           : {}),
                       }}
                     >
-                      {play ===
-                        "Saída de jogo" &&
-                      unavailable
-                        ? ""
-                        : ""}
-
                       <img className="scout-play-icon" src={playAsset(play)} alt="" />
                       <span className="scout-play-label">{play}</span>
                     </button>
                   );
                 })}
               </div>
-              {PLAYS.length > 6 && (
+              {allowedPlays.length > VISIBLE_FOUNDATIONS && (
                 <button type="button" className="scout-more-fundamentals" onClick={() => setShowMoreFundamentals((value) => !value)}>
                   {showMoreFundamentals ? "Menos fundamentos" : "Mais fundamentos"}
-                  <span aria-hidden="true">⌄</span>
+                  <span aria-hidden="true">{showMoreFundamentals ? "⌃" : "⌄"}</span>
                 </button>
               )}
+              </>
+              );
+              })()}
             </div>
           )}
 
