@@ -1,7 +1,8 @@
 // @ts-nocheck
 import './ClassicScoreboard.css';
+import '../filter-screens.css';
 import MobileDisclosure from './MobileDisclosure';
-import { ArrowCounterClockwise, CaretLeft, House, Clock, Timer, Circle, Crosshair, XCircle } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, CaretLeft, House, Clock, Timer, Circle, Crosshair, XCircle, MagnifyingGlass, FunnelSimple, UsersThree, User, Folders, CalendarBlank, Trophy, Buildings, X, CaretDown } from '@phosphor-icons/react';
 import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
 import HeaderNavigation from './HeaderNavigation';
@@ -443,6 +444,37 @@ function TinyBar({ value, suffix = "%", max = 100 }) {
   );
 }
 
+function FilterField({ label, icon: Icon, children }) {
+  return (
+    <div className="filter-field">
+      <label className="filter-field__label">
+        {Icon && <Icon size={16} weight="bold" aria-hidden="true" />}
+        <span>{label}</span>
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function FiltersPanel({ title, activeCount, onClear, children, moreOpen, onToggleMore }) {
+  return (
+    <section className="filter-panel">
+      <div className="filter-panel__header">
+        <h2 className="filter-panel__title">{title}</h2>
+        <div className="filter-panel__meta">
+          <span className="filter-badge" aria-label={`${activeCount} filtros ativos`}>{activeCount}</span>
+          {activeCount > 0 && <button type="button" className="filter-clear" onClick={onClear}><X size={16} weight="bold" /> Limpar</button>}
+        </div>
+      </div>
+      {children}
+      {onToggleMore && <button type="button" className={`filter-more${moreOpen ? ' is-open' : ''}`} onClick={onToggleMore}>
+        <span>{moreOpen ? "Ocultar filtros" : "Mais filtros"}</span>
+        <CaretDown size={16} weight="bold" aria-hidden="true" />
+      </button>}
+    </section>
+  );
+}
+
 function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
   const [search,setSearch]=useState('');
   const [filterClass,setFilterClass]=useState('Todos');
@@ -480,10 +512,17 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
         <p style={{ color: "#64748b", marginBottom: 0 }}>Use o botão <strong>Cadastrar atleta</strong> no topo do sistema. Contas comuns podem cadastrar atletas; edição e exclusão são exclusivas do administrador.</p>
       </div>
 
-      <div style={styles.card}>
-        <h2>Atletas cadastrados ({athletes.length})</h2>
+      <FiltersPanel
+        title={`Atletas cadastrados (${athletes.length})`}
+        activeCount={(search.trim() ? 1 : 0) + (filterClass !== "Todos" ? 1 : 0) + (filterGender !== "Todos" ? 1 : 0)}
+        onClear={() => { setSearch(""); setFilterClass("Todos"); setFilterGender("Todos"); }}
+      >
         <p>Consulte um atleta para ver as partidas registradas por esta conta.</p>
-        <div style={styles.grid}><Field label="Buscar atleta"><input style={styles.input} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Digite o nome"/></Field><Field label="Classe"><select style={styles.input} value={filterClass} onChange={e=>setFilterClass(e.target.value)}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></Field><Field label="Gênero"><select style={styles.input} value={filterGender} onChange={e=>setFilterGender(e.target.value)}><option>Todos</option><option>Masculino</option><option>Feminino</option></select></Field></div>
+        <div className="filter-grid">
+          <FilterField label="Buscar atleta" icon={MagnifyingGlass}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Digite o nome" /></FilterField>
+          <FilterField label="Classe" icon={Folders}><select value={filterClass} onChange={e=>setFilterClass(e.target.value)}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></FilterField>
+          <FilterField label="Gênero" icon={UsersThree}><select value={filterGender} onChange={e=>setFilterGender(e.target.value)}><option>Todos</option><option>Masculino</option><option>Feminino</option></select></FilterField>
+        </div>
         {!search.trim() && filterClass==='Todos' && filterGender==='Todos' && <p>Use a busca ou um filtro para mostrar os atletas.</p>}
         {filteredAthletes.length === 0 ? (
           <p style={styles.empty}>Nenhum atleta para os filtros selecionados.</p>
@@ -506,7 +545,7 @@ function AthletesScreen({ athletes, sessions, onAdd, onDelete, onBack }) {
           );
         })}
         {filteredAthletes.length > limit && <button style={styles.button} onClick={()=>setLimit(limit+20)}>Mostrar mais atletas</button>}
-      </div>
+      </FiltersPanel>
       {onBack && <button onClick={onBack} style={{ ...styles.button, background: "#475569", width: "100%" }}>Voltar</button>}
     </>
   );
@@ -706,6 +745,13 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
   const [historyGenderFilter, setHistoryGenderFilter] = useState("Todos");
   const [historyLevelFilter, setHistoryLevelFilter] = useState("Todos");
   const [showMoreHistoryFilters, setShowMoreHistoryFilters] = useState(false);
+  const activeHistoryFilters = (isAdmin && accountFilter !== "Todos" ? 1 : 0)
+    + (athleteFilter !== "Todos" ? 1 : 0)
+    + (period !== "Tudo" ? 1 : 0)
+    + (kind !== "Todos" ? 1 : 0)
+    + (historyClassFilter !== "Todos" ? 1 : 0)
+    + (historyGenderFilter !== "Todos" ? 1 : 0)
+    + (gameFilter !== "Todos" ? 1 : 0);
   const athletesWithHistory = useMemo(() => {
     const ids = new Set();
     const names = new Set();
@@ -875,11 +921,20 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
   const attentionPosition = [...positionEntries].sort((a,b) => b[1].errorRate - a[1].errorRate || b[1].total - a[1].total)[0];
 
   return <>
-    <div style={{ ...styles.card, borderTop: "6px solid #0f172a" }}>
-      <h2 style={{ marginBottom: 4 }}>Histórico do atleta</h2><div style={{ color: "#65a30d", fontWeight: 700, marginBottom: 16 }}>Análise completa de desempenho</div>
-      <div style={styles.grid}>
-        {isAdmin && <Field label="Conta"><select value={accountFilter} onChange={e=>{setAccountFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option value="Todos">Todas as contas</option>{ownerAccounts.map(a=><option key={a.id} value={a.id}>{a.name || a.username || a.id}</option>)}</select></Field>}
-        <Field label="🔎 Atleta"><AthleteCombobox
+    <FiltersPanel
+      title="Histórico do atleta"
+      activeCount={activeHistoryFilters}
+      onClear={() => {
+        setAccountFilter("Todos"); setKind("Todos"); setAthleteFilter("Todos"); setGameFilter("Todos");
+        setPeriod("Tudo"); setColorFilter("Todos"); setHistoryAthleteSearch(""); setHistoryClassFilter("Todos");
+        setHistoryGenderFilter("Todos"); setHistoryLevelFilter("Todos"); setShowMoreHistoryFilters(false);
+      }}
+      moreOpen={showMoreHistoryFilters}
+      onToggleMore={() => setShowMoreHistoryFilters((value) => !value)}
+    >
+      <div className="filter-grid">
+        {isAdmin && <FilterField label="Conta" icon={Buildings}><select value={accountFilter} onChange={e=>{setAccountFilter(e.target.value);setAthleteFilter("Todos");}}><option value="Todos">Todas as contas</option>{ownerAccounts.map(a=><option key={a.id} value={a.id}>{a.name || a.username || a.id}</option>)}</select></FilterField>}
+        <FilterField label="Atleta" icon={User}><AthleteCombobox
           items={historyAthletes}
           value={athleteFilter}
           onChange={setAthleteFilter}
@@ -887,18 +942,18 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
           setQuery={setHistoryAthleteSearch}
           favoriteIds={favoriteAthleteIds}
           onToggleFavorite={onToggleFavorite}
-          placeholder="🔎 Digite ou role os atletas"
+          placeholder="Digite ou role os atletas"
           allowAll
-        /></Field>
-        <Field label="Período"><select value={period} onChange={e=>setPeriod(e.target.value)} style={styles.input}><option>Tudo</option><option>30 dias</option><option>3 meses</option><option>6 meses</option><option>12 meses</option></select></Field>
-        <Field label="Tipo"><select value={kind} onChange={e=>setKind(e.target.value)} style={styles.input}><option>Todos</option><option>Treino</option><option>Campeonato</option></select></Field>
+        /></FilterField>
+        <FilterField label="Período" icon={CalendarBlank}><select value={period} onChange={e=>setPeriod(e.target.value)}><option>Tudo</option><option>30 dias</option><option>3 meses</option><option>6 meses</option><option>12 meses</option></select></FilterField>
+        <FilterField label="Tipo" icon={Trophy}><select value={kind} onChange={e=>setKind(e.target.value)}><option>Todos</option><option>Treino</option><option>Campeonato</option></select></FilterField>
       </div>
-      <button type="button" className="history-more-filters" onClick={() => setShowMoreHistoryFilters((value) => !value)}>{showMoreHistoryFilters ? "Ocultar filtros" : "Mais filtros"}</button>
-      {showMoreHistoryFilters && <div style={{ ...styles.grid, marginTop: 12 }}>
-        <Field label="Classe"><select value={historyClassFilter} onChange={e=>{setHistoryClassFilter(e.target.value);setAthleteFilter("Todos");}} style={styles.input}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></Field>
-        <Field label="Tipo de jogo"><select value={gameFilter} onChange={e=>setGameFilter(e.target.value)} style={styles.input}><option>Todos</option>{GAME_TYPES.map(g=><option key={g}>{g}</option>)}</select></Field>
+      {showMoreHistoryFilters && <div className="filter-grid" style={{ marginTop: 12 }}>
+        <FilterField label="Classe" icon={Folders}><select value={historyClassFilter} onChange={e=>{setHistoryClassFilter(e.target.value);setAthleteFilter("Todos");}}><option>Todos</option>{CLASSES.map(c=><option key={c}>{c}</option>)}</select></FilterField>
+        <FilterField label="Gênero" icon={UsersThree}><select value={historyGenderFilter} onChange={e=>setHistoryGenderFilter(e.target.value)}><option>Todos</option>{GENDERS.map(g=><option key={g}>{g}</option>)}</select></FilterField>
+        <FilterField label="Tipo de jogo" icon={Trophy}><select value={gameFilter} onChange={e=>setGameFilter(e.target.value)}><option>Todos</option>{GAME_TYPES.map(g=><option key={g}>{g}</option>)}</select></FilterField>
       </div>}
-    </div>
+    </FiltersPanel>
 
     <div style={styles.card}><div style={styles.miniStats}><MiniStat label="Partidas" value={filtered.length}/><MiniStat label="Vitórias" value={wins}/><MiniStat label="Derrotas" value={losses}/><MiniStat label="Aproveitamento" value={`${winRate.toFixed(1)}%`}/></div></div>
 
@@ -5054,6 +5109,3 @@ const styles = {
     padding: 15,
   },
 };
-
-
-
