@@ -102,6 +102,44 @@
 .filter-more.is-open svg { transform:rotate(180deg); }
 .filter-panel .history-more-filters { display:none; }
 .filter-results-hint { color:var(--filter-muted); font-size:13px; margin:10px 0 0; }
+.new-scout-title,
+.new-scout-field-label,
+.new-scout-inline-field,
+.new-scout-auto-date,
+.new-scout-athlete-heading,
+.new-scout-athlete-label {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.new-scout-title { color:var(--filter-text); }
+.new-scout-inline-field,
+.new-scout-auto-date { margin-right:16px; margin-bottom:10px; }
+.new-scout-inline-field select,
+.new-scout-inline-field input { margin-left:2px; }
+.new-scout-athlete-heading {
+  grid-column:1 / -1;
+  color:var(--filter-text);
+  font-weight:900;
+  margin-top:4px;
+}
+.new-scout-athlete-label { font-weight:700; }
+.new-scout-athlete-icon {
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+}
+.new-scout-athlete-icon,
+.new-scout-athlete-heading.is-red .new-scout-athlete-icon,
+.new-scout-athlete-label.is-red .new-scout-athlete-icon { background:#dc2626; }
+.new-scout-athlete-heading.is-blue .new-scout-athlete-icon,
+.new-scout-athlete-label.is-blue .new-scout-athlete-icon { background:#2563eb; }
+.athlete-combobox-input { position:relative; display:flex; align-items:center; }
+.athlete-combobox-input > svg { position:absolute; left:12px; z-index:1; pointer-events:none; }
 @media (min-width:560px) {
   .filter-panel { padding:18px; }
   .filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }

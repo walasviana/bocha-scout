@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Star } from '@phosphor-icons/react';
 import { supabase } from '../lib/supabase';
 
 type Athlete = {
@@ -159,7 +160,7 @@ export default function AthleteQuickStart({ onContinue }: Props) {
             <div style={{ color: '#64748b', fontSize: 13, marginBottom: 6 }}>{filtered.length} atleta(s)</div>
             {filtered.slice(0, 150).map(a => (
               <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '42px 1fr auto', gap: 8, alignItems: 'center', padding: '10px 4px', borderBottom: '1px solid #e2e8f0' }}>
-                <button aria-label="Favoritar atleta" onClick={() => toggleFavorite(a.id)} style={{ border: 0, background: 'transparent', fontSize: 24, cursor: 'pointer' }}>{favorites.has(a.id) ? '⭐' : '☆'}</button>
+                <button aria-label="Favoritar atleta" onClick={() => toggleFavorite(a.id)} style={{ border: 0, background: 'transparent', cursor: 'pointer' }}><Star size={20} weight={favorites.has(a.id) ? 'fill' : 'regular'} color={favorites.has(a.id) ? '#eab308' : '#94a3b8'} /></button>
                 <button onClick={() => chooseAthlete(a)} style={{ textAlign: 'left', border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}>
                   <strong>{a.name}</strong>
                   <div style={{ color: '#64748b', fontSize: 13 }}>{a.class} · {a.country || 'País não informado'}{a.uf ? ` · ${a.uf}` : ''}</div>

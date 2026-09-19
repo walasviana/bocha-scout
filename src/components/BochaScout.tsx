@@ -2,7 +2,34 @@
 import './ClassicScoreboard.css';
 import '../filter-screens.css';
 import MobileDisclosure from './MobileDisclosure';
-import { ArrowCounterClockwise, CaretLeft, House, Clock, Timer, Circle, Crosshair, XCircle, MagnifyingGlass, FunnelSimple, UsersThree, User, Folders, CalendarBlank, Trophy, Buildings, X, CaretDown } from '@phosphor-icons/react';
+import {
+  ArrowCounterClockwise,
+  CaretLeft,
+  House,
+  Clock,
+  Timer,
+  Circle,
+  Crosshair,
+  XCircle,
+  FunnelSimple,
+  UsersThree,
+  Folders,
+  Buildings,
+  X,
+  CaretDown,
+} from '@phosphor-icons/react';
+import {
+  Trophy,
+  Play,
+  Broadcast,
+  CalendarBlank,
+  Users,
+  Tag,
+  SlidersHorizontal,
+  MagnifyingGlass,
+  Star,
+  User,
+} from '@phosphor-icons/react';
 import './ScoutCapture.css';
 import HomeScreen from './HomeScreen';
 import HeaderNavigation from './HeaderNavigation';
@@ -309,7 +336,7 @@ function formatDateBR(iso) {
 }
 
 
-function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds = [], onToggleFavorite, placeholder = "🔎 Digite ou role a lista", allowAll = false }) {
+function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds = [], onToggleFavorite, placeholder = "Buscar ou selecionar atleta...", allowAll = false }) {
   const [open, setOpen] = useState(false);
   const selected = value && value !== "Todos" ? items.find((item) => item.id === value) : null;
 
@@ -329,6 +356,8 @@ function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds 
 
   return (
     <div style={{ position: "relative" }}>
+      <div className="athlete-combobox-input">
+        <MagnifyingGlass size={16} color="#94a3b8" aria-hidden="true" />
       <input
         value={query}
         onChange={handleInput}
@@ -336,8 +365,9 @@ function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds 
         onBlur={() => setTimeout(() => setOpen(false), 160)}
         placeholder={placeholder}
         autoComplete="off"
-        style={styles.input}
+        style={{ ...styles.input, paddingLeft: 36 }}
       />
+      </div>
       {open && (
         <div style={{ position: "absolute", zIndex: 40, top: "calc(100% + 4px)", left: 0, right: 0, maxHeight: 250, overflowY: "auto", background: "white", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 12px 28px rgba(15,23,42,.18)" }}>
           {allowAll && !query.trim() && (
@@ -356,7 +386,7 @@ function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds 
                   {item.athleteClass && <div style={{ fontSize:11, color:"#64748b", marginTop:2 }}>{item.athleteClass}{item.gender ? " · " + item.gender : ""}</div>}
                 </button>
                 <button type="button" aria-label={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"} title={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"} onMouseDown={(e)=>e.preventDefault()} onClick={(e)=>{e.stopPropagation();onToggleFavorite?.(item.id);}} style={{ border:0, background:"transparent", fontSize:24, lineHeight:1, padding:"9px 12px", cursor:"pointer", color:fav?"#ca8a04":"#94a3b8" }}>
-                  {fav ? "★" : "☆"}
+                  <Star size={18} weight={fav ? "fill" : "regular"} aria-hidden="true" />
                 </button>
               </div>
             );
@@ -2889,10 +2919,10 @@ export default function BochaScout() {
 
           {view === "new" && (
             <div style={styles.card}>
-              <h2>Novo Scout · {sessionKind}</h2>
+              <h2 className="new-scout-title">{sessionKind === "Campeonato" ? <Trophy size={24} weight="fill" aria-hidden="true" /> : <Play size={24} weight="fill" aria-hidden="true" />}<span>Novo Scout · {sessionKind}</span></h2>
               <p style={{ color: "#64748b", marginTop: -4 }}>
-                <label>Modo do Scout <select aria-label="Modo do Scout" value={scoutMode} onChange={e=>{setScoutMode(e.target.value);setSessionDate(e.target.value==='recorded'?'':todayISO());}}><option value="live">Ao Vivo</option><option value="recorded">Scout de Partida Gravada</option></select></label>
-                {scoutMode==='recorded' ? <label>Data real da partida <input aria-label="Data real da partida" type="date" required max={todayISO()} value={sessionDate} onChange={e=>setSessionDate(e.target.value)}/></label> : <span>Data automática: <strong>{formatDateBR(todayISO())}</strong></span>}
+                <label className="new-scout-inline-field"><Broadcast size={17} weight="bold" aria-hidden="true" /><span>Modo do Scout</span><select aria-label="Modo do Scout" value={scoutMode} onChange={e=>{setScoutMode(e.target.value);setSessionDate(e.target.value==='recorded'?'':todayISO());}}><option value="live">Ao Vivo</option><option value="recorded">Scout de Partida Gravada</option></select></label>
+                {scoutMode==='recorded' ? <label className="new-scout-inline-field"><CalendarBlank size={17} weight="bold" aria-hidden="true" /><span>Data real da partida</span><input aria-label="Data real da partida" type="date" required max={todayISO()} value={sessionDate} onChange={e=>setSessionDate(e.target.value)}/></label> : <span className="new-scout-auto-date"><CalendarBlank size={17} weight="bold" aria-hidden="true" /><span>Data automática: <strong>{formatDateBR(todayISO())}</strong></span></span>}
               </p>
 
               <div style={styles.grid}>
@@ -2905,7 +2935,7 @@ export default function BochaScout() {
                   </Field>
                 )}
 
-                <Field label="Tipo de jogo">
+                <Field label={<span className="new-scout-field-label"><Users size={17} weight="bold" aria-hidden="true" />Tipo de jogo</span>}>
                   <select
                     value={gameType}
                     onChange={(e) => {
@@ -2952,21 +2982,21 @@ export default function BochaScout() {
                 {gameType === "Individual" && sessionKind === "Campeonato" && (
                   <>
                     <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}>Filtros da partida</div>
-                    <Field label="Classe"><select value={competitionClassFilter} onChange={(e) => { setCompetitionClassFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todas as classes</option>{CLASSES.map((c)=><option key={c} value={c}>{c}</option>)}</select></Field>
-                    <Field label="Gênero"><select value={competitionGenderFilter} onChange={(e) => { setCompetitionGenderFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todos os gêneros</option>{GENDERS.map((g)=><option key={g} value={g}>{g}</option>)}</select></Field>
+                    <Field label={<span className="new-scout-field-label"><Tag size={17} weight="bold" aria-hidden="true" />Classe</span>}><select value={competitionClassFilter} onChange={(e) => { setCompetitionClassFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todas as classes</option>{CLASSES.map((c)=><option key={c} value={c}>{c}</option>)}</select></Field>
+                    <Field label={<span className="new-scout-field-label"><SlidersHorizontal size={17} weight="bold" aria-hidden="true" />Gênero</span>}><select value={competitionGenderFilter} onChange={(e) => { setCompetitionGenderFilter(e.target.value); setSelectedAthleteId(""); setSelectedOpponentId(""); setAthlete(""); setOpponent(""); setAthleteClass(""); setOpponentClass(""); }} style={styles.input}><option value="Todos">Todos os gêneros</option>{GENDERS.map((g)=><option key={g} value={g}>{g}</option>)}</select></Field>
                   </>
                 )}
 
                 {gameType === "Individual" && sessionKind === "Treino" && (
                   <>
-                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}><span style={{width:12,height:12,borderRadius:"50%",background:"#dc2626",display:"inline-block",marginRight:7,verticalAlign:"-1px"}} />Atleta Vermelho</div>
-                    <Field label="Classe do atleta">
+                    <div className="new-scout-athlete-heading is-red"><span className="new-scout-athlete-icon"><User size={16} weight="bold" /></span>Atleta Vermelho</div>
+                    <Field label={<span className="new-scout-field-label"><Tag size={17} weight="bold" aria-hidden="true" />Classe do atleta</span>}>
                       <select value={athleteClassFilter} onChange={(e) => { setAthleteClassFilter(e.target.value); setSelectedAthleteId(""); setAthlete(""); setAthleteClass(""); }} style={styles.input}>
                         <option value="Todos">Todas as classes</option>
                         {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </Field>
-                    <Field label="Gênero do atleta">
+                    <Field label={<span className="new-scout-field-label"><SlidersHorizontal size={17} weight="bold" aria-hidden="true" />Gênero do atleta</span>}>
                       <select value={athleteGenderFilter} onChange={(e) => { setAthleteGenderFilter(e.target.value); setSelectedAthleteId(""); setAthlete(""); setAthleteClass(""); }} style={styles.input}>
                         <option value="Todos">Todos os gêneros</option>
                         {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -2976,7 +3006,7 @@ export default function BochaScout() {
                 )}
 
                 {gameType === "Individual" ? (
-                  <Field label={<span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "#dc2626", display: "inline-block", flex: "0 0 12px" }} />Atleta Vermelho</span>}>
+                  <Field label={<span className="new-scout-athlete-label is-red"><span className="new-scout-athlete-icon"><User size={16} weight="bold" /></span>Atleta Vermelho</span>}>
                     <AthleteCombobox
                       items={filteredPrimaryAthletes}
                       value={selectedAthleteId}
@@ -2985,7 +3015,7 @@ export default function BochaScout() {
                       setQuery={setAthleteNameSearch}
                       favoriteIds={favoriteAthleteIds}
                       onToggleFavorite={toggleFavoriteAthlete}
-                      placeholder="🔎 Digite ou role os atletas"
+                      placeholder="Buscar ou selecionar atleta..."
                     />
                   </Field>
                 ) : (
@@ -3001,14 +3031,14 @@ export default function BochaScout() {
 
                 {gameType === "Individual" && sessionKind === "Treino" && (
                   <>
-                    <div style={{ gridColumn: "1 / -1", fontWeight: 900, color: "#334155", marginTop: 4 }}><span style={{width:12,height:12,borderRadius:"50%",background:"#2563eb",display:"inline-block",marginRight:7,verticalAlign:"-1px"}} />Atleta Azul</div>
-                    <Field label="Classe do atleta azul">
+                    <div className="new-scout-athlete-heading is-blue"><span className="new-scout-athlete-icon"><User size={16} weight="bold" /></span>Atleta Azul</div>
+                    <Field label={<span className="new-scout-field-label"><Tag size={17} weight="bold" aria-hidden="true" />Classe do atleta azul</span>}>
                       <select value={opponentClassFilter} onChange={(e) => { setOpponentClassFilter(e.target.value); setSelectedOpponentId(""); setOpponent(""); setOpponentClass(""); }} style={styles.input}>
                         <option value="Todos">Todas as classes</option>
                         {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </Field>
-                    <Field label="Gênero do atleta azul">
+                    <Field label={<span className="new-scout-field-label"><SlidersHorizontal size={17} weight="bold" aria-hidden="true" />Gênero do atleta azul</span>}>
                       <select value={opponentGenderFilter} onChange={(e) => { setOpponentGenderFilter(e.target.value); setSelectedOpponentId(""); setOpponent(""); setOpponentClass(""); }} style={styles.input}>
                         <option value="Todos">Todos os gêneros</option>
                         {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -3018,7 +3048,7 @@ export default function BochaScout() {
                 )}
 
                 {gameType === "Individual" ? (
-                  <Field label="🔵 Atleta Azul">
+                  <Field label={<span className="new-scout-athlete-label is-blue"><span className="new-scout-athlete-icon"><User size={16} weight="bold" /></span>Atleta Azul</span>}>
                     <AthleteCombobox
                       items={eligibleOpponents}
                       value={selectedOpponentId}
@@ -3027,7 +3057,7 @@ export default function BochaScout() {
                       setQuery={setOpponentNameSearch}
                       favoriteIds={favoriteAthleteIds}
                       onToggleFavorite={toggleFavoriteAthlete}
-                      placeholder="🔎 Digite ou role os atletas"
+                      placeholder="Buscar ou selecionar atleta..."
                     />
                   </Field>
                 ) : (
@@ -3057,7 +3087,7 @@ export default function BochaScout() {
               )}
 
               <button onClick={startGame} style={{ ...styles.button, ...styles.green, width: "100%", marginTop: 20 }}>
-                 Iniciar Scout
+                 <Play size={18} weight="fill" aria-hidden="true" /> Iniciar Scout
               </button>
             </div>
           )}
