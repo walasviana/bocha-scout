@@ -211,7 +211,7 @@ function polishMyMatchesCard() {
     window.scrollTo(0, 0);
   });
 
-  list.insertBefore(button, historyButton);
+  list.appendChild(button);
 }
 
 function polishMyMatchesView() {

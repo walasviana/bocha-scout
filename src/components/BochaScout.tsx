@@ -335,6 +335,23 @@ function formatDateBR(iso) {
   return `${d}/${m}/${y}`;
 }
 
+function pdfFilePart(value, fallback = "sem-informacao") {
+  return String(value || fallback)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || fallback;
+}
+
+function matchReportFileName(session) {
+  const athletes = `${pdfFilePart(session.athlete, "atleta-vermelho")}_vs_${pdfFilePart(session.opponent, "atleta-azul")}`;
+  const reference = session.sessionKind === "Campeonato" && session.competitionName?.trim()
+    ? pdfFilePart(session.competitionName, "campeonato")
+    : pdfFilePart(session.date || todayISO(), todayISO());
+  return `BochaScout_${reference}_${athletes}.pdf`;
+}
+
 
 function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds = [], onToggleFavorite, placeholder = "Buscar ou selecionar atleta...", allowAll = false }) {
   const [open, setOpen] = useState(false);
@@ -815,7 +832,7 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
 
   async function exportSavedSessionReport(item) {
     const doc=await createMatchReport({...item,ownerDisplay:item.ownerDisplay || ownerAccounts.find(a=>a.id===item.ownerUserId)?.name},buildPositionPerformance);
-    doc.save('BochaScout_'+item.date+'.pdf');
+    doc.save(matchReportFileName(item));
   }
 
   async function exportSavedSessionReportLegacy(item) {
@@ -868,7 +885,7 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
     athletePlays.forEach((p,i)=> line(`#${i+1} ${p.end} · ${p.ball} · ${p.play} · ${p.result} · posição ${p.whitePositionFrom}${p.whitePositionTo && p.whitePositionTo!==p.whitePositionFrom ? ` > ${p.whitePositionTo}` : ""}`));
     if(!athletePlays.length) line("Nenhuma jogada do atleta registrada.");
 
-    doc.save(`BochaScout_${item.athlete}_vs_${item.opponent}_${item.date || todayISO()}.pdf`);
+    doc.save(matchReportFileName(item));
   }
 
   const cutoff = useMemo(() => {
@@ -2433,7 +2450,7 @@ export default function BochaScout() {
 
   async function exportMatchReport() {
     const doc=await createMatchReport({athlete,opponent,athleteColor,gameType,sessionKind,date:sessionDate,scoutMode,scores,totalAthlete,totalOpponent,plays:playsHistory,ownerDisplay:ownerAccounts.find(a=>a.id===currentUserId)?.name},buildPositionPerformance);
-    doc.save('BochaScout_'+sessionDate+'.pdf');
+    doc.save(matchReportFileName({ athlete, opponent, sessionKind, date: sessionDate, competitionName }));
   }
 
   async function exportMatchReportLegacy() {
@@ -2847,9 +2864,13 @@ export default function BochaScout() {
     }
 
     doc.save(
-      `BochaScout_${athlete}_vs_${opponent}_${new Date()
-        .toISOString()
-        .slice(0, 10)}.pdf`
+      matchReportFileName({
+        athlete,
+        opponent,
+        sessionKind,
+        date: sessionDate || new Date().toISOString().slice(0, 10),
+        competitionName,
+      })
     );
   }
 

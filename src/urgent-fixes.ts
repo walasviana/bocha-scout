@@ -45,13 +45,6 @@ function fixAthleteLabels() {
     if (card) card.classList.add('history-performance-card');
   });
 
-  Array.from(document.querySelectorAll<HTMLElement>('div')).forEach((el) => {
-    if (normalize(el.textContent) !== 'Atleta Vermelho') return;
-    if (el.querySelector('.athlete-label-red-dot')) return;
-    const dot = document.createElement('span');
-    dot.className = 'athlete-label-red-dot';
-    el.insertBefore(dot, el.firstChild);
-  });
 }
 
 function fixMyMatchesAnalysis() {
