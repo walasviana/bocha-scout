@@ -30,3 +30,16 @@ Protótipo React/Vite para scout técnico de Bocha Paralímpica.
 npm install
 npm run dev
 ```
+
+## Deploy no Cloudflare Pages
+
+O projeto já possui um workflow em `.github/workflows/deploy-cloudflare.yml` que publica a pasta `dist` no Cloudflare Pages após cada push na branch `main`.
+
+1. Crie um projeto Pages chamado `bochascout` no Cloudflare.
+2. Crie um API Token com permissão **Account > Cloudflare Pages > Edit**.
+3. Cadastre os seguintes secrets no repositório GitHub:
+   - `CLOUDFLARE_API_TOKEN`: o API Token criado.
+   - `CLOUDFLARE_ACCOUNT_ID`: o ID da conta Cloudflare.
+4. Faça push para `main` ou execute o workflow manualmente em **Actions > Deploy Cloudflare Pages > Run workflow**.
+
+O arquivo `public/_redirects` mantém o fallback do React Router para que rotas acessadas diretamente funcionem no Cloudflare Pages.

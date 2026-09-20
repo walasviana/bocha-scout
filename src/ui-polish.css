@@ -62,6 +62,15 @@
   display: none !important;
 }
 
+/* Linguagem azul compartilhada pelos painéis de desempenho e fundamentos. */
+.is-history-live-performance,
+.foundation-radar-panel {
+  --performance-blue: #0075ff;
+  --performance-blue-ink: #09144f;
+  --performance-blue-soft: #e9f1fd;
+  --performance-blue-hover: #dceafd;
+}
+
 /* Histórico: desempenho por parcial com o mesmo padrão visual do Scout ao vivo. */
 .is-history-live-performance {
   margin: 16px 0 20px !important;
@@ -131,28 +140,47 @@
   padding-top: 14px;
 }
 
-.is-history-live-performance .partial-tabs.end-filter {
+.is-history-live-performance .partial-tabs.end-filter,
+.foundation-radar-panel .partial-tabs.end-filter {
   display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
   gap: 8px !important;
   margin: 0 0 14px !important;
   padding: 0 !important;
   overflow-x: auto;
   background: transparent !important;
+  scrollbar-width: thin;
 }
 
-.is-history-live-performance .partial-tabs.end-filter button {
+.is-history-live-performance .partial-tabs.end-filter button,
+.foundation-radar-panel .partial-tabs.end-filter button {
+  flex: 0 0 auto !important;
+  width: auto !important;
   min-width: 72px;
   min-height: 44px;
   padding: 8px 12px !important;
   border: 0 !important;
   border-radius: 12px !important;
-  background: #e9f1fd !important;
-  color: #09144f !important;
+  background: var(--performance-blue-soft) !important;
+  color: var(--performance-blue-ink) !important;
   font-weight: 800;
+  transition: background-color .18s ease, color .18s ease, transform .18s ease;
 }
 
-.is-history-live-performance .partial-tabs.end-filter button[aria-pressed="true"] {
-  background: #0075ff !important;
+.is-history-live-performance .partial-tabs.end-filter button:hover:not([aria-pressed="true"]),
+.foundation-radar-panel .partial-tabs.end-filter button:hover:not([aria-pressed="true"]) {
+  background: var(--performance-blue-hover) !important;
+}
+
+.is-history-live-performance .partial-tabs.end-filter button:active,
+.foundation-radar-panel .partial-tabs.end-filter button:active {
+  transform: scale(.98);
+}
+
+.is-history-live-performance .partial-tabs.end-filter button[aria-pressed="true"],
+.foundation-radar-panel .partial-tabs.end-filter button[aria-pressed="true"] {
+  background: var(--performance-blue) !important;
   color: #fff !important;
 }
 
