@@ -11,7 +11,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "deploy": "npm run build && wrangler pages deploy dist --project-name bochascout --force --commit-dirty=true",
-    "postinstall": "node -e \"const fs = require('fs'); if (fs.existsSync('dist/wrangler.json')) fs.unlinkSync('dist/wrangler.json');\""
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",
