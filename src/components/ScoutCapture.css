@@ -296,3 +296,8 @@ body .scout-live-page .scout-scoreboard>.scout-white-position{grid-area:white;wi
 .mobile-disclosure-always .history-quick{margin-left:auto;font-size:14px;color:#50647a}
 .mobile-disclosure-always[data-open=false]>.mobile-disclosure-body{display:none}
 .mobile-disclosure-always[data-open=true]>.mobile-disclosure-toggle>svg:last-child{transform:rotate(180deg)}
+@media(max-width:600px){
+  body .scout-live-page .scout-partial-history select{background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a}
+  body .scout-live-page .scout-partial-history select option,
+  body .scout-live-page .scout-partial-history select option:checked{background:#fff;color:#0f172a}
+}

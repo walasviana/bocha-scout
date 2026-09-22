@@ -140,6 +140,14 @@
 .new-scout-athlete-label.is-blue .new-scout-athlete-icon { background:#2563eb; }
 .athlete-combobox-input { position:relative; display:flex; align-items:center; }
 .athlete-combobox-input > svg { position:absolute; left:12px; z-index:1; pointer-events:none; }
+.athlete-combobox-input > input,
+.filter-panel .filter-field input,
+.filter-panel .filter-field select { background:#fff !important; color:#0f172a !important; -webkit-text-fill-color:#0f172a; }
+.filter-panel .filter-field select option,
+.filter-panel .filter-field select option:checked { background:#fff; color:#0f172a; }
+.athlete-combobox-input + div > button,
+.athlete-combobox-input + div > div > button:first-child,
+.athlete-combobox-input + div > div > button:first-child > div:first-child { color:#0f172a !important; }
 @media (min-width:560px) {
   .filter-panel { padding:18px; }
   .filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
