@@ -331,7 +331,8 @@ function todayISO() {
 
 function formatDateBR(iso) {
   if (!iso) return "-";
-  const [y, m, d] = iso.split("-");
+  const [y, m, d] = String(iso).split("-");
+  if (!y || !m || !d) return String(iso);
   return `${d}/${m}/${y}`;
 }
 
@@ -415,10 +416,10 @@ function AthleteCombobox({ items, value, onChange, query, setQuery, favoriteIds 
 }
 
 function TopNav({ view, setView }) {
-  if (view !== 'history' && view !== 'compare') return null;
+  if (view !== 'history' && view !== 'compare' && view !== 'my-matches') return null;
   return <HeaderNavigation>
     <nav className="home-section-nav" aria-label="Navegação de análises">
-      {[["dashboard", "Início"], ["history", "Histórico"], ["compare", "Comparar atletas"]].map(([id, label]) => (
+      {[["dashboard", "Início"], ["my-matches", "Minhas partidas"], ["history", "Histórico"], ["compare", "Comparar atletas"]].map(([id, label]) => (
         <button key={id} type="button" aria-current={view === id ? 'page' : undefined} onClick={() => {setView(id);window.scrollTo(0, 0);}}>{label}</button>
       ))}
     </nav>
@@ -786,7 +787,6 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
   const [gameFilter, setGameFilter] = useState("Todos");
   const [period, setPeriod] = useState("Tudo");
   const [colorFilter, setColorFilter] = useState("Todos");
-  const [selectedSessionId, setSelectedSessionId] = useState("");
   const [historyAthleteSearch, setHistoryAthleteSearch] = useState("");
   const [historyClassFilter, setHistoryClassFilter] = useState("Todos");
   const [historyGenderFilter, setHistoryGenderFilter] = useState("Todos");
@@ -816,24 +816,6 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
     const nameOk = !historyAthleteSearch.trim() || a.name.toLocaleLowerCase("pt-BR").startsWith(historyAthleteSearch.trim().toLocaleLowerCase("pt-BR"));
     return hasHistory && classOk && genderOk && nameOk;
   }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR")), [athletes, athletesWithHistory, historyClassFilter, historyGenderFilter, historyAthleteSearch, favoriteAthleteIds]);
-
-  async function deleteScout(item) {
-    if (!isSuperAdmin) return;
-    if (!window.confirm(`Excluir definitivamente o Scout de ${item.athlete} × ${item.opponent}? Esta ação remove o Scout do banco de dados.`)) return;
-    const { error } = await supabase.rpc('super_admin_delete_scout', { target_scout_id: item.id });
-    if (error) {
-      alert(error.message || 'Não foi possível excluir o Scout.');
-      return;
-    }
-    if (selectedSessionId === item.id) setSelectedSessionId("");
-    forgetSession(item.id);
-    onDeleted?.(item.id);
-  }
-
-  async function exportSavedSessionReport(item) {
-    const doc=await createMatchReport({...item,ownerDisplay:item.ownerDisplay || ownerAccounts.find(a=>a.id===item.ownerUserId)?.name},buildPositionPerformance);
-    doc.save(matchReportFileName(item));
-  }
 
   async function exportSavedSessionReportLegacy(item) {
     const { jsPDF } = await import("jspdf");
@@ -932,7 +914,6 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
     const levelOk = historyLevelFilter === "Todos" || (s.sessionKind === "Campeonato" && s.competitionLevel === historyLevelFilter);
     return accountOk && (kind === "Todos" || s.sessionKind === kind) && athleteOk && classOk && genderOk && levelOk && (gameFilter === "Todos" || s.gameType === gameFilter) && (colorFilter === "Todos" || selectedColor === colorFilter) && dateOk;
   });
-  const selected = sessions.find((s) => s.id === selectedSessionId);
   // O mapa e as métricas analisam somente as jogadas do atleta selecionado, independentemente
   // de ele ter sido cadastrado como atleta principal ou adversário naquela partida.
   const plays = filtered.flatMap((s) => playsForSelectedAthlete(s));
@@ -1025,9 +1006,78 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
       <div style={styles.card}><h3>Posição de atenção</h3><div style={{fontSize:32,fontWeight:900,color:"#b91c1c"}}>{attentionPosition ? attentionPosition[0] : "—"}</div><div>{attentionPosition ? `${attentionPosition[1].errorRate.toFixed(1)}% de erro · ${attentionPosition[1].total} jogadas` : "Sem dados"}</div></div>
     </div>
 
-    {selected && <SessionDetail item={selected} selectedAthleteId={athleteFilter} onClose={()=>setSelectedSessionId("")} onExportPdf={exportSavedSessionReport}/>} 
-    <div style={styles.card}><h2>Histórico de partidas</h2>{filtered.length===0?<p style={styles.empty}>Nenhuma sessão registrada com esse filtro.</p>:filtered.map(item=><div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}><div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}><div><strong>{item.athlete} × {item.opponent}</strong><div style={{fontSize:13,color:"#64748b"}}>{formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {modeLabel(item)} · {item.athleteColor}{isAdmin && <span> · Criado por: {item.ownerDisplay || ownerAccounts.find(a => a.id === item.ownerUserId)?.name || ownerAccounts.find(a => a.id === item.ownerUserId)?.username || "Conta"}</span>}</div></div><strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong></div><div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}><button onClick={()=>setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>{isSuperAdmin && <button onClick={()=>deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}</div></div>)}</div>
     <button onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
+  </>;
+}
+
+function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuperAdmin = false, ownerAccounts = [] }) {
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [accountFilter, setAccountFilter] = useState("Todos");
+  const availableSessions = Array.isArray(sessions) ? sessions : [];
+  const filteredSessions = useMemo(
+    () => isSuperAdmin && accountFilter !== "Todos"
+      ? availableSessions.filter((session) => session.ownerUserId === accountFilter)
+      : availableSessions,
+    [availableSessions, accountFilter, isSuperAdmin],
+  );
+  const selected = filteredSessions.find((s) => s.id === selectedSessionId);
+
+  async function deleteScout(item) {
+    if (!isSuperAdmin) return;
+    if (!window.confirm(`Excluir definitivamente o Scout de ${item.athlete} × ${item.opponent}? Esta ação remove o Scout do banco de dados.`)) return;
+    const { error } = await supabase.rpc("super_admin_delete_scout", { target_scout_id: item.id });
+    if (error) {
+      alert(error.message || "Não foi possível excluir o Scout.");
+      return;
+    }
+    if (selectedSessionId === item.id) setSelectedSessionId("");
+    forgetSession(item.id);
+    onDeleted?.(item.id);
+  }
+
+  async function exportSavedSessionReport(item) {
+    const doc = await createMatchReport({
+      ...item,
+      ownerDisplay: item.ownerDisplay || ownerAccounts.find((a) => a.id === item.ownerUserId)?.name,
+    }, buildPositionPerformance);
+    doc.save(matchReportFileName(item));
+  }
+
+  return <>
+    <div style={styles.card}>
+      <h2>Minhas partidas</h2>
+      {isSuperAdmin && <FilterField label="Conta" icon={Buildings}>
+        <select value={accountFilter} onChange={(event) => {
+          setAccountFilter(event.target.value);
+          setSelectedSessionId("");
+        }}>
+          <option value="Todos">Todas as contas</option>
+          {ownerAccounts.map((account) => (
+            <option key={account.id} value={account.id}>{account.name || account.username || account.id}</option>
+          ))}
+        </select>
+      </FilterField>}
+      {filteredSessions.length === 0 ? <p style={styles.empty}>Nenhuma partida registrada.</p> : filteredSessions.map((item) => (
+        <div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+            <div>
+              <strong>{item.athlete} × {item.opponent}</strong>
+              <div style={{fontSize:13,color:"#64748b"}}>
+                {formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {modeLabel(item)} · {item.athleteColor}
+                {isAdmin && <span> · Criado por: {item.ownerDisplay || ownerAccounts.find((a) => a.id === item.ownerUserId)?.name || ownerAccounts.find((a) => a.id === item.ownerUserId)?.username || "Conta"}</span>}
+              </div>
+            </div>
+            <strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
+            <button onClick={() => setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>
+            {isSuperAdmin && <button onClick={() => deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}
+          </div>
+        </div>
+      ))}
+    </div>
+    {selected && <SessionDetail item={selected} onClose={() => setSelectedSessionId("")} onExportPdf={exportSavedSessionReport} />}
+    <button className="my-matches-back" onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }
 
@@ -2881,7 +2931,7 @@ export default function BochaScout() {
   if(!draftReady)return <div style={{padding:24}}>Carregando Bocha Scout...</div>;
   if ((!started && !finished) || matchHome) {
     return (
-      <div style={styles.page} className={`hub-scout-home ${view==='dashboard'||view==='compare'?'hub-dashboard':''}`}>
+      <div style={styles.page} className={`hub-scout-home ${view==='dashboard'||view==='compare'?'hub-dashboard':''} ${view==='my-matches'?'my-matches-view':''}`}>
         <div style={styles.container}>
           {view !== "dashboard" && <TopNav view={view} setView={(next) => setView(next === "data" && !currentUserIsSuperAdmin ? "dashboard" : next)} isSuperAdmin={currentUserIsSuperAdmin} />}
 
@@ -2893,6 +2943,7 @@ export default function BochaScout() {
               onNewTraining={() => { if(started){setMatchHome(false);return;} setSessionKind("Treino"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
               onNewCompetition={() => { if(started){setMatchHome(false);return;} setSessionKind("Campeonato"); setCompetitionName(""); setCompetitionPhase(""); setCompetitionLevel("Nacional"); setView("new"); }}
               onHistory={() => {setView("history");window.scrollTo(0,0);}}
+              onMyMatches={() => {setView("my-matches");window.scrollTo(0,0);}}
               onCompare={() => {setView('compare');window.scrollTo(0,0);}}
             />
           )}
@@ -2911,6 +2962,17 @@ export default function BochaScout() {
               sessions={accountSessions}
               onAdd={addAthlete}
               onDelete={deleteAthlete}
+              onBack={() => setView("dashboard")}
+            />
+          )}
+
+          {view === "my-matches" && (
+            <MyMatchesScreen
+              sessions={historySessions}
+              onDeleted={id=>setSessions(previous=>previous.filter(item=>item.id!==id))}
+              isAdmin={currentUserIsAdmin}
+              isSuperAdmin={currentUserIsSuperAdmin}
+              ownerAccounts={ownerAccounts}
               onBack={() => setView("dashboard")}
             />
           )}
@@ -3161,7 +3223,7 @@ export default function BochaScout() {
                 {Array.from({ length: 6 }, (_, i) => <img key={i} src="/scout-assets/red-ball.png" alt="" className={i < redBallsAvailable ? "is-active" : "is-used"} />)}
               </div>
             </div>
-            <div className="classic-score"><b>{redScore}</b><span>×</span><b>{blueScore}</b></div>
+            <div className="classic-score"><b>{blueScore}</b><span>×</span><b>{redScore}</b></div>
             <div className="classic-player classic-player-blue">
               <strong title={blueName}>{blueName}</strong><span>AZUL</span>
               <div className="classic-balls" aria-label={`${blueBallsAvailable} bolas azuis restantes`}>
@@ -3605,6 +3667,10 @@ export default function BochaScout() {
   const opponentBestPosition = [...opponentPositionEntries].sort((a,b) => b[1].efficiency - a[1].efficiency || b[1].total - a[1].total)[0];
   const opponentAttentionPosition = [...opponentPositionEntries].sort((a,b) => b[1].errorRate - a[1].errorRate || b[1].total - a[1].total)[0];
 
+  const finalRedName = athleteColor === "Vermelho" ? athlete : opponent;
+  const finalBlueName = athleteColor === "Azul" ? athlete : opponent;
+  const finalRedScore = athleteColor === "Vermelho" ? totalAthlete : totalOpponent;
+  const finalBlueScore = athleteColor === "Azul" ? totalAthlete : totalOpponent;
   const finalShowingAthlete = finalSelectedSide === "athlete";
   const finalName = finalShowingAthlete ? athlete : opponent;
   const finalColor = finalShowingAthlete ? athleteColor : opponentColor;
@@ -3640,21 +3706,23 @@ export default function BochaScout() {
           <small>ANÁLISE · INCLUSÃO · MAIS JOGO</small>
         </div>
         <div className="scout-final-scoreboard">
-          <div className="scout-final-player" style={{ color: colorHex(athleteColor) }}>
-            <img src={athleteColor === "Vermelho" ? "/scout-assets/red-ball.png" : "/scout-assets/blue-ball.png"} alt="" />
-            <strong>{athlete}</strong><span>{athleteColor.toUpperCase()}</span>
+          <div className="scout-final-player" style={{ color: colorHex("Azul") }}>
+            <img src="/scout-assets/blue-ball.png" alt="" />
+            <strong>{finalBlueName}</strong><span>AZUL</span>
           </div>
-          <div className="scout-final-score">{totalAthlete}<span>×</span>{totalOpponent}</div>
-          <div className="scout-final-player" style={{ color: colorHex(opponentColor) }}>
-            <img src={opponentColor === "Vermelho" ? "/scout-assets/red-ball.png" : "/scout-assets/blue-ball.png"} alt="" />
-            <strong>{opponent}</strong><span>{opponentColor.toUpperCase()}</span>
+          <div className="scout-final-score">{finalBlueScore}<span>×</span>{finalRedScore}</div>
+          <div className="scout-final-player" style={{ color: colorHex("Vermelho") }}>
+            <img src="/scout-assets/red-ball.png" alt="" />
+            <strong>{finalRedName}</strong><span>VERMELHO</span>
           </div>
         </div>
         <div className="scout-final-winner">{winnerName === "Empate" ? "Partida empatada" : `${winnerName} venceu${tieBreakWinner ? " no tie-break" : ""}`}</div>
         <div className="scout-final-ends">
-          {Object.entries(scores).map(([name, score]) => (
-            <div key={name} style={{ borderColor: endTone(score) }}><span>{name.replace("End ", "E")}</span><strong style={{ color: endTone(score) }}>{score.athlete} – {score.opponent}</strong></div>
-          ))}
+          {Object.entries(scores).map(([name, score]) => {
+            const blueEndScore = athleteColor === "Azul" ? score.athlete : score.opponent;
+            const redEndScore = athleteColor === "Vermelho" ? score.athlete : score.opponent;
+            return <div key={name} style={{ borderColor: endTone(score) }}><span>{name.replace("End ", "E")}</span><strong style={{ color: endTone(score) }}>{blueEndScore} – {redEndScore}</strong></div>;
+          })}
         </div>
       </section>
 
@@ -4612,47 +4680,27 @@ function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,dr
       <div
         style={styles.grid2}
       >
-        <Field
-          label={`${athleteColor} ${athlete}`}
-        >
-          <input
-            type="number"
-            min="0"
-            placeholder="0"
-            value={
-              athleteScore
-            }
-            onChange={(e) =>
-              setAthleteScore(
-                e.target.value
-              )
-            }
-            style={
-              styles.scoreInput
-            }
-          />
-        </Field>
-
-        <Field
-          label={`${opponentColor} ${opponent}`}
-        >
-          <input
-            type="number"
-            min="0"
-            placeholder="0"
-            value={
-              opponentScore
-            }
-            onChange={(e) =>
-              setOpponentScore(
-                e.target.value
-              )
-            }
-            style={
-              styles.scoreInput
-            }
-          />
-        </Field>
+        {(athleteColor === "Azul"
+          ? [
+              { color: athleteColor, name: athlete, value: athleteScore, setValue: setAthleteScore },
+              { color: opponentColor, name: opponent, value: opponentScore, setValue: setOpponentScore },
+            ]
+          : [
+              { color: opponentColor, name: opponent, value: opponentScore, setValue: setOpponentScore },
+              { color: athleteColor, name: athlete, value: athleteScore, setValue: setAthleteScore },
+            ]
+        ).map((side) => (
+          <Field key={side.color} label={`${side.color} ${side.name}`}>
+            <input
+              type="number"
+              min="0"
+              placeholder="0"
+              value={side.value}
+              onChange={(e) => side.setValue(e.target.value)}
+              style={styles.scoreInput}
+            />
+          </Field>
+        ))}
       </div>
 
       <button

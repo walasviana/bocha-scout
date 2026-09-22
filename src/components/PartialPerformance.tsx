@@ -8,7 +8,7 @@ export default function PartialPerformance({plays, gameType, athlete, opponent, 
   const [comparisonOpen,setComparisonOpen]=useState(false);
   const [historyOpen,setHistoryOpen]=useState(false);
   const ends = [...new Set<string>([...regularEnds(gameType), ...plays.map((p: any) => p.end)])];
-  const groups=['Vermelho','Azul'].map(color=>({id:color,color,name:color===athleteColor?athlete:opponent,plays:plays.filter((p:any)=>p.color===color)}));
+  const groups=['Azul','Vermelho'].map(color=>({id:color,color,name:color===athleteColor?athlete:opponent,plays:plays.filter((p:any)=>p.color===color)}));
   const isLive = !isHistory && scoutMode !== 'recorded';
   const title = isHistory ? 'Desempenho por parcial' : scoutMode === 'recorded' ? 'Desempenho da partida gravada' : 'Desempenho ao vivo';
 

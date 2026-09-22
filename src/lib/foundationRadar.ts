@@ -1,7 +1,7 @@
 import {calcStats, sideName} from './scoutData';
 export const foundations=['Saída de jogo','Aproximação','Tirar bola da ZP','Batida','Aérea','Mover branca','Dobrar bola',"Pingo d'água",'Bola de defesa','Tabela','Sobrepor','Empurrar bola na ZP','Falta'];
 export type RadarSeries={name:string;color:string;plays:any[]};
-export function matchSeries(session:any):RadarSeries[]{return ['Vermelho','Azul'].map(color=>({name:sideName(session,color)||color,color,plays:(session.plays||[]).filter((p:any)=>p.color===color)}));}
+export function matchSeries(session:any):RadarSeries[]{return ['Azul','Vermelho'].map(color=>({name:sideName(session,color)||color,color,plays:(session.plays||[]).filter((p:any)=>p.color===color)}));}
 export function usedFoundations(series:RadarSeries[]){
  const used=new Set<string>(series.flatMap(s=>s.plays.filter(p=>['Acerto','Funcional','Erro'].includes(p.result)&&typeof p.play==='string'&&p.play.trim()).map(p=>p.play)));
  return [...foundations.filter(name=>used.has(name)),...Array.from(used).filter(name=>!foundations.includes(name)).sort((a,b)=>a.localeCompare(b,'pt-BR'))];

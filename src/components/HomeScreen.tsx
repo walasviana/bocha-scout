@@ -7,6 +7,7 @@ import {PlayCircle} from '@phosphor-icons/react/dist/csr/PlayCircle';
 import {UserPlus} from '@phosphor-icons/react/dist/csr/UserPlus';
 import {UsersThree} from '@phosphor-icons/react/dist/csr/UsersThree';
 import {ChartBar} from '@phosphor-icons/react/dist/csr/ChartBar';
+import {ClipboardText} from '@phosphor-icons/react/dist/csr/ClipboardText';
 import {CaretRight} from '@phosphor-icons/react/dist/csr/CaretRight';
 import {ArrowLeft} from '@phosphor-icons/react/dist/csr/ArrowLeft';
 import {AccountActionsContext} from './AccountActionsContext';
@@ -48,7 +49,7 @@ export function HomeHeader({notifications,account}:{notifications:React.ReactNod
  return <header ref={headerRef} onFocusCapture={()=>setHidden(false)} className={`account-toolbar hub-modern-header${hidden?' is-retracted':''}${scrolled?' is-scrolled':''}`}><button type="button" className="home-global-back" aria-label="Voltar" title="Voltar" onClick={goBackFromHeader}><ArrowLeft weight="bold" aria-hidden="true"/></button><div className="home-brand"><img src="/bocha-scout-emblem.png" alt=""/><span>BOCHA <b>SCOUT</b></span></div><div className="home-header-actions">{notifications}{account}</div><div className="home-header-navigation" data-header-navigation /></header>;
 }
 
-export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,onCompare,sessions=[]}:{onNewTraining:()=>void;onNewCompetition:()=>void;onHistory:()=>void;onCompare:()=>void;sessions?:any[];athletes?:any[]}){
+export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,onMyMatches,onCompare,sessions=[]}:{onNewTraining:()=>void;onNewCompetition:()=>void;onHistory:()=>void;onMyMatches:()=>void;onCompare:()=>void;sessions?:any[];athletes?:any[]}){
  const [choosing,setChoosing]=useState(false);
  const [registering,setRegistering]=useState(false);
 
@@ -74,9 +75,11 @@ export default function HomeScreen({onNewTraining,onNewCompetition,onHistory,onC
    </div>}
   </section>
 
-  <button className="home-compare-button" onClick={onCompare}><span className="home-icon"><UsersThree/></span><span><strong>Comparar atletas</strong><small>Veja desempenhos lado a lado</small></span><CaretRight className="home-chevron"/></button>
+  <button className="action-card home-compare-button" onClick={onCompare}><span className="home-icon"><UsersThree/></span><span><strong>Comparar atletas</strong><small>Veja desempenhos lado a lado</small></span><CaretRight className="home-chevron"/></button>
 
-  <button className="home-history" onClick={onHistory}><span className="home-icon"><ChartBar/></span><span><strong>Histórico e análises</strong><small>Reveja partidas e desempenho</small></span><CaretRight className="home-chevron"/></button>
+  <button className="action-card home-history" onClick={onHistory}><span className="home-icon"><ChartBar/></span><span><strong>Histórico e análises</strong><small>Reveja partidas e desempenho</small></span><CaretRight className="home-chevron"/></button>
+
+  <button className="action-card home-my-matches" onClick={()=>{window.sessionStorage.setItem('bochaScout.myMatchesView','1');onMyMatches();}}><span className="home-icon"><ClipboardText/></span><span><strong>Minhas partidas</strong><small>Reveja todas as partidas registradas nesta conta</small></span><CaretRight className="home-chevron"/></button>
  </div></>}
  <footer className="home-footer">BOCHA SCOUT · DADOS QUE INCLUEM</footer>
  </main>;

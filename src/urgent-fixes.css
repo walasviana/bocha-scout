@@ -91,6 +91,10 @@ body .history-performance-card .athlete-label-neutral {
   color: #334155 !important;
 }
 
+body .athlete-label-neutral {
+  color: #111827 !important;
+}
+
 /* O retorno para a Home em Minhas partidas fica apenas no cabeçalho, sem botão duplicado. */
 body .hub-scout-home.my-matches-view .my-matches-back {
   display: none !important;

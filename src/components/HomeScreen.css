@@ -23,3 +23,15 @@ body .hub-modern-header.account-toolbar:has(.home-section-nav) {flex-wrap:wrap;}
 .home-section-nav button[aria-current=page]:hover {background:#facc15;}
 .home-section-nav button:focus-visible {outline:2px solid #fff;outline-offset:2px;}
 @media(max-width:360px){.home-section-nav{gap:5px}.home-section-nav button{font-size:11px;padding:8px 5px;}}
+
+/* Shared secondary action-card geometry, including Minhas partidas. */
+.action-card{display:flex;align-items:center;gap:14px;width:100%;min-height:94px;padding:17px 16px;border:1px solid #d7e3f1;border-radius:15px;background:#fff;box-shadow:0 8px 24px rgba(24,75,146,.055)}
+.action-card .home-icon{width:58px;height:58px}
+.action-card .home-icon svg{width:34px;height:34px}
+.action-card .home-chevron{margin-left:auto}
+.action-card strong{font-size:18px}
+.action-card:hover{background:#f3f7ff!important}
+.home-screen .action-card.home-my-matches .home-icon svg{display:block!important}
+.home-screen .action-card.home-my-matches .home-icon::before{display:none!important}
+@media(min-width:700px){.action-card{min-height:112px}}
+@media(max-width:360px){.action-card{gap:10px}.action-card strong{font-size:16px!important}.action-card small{font-size:13px}}
