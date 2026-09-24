@@ -1050,6 +1050,10 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
     doc.save(matchReportFileName(item));
   }
 
+  if (selected) {
+    return <SessionDetail item={selected} onClose={() => { setSelectedSessionId(""); window.scrollTo(0,0); }} onExportPdf={exportSavedSessionReport} />;
+  }
+
   return <>
     <div style={styles.card}>
       <h2>Minhas partidas</h2>
@@ -1077,13 +1081,12 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
             <strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
-            <button onClick={() => setSelectedSessionId(item.id)} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>
+            <button onClick={() => { setSelectedSessionId(item.id); window.scrollTo(0,0); }} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>
             {isSuperAdmin && <button onClick={() => deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}
           </div>
         </div>
       ))}
     </div>
-    {selected && <div ref={detailRef}><SessionDetail item={selected} onClose={() => setSelectedSessionId("")} onExportPdf={exportSavedSessionReport} /></div>}
     <button className="my-matches-back" onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }
