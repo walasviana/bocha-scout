@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import './ClassicScoreboard.css';
 import '../filter-screens.css';
 import MobileDisclosure from './MobileDisclosure';
@@ -1013,6 +1013,7 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
 function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuperAdmin = false, ownerAccounts = [] }) {
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [accountFilter, setAccountFilter] = useState("Todos");
+  const detailRef = useRef<HTMLDivElement>(null);
   const availableSessions = Array.isArray(sessions) ? sessions : [];
   const filteredSessions = useMemo(
     () => isSuperAdmin && accountFilter !== "Todos"
@@ -1021,6 +1022,12 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
     [availableSessions, accountFilter, isSuperAdmin],
   );
   const selected = filteredSessions.find((s) => s.id === selectedSessionId);
+
+  useEffect(() => {
+    if (selected && detailRef.current) {
+      setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    }
+  }, [selected]);
 
   async function deleteScout(item) {
     if (!isSuperAdmin) return;
@@ -1076,7 +1083,7 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
         </div>
       ))}
     </div>
-    {selected && <SessionDetail item={selected} onClose={() => setSelectedSessionId("")} onExportPdf={exportSavedSessionReport} />}
+    {selected && <div ref={detailRef}><SessionDetail item={selected} onClose={() => setSelectedSessionId("")} onExportPdf={exportSavedSessionReport} /></div>}
     <button className="my-matches-back" onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }

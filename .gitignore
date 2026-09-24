@@ -8,3 +8,5 @@ tests/artifacts/
 !.dev.vars.example
 .env*
 !.env.example
+
+.vercel
