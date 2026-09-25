@@ -109,3 +109,223 @@ body .scout-partial-history-item span{white-space:normal;overflow:visible;text-o
 
 .home-footer{padding-top:32px}
 .hub-modern-header.account-toolbar{padding-top:14px;padding-bottom:14px;min-height:67px}.home-greeting h1{font-size:34px}.home-greeting p{font-size:17px}.home-registration button{padding:14px 16px}.home-registration .home-icon{width:50px;height:50px}.home-registration strong{font-size:17px}.home-history{padding:14px 16px}.home-history strong{font-size:17px}.home-history small{font-size:14px}@media(min-width:700px){.home-greeting h1{font-size:44px}.home-greeting p{font-size:21px}.home-registration button{padding:22px}.home-registration strong,.home-history strong{font-size:21px}.home-history small{font-size:16px}}
+
+/* =========================================================
+   HISTÓRICO E MINHAS PARTIDAS: REDESIGN DE CARDS & PARCIAS
+   ========================================================= */
+
+/* Grid compacto de métricas do Histórico (sem mapa de calor/radar) */
+.history-compact-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+@media (max-width: 580px) {
+  .history-compact-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}
+.history-compact-tile {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 84px;
+}
+@media (max-width: 580px) {
+  .history-compact-tile {
+    padding: 10px 11px;
+    border-radius: 11px;
+    min-height: 76px;
+  }
+}
+.history-compact-tile h4 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.history-compact-tile .tile-value {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.history-compact-tile .tile-sub {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+/* CARDS DE PARTIDAS REDESENHADOS */
+.scout-match-accordion-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  margin-bottom: 10px;
+  transition: all 0.18s ease;
+}
+.scout-match-accordion-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+.scout-match-accordion-card.is-expanded {
+  border-color: #94a3b8;
+  box-shadow: 0 6px 16px rgba(9, 38, 75, 0.08);
+}
+.scout-match-accordion-header {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  outline: none;
+  user-select: none;
+}
+@media (max-width: 580px) {
+  .scout-match-accordion-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+}
+
+/* MÁSCARA ESVERDEADA OPACA COM 'VITÓRIA' */
+.scout-winner-mask {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(22, 163, 74, 0.28);
+  max-width: 100%;
+}
+.scout-winner-name {
+  font-weight: 800;
+  font-size: 13.5px;
+  color: #15803d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scout-win-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #16a34a;
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+.scout-player-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Indicador de cor */
+.scout-color-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.scout-color-dot.is-red {
+  background: #ef4444;
+}
+.scout-color-dot.is-blue {
+  background: #2563eb;
+}
+
+/* Placar em cápsula */
+.scout-score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #09264b;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.scout-score-pill .scout-num-win {
+  color: #facc15;
+}
+.scout-score-pill .scout-score-sep {
+  color: #64748b;
+  font-size: 11px;
+}
+
+/* Gaveta de Ends */
+.scout-ends-drawer {
+  padding: 12px 16px 14px;
+  background: #f8fafc;
+  border-top: 1px solid #edf2f7;
+}
+.scout-ends-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.scout-end-chip {
+  min-width: 62px;
+  padding: 5px 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.scout-end-chip.is-tb {
+  border-color: #fed7aa;
+  background: #fffaf5;
+}
+.scout-end-chip-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+}
+.scout-end-chip-score {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.scout-end-chip-score .score-lead {
+  color: #16a34a;
+}
+.scout-end-chip-score .score-trail {
+  color: #dc2626;
+}
+

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bocha Scout - Visual Final</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Manrope:wght@700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #f1f5f9;
+      font-family: 'DM Sans', 'Inter', system-ui, -apple-system, sans-serif;
+      color: #0f172a;
+      padding: 24px 14px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* GRID COMPACTO DE MÉTRICAS (SEM MAPA DE CALOR/RADAR) */
+    .section-title {
+      font-family: 'Manrope', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      color: #09264b;
+      margin: 18px 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .metrics-grid-compact {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .metric-tile {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 76px;
+    }
+    .metric-tile-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 4px;
+    }
+    .metric-tile-value {
+      font-size: 21px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+    .metric-tile-sub {
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.2;
+    }
+
+    /* CARDS DE PARTIDAS REDESENHADOS */
+    .match-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      overflow: hidden;
+      margin-bottom: 8px;
+      transition: all 0.18s ease;
+    }
+    .match-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+    }
+    .match-card.is-expanded {
+      border-color: #94a3b8;
+      box-shadow: 0 5px 14px rgba(9, 38, 75, 0.08);
+    }
+    .match-header-btn {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 12px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: left;
+      outline: none;
+      user-select: none;
+    }
+
+    /* MÁSCARA ESVERDEADA OPACA COM 'VITÓRIA' */
+    .scout-winner-mask {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(22, 163, 74, 0.12);
+      color: #15803d;
+      padding: 2px 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(22, 163, 74, 0.28);
+      max-width: 100%;
+    }
+    .scout-winner-name {
+      font-weight: 800;
+      font-size: 13.5px;
+      color: #15803d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .scout-win-pill {
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #16a34a;
+      color: #ffffff;
+      padding: 1px 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+    .scout-player-name {
+      font-weight: 600;
+      font-size: 13.5px;
+      color: #475569;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .color-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .color-dot.red { background: #ef4444; }
+    .color-dot.blue { background: #2563eb; }
+
+    /* Placar em cápsula */
+    .score-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #09264b;
+      color: #ffffff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .score-pill .score-win { color: #facc15; }
+    .score-pill .score-sep { color: #64748b; font-size: 11px; }
+
+    .match-date {
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .chevron-icon {
+      color: #94a3b8;
+      font-size: 11px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .match-card.is-expanded .chevron-icon {
+      transform: rotate(180deg);
+      color: #09264b;
+    }
+
+    /* Gaveta de Ends */
+    .ends-drawer {
+      padding: 12px 14px 14px;
+      background: #f8fafc;
+      border-top: 1px solid #edf2f7;
+    }
+    .ends-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .ends-drawer-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+    }
+    .ends-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .end-chip {
+      min-width: 62px;
+      padding: 5px 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .end-chip.is-tb {
+      border-color: #fed7aa;
+      background: #fffaf5;
+    }
+    .end-chip-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
+    }
+    .end-chip-score {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .end-chip-score .win { color: #16a34a; }
+    .end-chip-score .loss { color: #dc2626; }
+
+    .drawer-footer {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .btn-action {
+      background: #113875;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    @media (max-width: 540px) {
+      .match-header-btn { padding: 10px 11px; gap: 6px; }
+      .scout-winner-name, .scout-player-name { max-width: 90px; }
+      .scout-win-pill { font-size: 9px; padding: 1px 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- CARDS DE MÉTRICAS COMPACTOS (SEM MAPA DE CALOR E RADAR) -->
+    <div class="section-title">
+      <span>Métricas Resumidas</span>
+      <span style="font-size: 11px; color: #16a34a; background: #dcfce7; padding: 2px 8px; border-radius: 999px; font-weight: 700;">Mobile Friendly (2x2)</span>
+    </div>
+
+    <div class="metrics-grid-compact">
+      <div class="metric-tile">
+        <div class="metric-tile-title"><span class="color-dot red"></span> Cores</div>
+        <div style="display: flex; gap: 8px; align-items: baseline;">
+          <span style="font-size: 12px; font-weight: 800; color: #ef4444;">V: <strong>72%</strong></span>
+          <span style="font-size: 12px; font-weight: 800; color: #2563eb;">A: <strong>65%</strong></span>
+        </div>
+        <div class="metric-tile-sub">12 partidas disputadas</div>
+      </div>
+
+      <div class="metric-tile">
+        <div class="metric-tile-title">Saída frequente</div>
+        <div class="metric-tile-value" style="color: #15803d;">C3</div>
+        <div class="metric-tile-sub">18 saídas registradas</div>
+      </div>
+
+      <div class="metric-tile">
+        <div class="metric-tile-title">Melhor posição</div>
+        <div class="metric-tile-value" style="color: #15803d;">D4</div>
+        <div class="metric-tile-sub">88% eficiência (24 jogadas)</div>
+      </div>
+
+      <div class="metric-tile">
+        <div class="metric-tile-title">Atenção</div>
+        <div class="metric-tile-value" style="color: #b91c1c;">B2</div>
+        <div class="metric-tile-sub">42% de erro (14 jogadas)</div>
+      </div>
+    </div>
+
+    <!-- LISTA DE PARTIDAS COM MÁSCARA ESVERDEADA DE VITÓRIA -->
+    <div class="section-title">
+      <span>Partidas Registradas</span>
+      <span style="font-size: 11px; color: #64748b; font-weight: 600;">Toque para abrir ends</span>
+    </div>
+
+    <!-- Card 1 (Aberto) -->
+    <div class="match-card is-expanded" id="card-1">
+      <button class="match-header-btn" onclick="toggleCard('card-1')">
+        <div style="display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; flex-wrap: wrap;">
+          <!-- Vencedor com máscara esverdeada opaca e escrito 'Vitória' -->
+          <div style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
+            <span class="color-dot red"></span>
+            <span class="scout-winner-mask">
+              <span class="scout-winner-name">Maciel Santos</span>
+              <span class="scout-win-pill">Vitória</span>
+            </span>
+          </div>
+
+          <div class="score-pill">
+            <span class="score-win">5</span>
+            <span class="score-sep">×</span>
+            <span>2</span>
+          </div>
+
+          <!-- Perdedor -->
+          <div style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
+            <span class="color-dot blue"></span>
+            <span class="scout-player-name">José Carlos</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="match-date">22/03/2026</span>
+          <span class="chevron-icon">▼</span>
+        </div>
+      </button>
+
+      <div class="ends-drawer">
+        <div class="ends-drawer-header">
+          <span class="ends-drawer-title">Parciais da Partida (Ends)</span>
+          <span style="font-size: 11px; color: #94a3b8;">Campeonato · Individual BC2</span>
+        </div>
+        <div class="ends-grid">
+          <div class="end-chip">
+            <span class="end-chip-title">E1</span>
+            <div class="end-chip-score"><span class="win">2</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div>
+          </div>
+          <div class="end-chip">
+            <span class="end-chip-title">E2</span>
+            <div class="end-chip-score"><span>0</span><span style="color:#cbd5e1;font-size:10px;">-</span><span class="loss">1</span></div>
+          </div>
+          <div class="end-chip">
+            <span class="end-chip-title">E3</span>
+            <div class="end-chip-score"><span class="win">3</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div>
+          </div>
+          <div class="end-chip">
+            <span class="end-chip-title">E4</span>
+            <div class="end-chip-score"><span>0</span><span style="color:#cbd5e1;font-size:10px;">-</span><span class="loss">1</span></div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button class="btn-action">Ver análise completa da partida →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 (Fechado) -->
+    <div class="match-card" id="card-2">
+      <button class="match-header-btn" onclick="toggleCard('card-2')">
+        <div style="display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; flex-wrap: wrap;">
+          <div style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
+            <span class="color-dot red"></span>
+            <span class="scout-player-name">Iuri Tauan</span>
+          </div>
+
+          <div class="score-pill">
+            <span>2</span>
+            <span class="score-sep">×</span>
+            <span class="score-win">4</span>
+          </div>
+
+          <!-- Vencedor com máscara esverdeada opaca e escrito 'Vitória' -->
+          <div style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
+            <span class="color-dot blue"></span>
+            <span class="scout-winner-mask">
+              <span class="scout-winner-name">Mateus Carvalho</span>
+              <span class="scout-win-pill">Vitória</span>
+            </span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="match-date">15/03/2026</span>
+          <span class="chevron-icon">▼</span>
+        </div>
+      </button>
+
+      <div class="ends-drawer" style="display: none;">
+        <div class="ends-drawer-header">
+          <span class="ends-drawer-title">Parciais da Partida (Ends)</span>
+          <span style="font-size: 11px; color: #94a3b8;">Campeonato · Individual BC3</span>
+        </div>
+        <div class="ends-grid">
+          <div class="end-chip"><span class="end-chip-title">E1</span><div class="end-chip-score"><span class="win">1</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div></div>
+          <div class="end-chip"><span class="end-chip-title">E2</span><div class="end-chip-score"><span>0</span><span style="color:#cbd5e1;font-size:10px;">-</span><span class="loss">2</span></div></div>
+          <div class="end-chip"><span class="end-chip-title">E3</span><div class="end-chip-score"><span class="win">1</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div></div>
+          <div class="end-chip"><span class="end-chip-title">E4</span><div class="end-chip-score"><span>0</span><span style="color:#cbd5e1;font-size:10px;">-</span><span class="loss">2</span></div></div>
+        </div>
+        <div class="drawer-footer">
+          <button class="btn-action">Ver análise completa da partida →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 (Tie-Break) -->
+    <div class="match-card" id="card-3">
+      <button class="match-header-btn" onclick="toggleCard('card-3')">
+        <div style="display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; flex-wrap: wrap;">
+          <div style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
+            <span class="color-dot red"></span>
+            <span class="scout-winner-mask">
+              <span class="scout-winner-name">Evelyn Oliveira</span>
+              <span class="scout-win-pill">Vitória</span>
+            </span>
+          </div>
+
+          <div class="score-pill">
+            <span class="score-win">4</span>
+            <span class="score-sep">×</span>
+            <span>3</span>
+          </div>
+
+          <div style="display: inline-flex; align-items: center; gap: 5px; min-width: 0;">
+            <span class="color-dot blue"></span>
+            <span class="scout-player-name">Lucas Ferreira</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="match-date">08/03/2026</span>
+          <span class="chevron-icon">▼</span>
+        </div>
+      </button>
+
+      <div class="ends-drawer" style="display: none;">
+        <div class="ends-drawer-header">
+          <span class="ends-drawer-title">Parciais da Partida (Ends com TB)</span>
+          <span style="font-size: 11px; color: #94a3b8;">Campeonato · Individual BC3</span>
+        </div>
+        <div class="ends-grid">
+          <div class="end-chip"><span class="end-chip-title">E1</span><div class="end-chip-score"><span>0</span><span style="color:#cbd5e1;font-size:10px;">-</span><span class="loss">2</span></div></div>
+          <div class="end-chip"><span class="end-chip-title">E2</span><div class="end-chip-score"><span class="win">2</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div></div>
+          <div class="end-chip"><span class="end-chip-title">E3</span><div class="end-chip-score"><span class="win">1</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div></div>
+          <div class="end-chip"><span class="end-chip-title">E4</span><div class="end-chip-score"><span>0</span><span style="color:#cbd5e1;font-size:10px;">-</span><span class="loss">1</span></div></div>
+          <div class="end-chip is-tb"><span class="end-chip-title" style="color:#c2410c;">TB</span><div class="end-chip-score"><span class="win">1</span><span style="color:#cbd5e1;font-size:10px;">-</span><span>0</span></div></div>
+        </div>
+        <div class="drawer-footer">
+          <button class="btn-action">Ver análise completa da partida →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleCard(cardId) {
+      const card = document.getElementById(cardId);
+      const drawer = card.querySelector('.ends-drawer');
+      const isExpanded = card.classList.contains('is-expanded');
+
+      if (isExpanded) {
+        card.classList.remove('is-expanded');
+        drawer.style.display = 'none';
+      } else {
+        card.classList.add('is-expanded');
+        drawer.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

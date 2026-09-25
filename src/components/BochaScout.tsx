@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import './ClassicScoreboard.css';
 import '../filter-screens.css';
 import MobileDisclosure from './MobileDisclosure';
@@ -50,7 +50,7 @@ import CourtPositionMap from "./CourtPositionMap";
 import { createMatchReport } from '../lib/matchReport';
 import PrecisePosition from './PrecisePosition';
 import PartialPerformance from './PartialPerformance';
-import { calcStats, regularEnds as getRegularEnds, formatDuration, durationOf, positionLabel, playName, modeLabel, playsForAthlete, removeAndRenumber, participants, foundationAllowed } from '../lib/scoutData';
+import { calcStats, regularEnds as getRegularEnds, formatDuration, durationOf, positionLabel, playName, modeLabel, playsForAthlete, removeAndRenumber, participants, foundationAllowed, sessionEnds } from '../lib/scoutData';
 import { drawScorePartials } from "../lib/pdfPartials";
 import { appendHeatmapReport } from "../lib/courtHeatmap";
 import { supabase } from "../lib/supabase";
@@ -870,6 +870,9 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
     doc.save(matchReportFileName(item));
   }
 
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [expandedSessionId, setExpandedSessionId] = useState("");
+
   const cutoff = useMemo(() => {
     if (period === "Tudo") return null;
     const days = period === "30 dias" ? 30 : period === "3 meses" ? 90 : period === "6 meses" ? 180 : 365;
@@ -999,19 +1002,180 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
         );
       })()}</div>
 
-    <div style={styles.grid2}>
-      <div style={styles.card}><h3>Desempenho por cor</h3>{colorStats.map(c=><div key={c.color} style={{padding:"10px 0",borderBottom:"1px solid #e2e8f0"}}><strong>{c.color}</strong><div>{c.stats.efficiency.toFixed(1)}% eficiência · {c.wins}/{c.sessions} vitórias</div></div>)}</div>
-      <div style={styles.card}><h3>Saída mais utilizada</h3><div style={{fontSize:32,fontWeight:900,color:"#15803d"}}>{topExit ? topExit[0] : "—"}</div><div>{topExit ? `${topExit[1]} saídas registradas` : "Sem saídas registradas"}</div></div>
-      <div style={styles.card}><h3>Melhor posição</h3><div style={{fontSize:32,fontWeight:900,color:"#15803d"}}>{bestPosition ? bestPosition[0] : "—"}</div><div>{bestPosition ? `${bestPosition[1].efficiency.toFixed(1)}% eficiência · ${bestPosition[1].total} jogadas` : "Sem dados"}</div></div>
-      <div style={styles.card}><h3>Posição de atenção</h3><div style={{fontSize:32,fontWeight:900,color:"#b91c1c"}}>{attentionPosition ? attentionPosition[0] : "—"}</div><div>{attentionPosition ? `${attentionPosition[1].errorRate.toFixed(1)}% de erro · ${attentionPosition[1].total} jogadas` : "Sem dados"}</div></div>
+    <div className="history-compact-metrics-grid">
+      <div className="history-compact-tile">
+        <h4><span className="scout-color-dot is-red"/> Cores</h4>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 2 }}>
+          {colorStats.map(c => (
+            <div key={c.color} style={{ fontSize: 12 }}>
+              <span style={{ fontWeight: 800, color: c.color === "Vermelho" ? "#ef4444" : "#2563eb" }}>{c.color[0]}: </span>
+              <strong>{c.stats.efficiency.toFixed(0)}%</strong>
+              <span style={{ color: "#64748b", fontSize: 11 }}> ({c.wins}V)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="history-compact-tile">
+        <h4>Saída frequente</h4>
+        <div className="tile-value" style={{ color: "#15803d" }}>{topExit ? topExit[0] : "—"}</div>
+        <div className="tile-sub">{topExit ? `${topExit[1]} jogada(s)` : "Sem saídas"}</div>
+      </div>
+      <div className="history-compact-tile">
+        <h4>Melhor posição</h4>
+        <div className="tile-value" style={{ color: "#15803d" }}>{bestPosition ? bestPosition[0] : "—"}</div>
+        <div className="tile-sub">{bestPosition ? `${bestPosition[1].efficiency.toFixed(0)}% efic. (${bestPosition[1].total})` : "Sem dados"}</div>
+      </div>
+      <div className="history-compact-tile">
+        <h4>Atenção</h4>
+        <div className="tile-value" style={{ color: "#b91c1c" }}>{attentionPosition ? attentionPosition[0] : "—"}</div>
+        <div className="tile-sub">{attentionPosition ? `${attentionPosition[1].errorRate.toFixed(0)}% erro (${attentionPosition[1].total})` : "Sem dados"}</div>
+      </div>
+    </div>
+
+    <div style={{ ...styles.card, marginTop: 14 }}>
+      <h3 style={{ margin: "0 0 12px", color: "#09264b", fontSize: 16 }}>Partidas do histórico ({filtered.length})</h3>
+      {filtered.length === 0 ? <p style={styles.empty}>Nenhuma partida encontrada com estes filtros.</p> : (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {filtered.map((item) => (
+            <MatchAccordionItem
+              key={item.id}
+              item={item}
+              isExpanded={expandedSessionId === item.id}
+              onToggle={() => setExpandedSessionId((prev) => (prev === item.id ? "" : item.id))}
+              onSelectFull={() => { setSelectedSessionId(item.id); window.scrollTo(0, 0); }}
+              onDelete={null}
+              isAdmin={isAdmin}
+            />
+          ))}
+        </div>
+      )}
     </div>
 
     <button onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }
 
+function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete = null, isAdmin = false }) {
+  const athleteTotal = Number(item.totalAthlete ?? 0);
+  const opponentTotal = Number(item.totalOpponent ?? 0);
+  const isAthleteWin = athleteTotal > opponentTotal;
+  const isOpponentWin = opponentTotal > athleteTotal;
+  const ends = sessionEnds(item);
+
+  return (
+    <div className={`scout-match-accordion-card ${isExpanded ? "is-expanded" : ""}`}>
+      <button type="button" className="scout-match-accordion-header" onClick={onToggle} aria-expanded={isExpanded}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, flexWrap: "wrap" }}>
+          {/* Lado Atleta */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, maxWidth: "100%" }}>
+            <span className={`scout-color-dot ${item.athleteColor === "Vermelho" ? "is-red" : "is-blue"}`} />
+            {isAthleteWin ? (
+              <span className="scout-winner-mask">
+                <span className="scout-winner-name">{item.athlete}</span>
+                <span className="scout-win-pill">Vitória</span>
+              </span>
+            ) : (
+              <span className="scout-player-name">{item.athlete}</span>
+            )}
+          </div>
+
+          {/* Placar em Cápsula */}
+          <div className="scout-score-pill">
+            <span className={isAthleteWin ? "scout-num-win" : ""}>{athleteTotal}</span>
+            <span className="scout-score-sep">×</span>
+            <span className={isOpponentWin ? "scout-num-win" : ""}>{opponentTotal}</span>
+          </div>
+
+          {/* Lado Adversário */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, maxWidth: "100%" }}>
+            <span className={`scout-color-dot ${item.athleteColor === "Vermelho" ? "is-blue" : "is-red"}`} />
+            {isOpponentWin ? (
+              <span className="scout-winner-mask">
+                <span className="scout-winner-name">{item.opponent}</span>
+                <span className="scout-win-pill">Vitória</span>
+              </span>
+            ) : (
+              <span className="scout-player-name">{item.opponent}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Data e Chevron */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>{formatDateBR(item.date)}</span>
+          <span style={{ color: "#94a3b8", fontSize: 11, transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
+        </div>
+      </button>
+
+      {/* Gaveta Aberta com Ends e Ações */}
+      {isExpanded && (
+        <div className="scout-ends-drawer">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "#64748b" }}>
+              Parciais (Ends)
+            </span>
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>
+              {item.sessionKind} · {item.gameType} · {item.competitionPhase || modeLabel(item)}
+            </span>
+          </div>
+
+          <div className="scout-ends-grid">
+            {ends.map((endName) => {
+              const sc = item.scores?.[endName] || { athlete: 0, opponent: 0 };
+              const aPts = Number(sc.athlete || 0);
+              const oPts = Number(sc.opponent || 0);
+              const aLead = aPts > oPts;
+              const oLead = oPts > aPts;
+              const isTb = endName.startsWith("Tie-Break") || endName === "TB";
+
+              return (
+                <div key={endName} className={`scout-end-chip ${isTb ? "is-tb" : ""}`}>
+                  <span className="scout-end-chip-title" style={{ color: isTb ? "#c2410c" : undefined }}>
+                    {isTb ? "TB" : endName.replace("End ", "E")}
+                  </span>
+                  <div className="scout-end-chip-score">
+                    <span className={aLead ? "score-lead" : ""}>{aPts}</span>
+                    <span style={{ color: "#cbd5e1", fontSize: 10 }}>-</span>
+                    <span className={oLead ? "score-trail" : ""}>{oPts}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {isAdmin && item.ownerDisplay && (
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 8 }}>
+              Criado por: {item.ownerDisplay}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12, paddingTop: 10, borderTop: "1px dashed #e2e8f0" }}>
+            <button
+              type="button"
+              onClick={onSelectFull}
+              style={{ ...styles.button, background: "#113875", padding: "8px 14px", fontSize: 13, fontWeight: 700, color: "#ffffff" }}
+            >
+              Ver análise completa da partida →
+            </button>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                style={{ ...styles.button, background: "#b91c1c", padding: "8px 12px", fontSize: 13, fontWeight: 700, color: "#ffffff" }}
+              >
+                Excluir Scout
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuperAdmin = false, ownerAccounts = [] }) {
   const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [expandedSessionId, setExpandedSessionId] = useState("");
   const [accountFilter, setAccountFilter] = useState("Todos");
   const detailRef = useRef<HTMLDivElement>(null);
   const availableSessions = Array.isArray(sessions) ? sessions : [];
@@ -1056,7 +1220,7 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
 
   return <>
     <div style={styles.card}>
-      <h2>Minhas partidas</h2>
+      <h2 style={{ marginBottom: 16 }}>Minhas partidas</h2>
       {isSuperAdmin && <FilterField label="Conta" icon={Buildings}>
         <select value={accountFilter} onChange={(event) => {
           setAccountFilter(event.target.value);
@@ -1068,24 +1232,21 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
           ))}
         </select>
       </FilterField>}
-      {filteredSessions.length === 0 ? <p style={styles.empty}>Nenhuma partida registrada.</p> : filteredSessions.map((item) => (
-        <div key={item.id} style={{padding:"12px 0",borderBottom:"1px solid #e2e8f0"}}>
-          <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-            <div>
-              <strong>{item.athlete} × {item.opponent}</strong>
-              <div style={{fontSize:13,color:"#64748b"}}>
-                {formatDateBR(item.date)} · {item.sessionKind} · {item.gameType} · {modeLabel(item)} · {item.athleteColor}
-                {isAdmin && <span> · Criado por: {item.ownerDisplay || ownerAccounts.find((a) => a.id === item.ownerUserId)?.name || ownerAccounts.find((a) => a.id === item.ownerUserId)?.username || "Conta"}</span>}
-              </div>
-            </div>
-            <strong style={{fontSize:20}}>{item.totalAthlete} × {item.totalOpponent}</strong>
-          </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
-            <button onClick={() => { setSelectedSessionId(item.id); window.scrollTo(0,0); }} style={{...styles.button,background:"#2563eb",padding:"9px 12px"}}>Ver análise completa</button>
-            {isSuperAdmin && <button onClick={() => deleteScout(item)} style={{...styles.button,background:"#b91c1c",padding:"9px 12px"}}>Excluir Scout</button>}
-          </div>
+      {filteredSessions.length === 0 ? <p style={styles.empty}>Nenhuma partida registrada.</p> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 12 }}>
+          {filteredSessions.map((item) => (
+            <MatchAccordionItem
+              key={item.id}
+              item={item}
+              isExpanded={expandedSessionId === item.id}
+              onToggle={() => setExpandedSessionId((prev) => (prev === item.id ? "" : item.id))}
+              onSelectFull={() => { setSelectedSessionId(item.id); window.scrollTo(0,0); }}
+              onDelete={isSuperAdmin ? () => deleteScout(item) : null}
+              isAdmin={isAdmin}
+            />
+          ))}
         </div>
-      ))}
+      )}
     </div>
     <button className="my-matches-back" onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
