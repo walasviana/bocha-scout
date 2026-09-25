@@ -7,7 +7,13 @@ export function usedFoundations(series:RadarSeries[]){
  return [...foundations.filter(name=>used.has(name)),...Array.from(used).filter(name=>!foundations.includes(name)).sort((a,b)=>a.localeCompare(b,'pt-BR'))];
 }
 export function radarData(series:RadarSeries[], axes=usedFoundations(series)){return axes.map(name=>({name,values:series.map(s=>{const st=calcStats(s.plays.filter(p=>p.play===name));return {total:st.total,value:st.total?st.efficiency:null};})}));}
-export const radarColor=(color:string)=>color==='Roxo'?'#7c3aed':color==='Azul'?'#1673e8':'#e34250';
+export const radarColor=(color:string)=>{
+ const c=String(color||'').toLowerCase();
+ if(c==='roxo'||c==='purple') return '#7c3aed';
+ if(c==='amarelo'||c==='yellow') return '#eab308';
+ if(c==='azul'||c==='blue') return '#1673e8';
+ return '#e34250';
+};
 export function drawRadar(canvas:HTMLCanvasElement,series:RadarSeries[],axes=usedFoundations(series)){
  canvas.width=720;canvas.height=570;const ctx=canvas.getContext('2d');if(!ctx)return;
  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,720,570);const cx=360,cy=282,r=180,n=axes.length;
