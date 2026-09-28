@@ -2,12 +2,32 @@ import { useEffect, useRef } from 'react';
 import { courtCells, drawCourtHeatmap } from '../lib/courtHeatmap';
 import './CourtHeatmap.css';
 const EMPTY_DATA = {};
-export default function CourtPositionMap({ selected, onSelect }: { selected: string; onSelect: (position: string) => void }) {
+export default function CourtPositionMap({ selected, onSelect, originPosition, originPoint }: { selected: string; onSelect: (position: string) => void; originPosition?: string; originPoint?: { x: number; y: number } | null }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (canvas.current) drawCourtHeatmap(canvas.current, { data: EMPTY_DATA, selected, selectionOnly: true });
-  }, [selected]);
+    if (canvas.current) drawCourtHeatmap(canvas.current, { data: EMPTY_DATA, selected, selectionOnly: true, originPosition, originPoint });
+  }, [selected, originPosition, originPoint]);
   return <div className="court-heatmap" style={{padding:0,maxWidth:560}}>
+    {originPosition && (
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "8px 12px",
+        background: "#fffbeb",
+        border: "1px solid #fde68a",
+        borderRadius: 8,
+        marginBottom: 8,
+        fontSize: 13,
+        color: "#92400e"
+      }}>
+        <div>
+          <span>⚪ <strong>Posição original:</strong> {originPosition}</span>
+          {selected && selected !== originPosition && <span> → 🎯 <strong>Nova posição:</strong> {selected}</span>}
+        </div>
+        <span style={{ fontSize: 11, color: "#b45309", fontWeight: 700 }}>Marcada no mapa</span>
+      </div>
+    )}
     <div className="court-heatmap-figure" style={{aspectRatio:'800 / 1120'}}>
       <canvas ref={canvas} role="img" aria-label="Quadra de bocha: selecione a posição da bola branca" />
       {courtCells.map(({position,x,y}) => <button key={position} type="button" className="court-position-hit" aria-label={`Selecionar posição ${position}`} aria-pressed={selected === position} onClick={() => onSelect(position)} style={{left:`${x/8}%`,top:`${(y-176)/1120*100}%`,width:'12.5%',height:`${100/1120*100}%`}} />)}

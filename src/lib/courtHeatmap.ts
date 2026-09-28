@@ -1,7 +1,7 @@
 type Point = {x:number;y:number};
 export type Movement = {from:string;to:string;fromPoint?:Point;toPoint?:Point};
 export type PositionStats = { total: number; points?: Point[]; movements?: Movement[]; acertos?: number; funcionais?: number; erros?: number; saidas: number; efficiency: number };
-export type CourtOptions = { data: Record<string, PositionStats>; mode?: string; color?: string; name?: string; selected?: string; showPositions?: boolean; showMovements?: boolean; selectionOnly?: boolean };
+export type CourtOptions = { data: Record<string, PositionStats>; mode?: string; color?: string; name?: string; selected?: string; showPositions?: boolean; showMovements?: boolean; selectionOnly?: boolean; originPosition?: string; originPoint?: Point | null };
 export const CHART_WIDTH = 800, CHART_HEIGHT = 1360;
 const X = 100, Y = 200, BOX = 84, FIELD = Y + BOX;
 const navy = '#223e62';
@@ -75,6 +75,32 @@ export function drawCourtHeatmap(canvas: HTMLCanvasElement, options: CourtOption
   for(let c=0;c<6;c++) label(String(6-c),X+c*100+50,Y+54,30);
   for(const cell of courtCells){
     const m = cellMetric(options,cell.position), center = cell.x+50;
+    if(options.originPosition===cell.position){
+      ctx.save();
+      ctx.fillStyle='rgba(245, 158, 11, 0.22)';
+      ctx.fillRect(cell.x+2,cell.y+2,96,96);
+      ctx.strokeStyle='#d97706';
+      ctx.lineWidth=3;
+      ctx.setLineDash([5,4]);
+      ctx.strokeRect(cell.x+3,cell.y+3,94,94);
+      ctx.restore();
+      const ox=cell.x+(options.originPoint && Number.isFinite(options.originPoint.x)?options.originPoint.x*100:50);
+      const oy=cell.y+(options.originPoint && Number.isFinite(options.originPoint.y)?options.originPoint.y*100:50);
+      ctx.save();
+      ctx.shadowColor='rgba(0,0,0,0.35)';
+      ctx.shadowBlur=5;
+      ctx.fillStyle='#ffffff';
+      ctx.beginPath();
+      ctx.arc(ox,oy,13,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle='#0f172a';
+      ctx.lineWidth=2.5;
+      ctx.beginPath();
+      ctx.arc(ox,oy,13,0,Math.PI*2);
+      ctx.stroke();
+      label('Origem',center,cell.y+86,13,'#b45309');
+    }
     if(options.selected===cell.position){ctx.strokeStyle=accent;ctx.lineWidth=4;ctx.strokeRect(cell.x+4,cell.y+4,92,92);}
     if(options.showPositions !== false) label(cell.position,center,cell.y+47,26);
     if(m){
@@ -84,6 +110,28 @@ export function drawCourtHeatmap(canvas: HTMLCanvasElement, options: CourtOption
         ctx.fillStyle=accent;ctx.beginPath();ctx.arc(cell.x+point.x*100,cell.y+point.y*100,6,0,Math.PI*2);ctx.fill();
       }}
     }else if(!options.selectionOnly && options.showPositions!==false && cell.position!=='14' && cell.position!=='13') label('–',center,cell.y+77,18,'#9fadb9');
+  }
+  if(options.originPosition && options.selected && options.originPosition!==options.selected){
+    const fromCell=courtCells.find(c=>c.position===options.originPosition);
+    const toCell=courtCells.find(c=>c.position===options.selected);
+    if(fromCell && toCell){
+      const fx=fromCell.x+(options.originPoint && Number.isFinite(options.originPoint.x)?options.originPoint.x*100:50);
+      const fy=fromCell.y+(options.originPoint && Number.isFinite(options.originPoint.y)?options.originPoint.y*100:50);
+      const tx=toCell.x+50, ty=toCell.y+50;
+      const angle=Math.atan2(ty-fy,tx-fx);
+      ctx.save();
+      ctx.strokeStyle='#2563eb';
+      ctx.fillStyle='#2563eb';
+      ctx.lineWidth=3.5;
+      ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(tx,ty);ctx.stroke();
+      const head=13;
+      ctx.beginPath();
+      ctx.moveTo(tx,ty);
+      ctx.lineTo(tx-head*Math.cos(angle-0.5),ty-head*Math.sin(angle-0.5));
+      ctx.lineTo(tx-head*Math.cos(angle+0.5),ty-head*Math.sin(angle+0.5));
+      ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
   }
   ctx.strokeStyle = navy; ctx.lineWidth = 4; ctx.lineJoin = 'round';
   ctx.beginPath(); ctx.moveTo(X,FIELD);ctx.lineTo(X+600,FIELD);ctx.stroke();

@@ -71,6 +71,41 @@ export default function AccountNotifications({userId,role}: {userId:string;role:
  async function decide(n:any,status:string) {
    setBusy(true);
    setError('');
+   const isDelete = n.change_data?.action === 'delete_scout' || String(n.title || '').toLowerCase().includes('exclusão');
+   if ((n.source_type === 'scout' || n.source_type === 'scout_deletion') && isDelete) {
+     if (status === 'approved') {
+       const res = await supabase.rpc('super_admin_delete_scout', { target_scout_id: n.source_id });
+       if (res.error) {
+         const direct = await supabase.from('scout_sessions').delete().eq('id', n.source_id);
+         if (direct.error) {
+           setError(direct.error.message || res.error.message);
+           setBusy(false);
+           return;
+         }
+       }
+       await supabase.from('admin_notifications').update({ status: 'approved', resolved_at: new Date().toISOString() }).eq('id', n.id);
+     } else {
+       const { data: cur } = await supabase.from('scout_sessions').select('payload').eq('id', n.source_id).maybeSingle();
+       const p = { ...(cur?.payload || {}), deletionRequested: false };
+       delete p.deletionRequestedAt;
+       delete p.deletionRequestedBy;
+       const up = await supabase.from('scout_sessions').update({
+         approval_status: 'approved',
+         payload: p,
+         updated_at: new Date().toISOString()
+       }).eq('id', n.source_id);
+       if (up.error) {
+         setError(up.error.message);
+         setBusy(false);
+         return;
+       }
+       await supabase.from('admin_notifications').update({ status: 'rejected', resolved_at: new Date().toISOString() }).eq('id', n.id);
+     }
+     window.dispatchEvent(new Event('boccia-catalog-updated'));
+     await load();
+     setBusy(false);
+     return;
+   }
    const calls:Record<string,[string,any]>={
      athlete:['admin_set_athlete_approval',{target_athlete_id:n.source_id,new_status:status}],
      team_entry:['admin_set_team_entry_approval',{target_entry_id:n.source_id,new_status:status}],
@@ -114,7 +149,7 @@ export default function AccountNotifications({userId,role}: {userId:string;role:
          <p>{n.message}</p>
          <p>{({pending:'Aguardando aprovação',approved:'Aprovado',rejected:'Rejeitado'} as any)[n.status]} · {new Date(n.created_at).toLocaleString('pt-BR')}</p>
          <CorrectionPreview data={n.change_data}/>
-         {canDecide(n)?<div style={{display:'flex',gap:8}}><button style={{...btn,background:'#15803d',color:'#fff'}} disabled={busy} onClick={()=>decide(n,'approved')}>Aprovar</button><button style={btn} disabled={busy} onClick={()=>decide(n,'rejected')}>Rejeitar</button></div>:unread(n)?<button style={btn} disabled={busy} onClick={()=>markRead(n)}>Marcar como lida</button>:<small>Lida</small>}
+         {canDecide(n)?<div style={{display:'flex',gap:8}}>{n.change_data?.action==='delete_scout'||String(n.title||'').toLowerCase().includes('exclusão')?(<><button style={{...btn,background:'#b91c1c',color:'#fff'}} disabled={busy} onClick={()=>decide(n,'approved')}>Excluir definitivamente</button><button style={{...btn,background:'#15803d',color:'#fff'}} disabled={busy} onClick={()=>decide(n,'rejected')}>Restaurar Scout</button></>):(<><button style={{...btn,background:'#15803d',color:'#fff'}} disabled={busy} onClick={()=>decide(n,'approved')}>Aprovar</button><button style={btn} disabled={busy} onClick={()=>decide(n,'rejected')}>Rejeitar</button></>)}</div>:unread(n)?<button style={btn} disabled={busy} onClick={()=>markRead(n)}>Marcar como lida</button>:<small>Lida</small>}
        </article>)}
      </div>
    </div>,

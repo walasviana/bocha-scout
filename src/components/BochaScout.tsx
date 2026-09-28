@@ -1,3 +1,4 @@
+// PATCH: user-fixes-3-details-v27
 // @ts-nocheck
 import './ClassicScoreboard.css';
 import '../filter-screens.css';
@@ -673,8 +674,24 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
 
       <h3 style={{ marginTop: 20 }}>Placar por End</h3>
       {Object.keys(item.scores || {}).length === 0 ? <p style={styles.empty}>Sem placar por End salvo.</p> : Object.entries(item.scores || {}).map(([name, s]) => (
-        <div key={name} style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, padding: "7px 0", borderBottom: "1px solid #e2e8f0" }}>
-          <span>{name}</span><strong>{s.athlete} × {s.opponent}</strong><span>{item.athlete}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color===item.athleteColor)).efficiency.toFixed(1)}% · {item.opponent}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color!==item.athleteColor)).efficiency.toFixed(1)}%</span>
+        <div key={name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "7px 0", borderBottom: "1px solid #e2e8f0" }}>
+          <div>
+            <span>{name}</span>
+            {s.penalty && (
+              <span style={{
+                marginLeft: 8,
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "2px 7px",
+                borderRadius: 6,
+                background: s.penalty === "Acerto" ? "#dcfce7" : "#fee2e2",
+                color: s.penalty === "Acerto" ? "#166534" : "#991b1b"
+              }}>
+                ⚖️ Penalidade: {s.penalty}
+              </span>
+            )}
+          </div>
+          <strong>{s.athlete} × {s.opponent}</strong><span>{item.athlete}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color===item.athleteColor)).efficiency.toFixed(1)}% · {item.opponent}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color!==item.athleteColor)).efficiency.toFixed(1)}%</span>
         </div>
       ))}
 
@@ -873,6 +890,20 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [expandedSessionId, setExpandedSessionId] = useState("");
 
+  useEffect(() => {
+    if (!selectedSessionId) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => {
+      if (e.key === "Escape") setSelectedSessionId("");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [selectedSessionId]);
+
   const cutoff = useMemo(() => {
     if (period === "Tudo") return null;
     const days = period === "30 dias" ? 30 : period === "3 meses" ? 90 : period === "6 meses" ? 180 : 365;
@@ -1051,11 +1082,99 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
       )}
     </div>
 
+    {(() => {
+      const fullSelectedSession = sessions.find((s) => s.id === selectedSessionId);
+      if (!fullSelectedSession) return null;
+      return (
+        <div
+          className="history-full-match-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Análise completa da partida: ${fullSelectedSession.athlete} × ${fullSelectedSession.opponent}`}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(15, 23, 42, 0.8)",
+            backdropFilter: "blur(6px)",
+            overflowY: "auto",
+            padding: "16px 12px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 900,
+              background: "#ffffff",
+              borderRadius: 16,
+              overflow: "hidden",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
+              margin: "12px auto",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "#0f172a",
+                color: "#ffffff",
+                padding: "14px 20px",
+                borderBottom: "1px solid #334155",
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>📊</span>
+                  <span>Análise Completa da Partida</span>
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                  {fullSelectedSession.athlete} × {fullSelectedSession.opponent} · {formatDateBR(fullSelectedSession.date)} · {fullSelectedSession.gameType}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedSessionId("")}
+                style={{
+                  background: "#ffffff",
+                  color: "#0f172a",
+                  border: 0,
+                  borderRadius: 8,
+                  padding: "8px 16px",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                }}
+              >
+                ✕ Fechar tela
+              </button>
+            </div>
+
+            <div style={{ padding: "16px 20px" }}>
+              <SessionDetail
+                item={fullSelectedSession}
+                onClose={() => setSelectedSessionId("")}
+                onExportPdf={exportPdf}
+                selectedAthleteId={athleteFilter}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+
     <button onClick={onBack} style={{...styles.button,background:"#475569",width:"100%"}}>Voltar</button>
   </>;
 }
 
-function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete = null, isAdmin = false }) {
+function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete = null, onRestore = null, isAdmin = false, isSuperAdmin = false }) {
   const athleteTotal = Number(item.totalAthlete ?? 0);
   const opponentTotal = Number(item.totalOpponent ?? 0);
   const isAthleteWin = athleteTotal > opponentTotal;
@@ -1102,6 +1221,19 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
 
         {/* Data e Chevron */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          {isSuperAdmin && (item.deletionRequested || item.approvalStatus === "pending_deletion") && (
+            <span style={{
+              background: "#fef2f2",
+              color: "#b91c1c",
+              border: "1px solid #fecaca",
+              borderRadius: 6,
+              padding: "2px 6px",
+              fontSize: 10,
+              fontWeight: 800,
+            }}>
+              Exclusão solicitada
+            </span>
+          )}
           <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>{formatDateBR(item.date)}</span>
           <span style={{ color: "#94a3b8", fontSize: 11, transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
         </div>
@@ -1138,6 +1270,20 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
                     <span style={{ color: "#cbd5e1", fontSize: 10 }}>-</span>
                     <span className={oLead ? "score-trail" : ""}>{oPts}</span>
                   </div>
+                  {sc.penalty && (
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 800,
+                      marginTop: 2,
+                      padding: "1px 4px",
+                      borderRadius: 4,
+                      background: sc.penalty === "Acerto" ? "#dcfce7" : "#fee2e2",
+                      color: sc.penalty === "Acerto" ? "#166534" : "#991b1b",
+                      whiteSpace: "nowrap"
+                    }}>
+                      {sc.penalty === "Acerto" ? "⚖️ Penal: ✓" : "⚖️ Penal: ✗"}
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -1163,7 +1309,18 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
                 onClick={onDelete}
                 style={{ ...styles.button, background: "#b91c1c", padding: "8px 12px", fontSize: 13, fontWeight: 700, color: "#ffffff" }}
               >
-                Excluir Scout
+                {isSuperAdmin && (item.deletionRequested || item.approvalStatus === "pending_deletion")
+                  ? "Aprovar exclusão permanente"
+                  : "Excluir Scout"}
+              </button>
+            )}
+            {isSuperAdmin && (item.deletionRequested || item.approvalStatus === "pending_deletion") && onRestore && (
+              <button
+                type="button"
+                onClick={onRestore}
+                style={{ ...styles.button, background: "#15803d", padding: "8px 12px", fontSize: 13, fontWeight: 700, color: "#ffffff" }}
+              >
+                Restaurar / Voltar Scout
               </button>
             )}
           </div>
@@ -1173,7 +1330,7 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
   );
 }
 
-function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuperAdmin = false, ownerAccounts = [] }) {
+function MyMatchesScreen({ sessions, onBack, onDeleted, onRestore, isAdmin = false, isSuperAdmin = false, ownerAccounts = [], currentUserId = "" }) {
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [expandedSessionId, setExpandedSessionId] = useState("");
   const [accountFilter, setAccountFilter] = useState("Todos");
@@ -1193,17 +1350,96 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
     }
   }, [selected]);
 
-  async function deleteScout(item) {
-    if (!isSuperAdmin) return;
-    if (!window.confirm(`Excluir definitivamente o Scout de ${item.athlete} × ${item.opponent}? Esta ação remove o Scout do banco de dados.`)) return;
-    const { error } = await supabase.rpc("super_admin_delete_scout", { target_scout_id: item.id });
-    if (error) {
-      alert(error.message || "Não foi possível excluir o Scout.");
+  async function handleDeleteScout(item) {
+    if (isSuperAdmin) {
+      if (!window.confirm(`Excluir definitivamente o Scout de ${item.athlete} × ${item.opponent}? Esta ação remove o Scout do banco de dados.`)) return;
+      const { error } = await supabase.rpc("super_admin_delete_scout", { target_scout_id: item.id });
+      if (error) {
+        const direct = await supabase.from("scout_sessions").delete().eq("id", item.id);
+        if (direct.error) {
+          alert(direct.error.message || error.message || "Não foi possível excluir o Scout.");
+          return;
+        }
+      }
+      if (selectedSessionId === item.id) setSelectedSessionId("");
+      forgetSession(item.id);
+      onDeleted?.(item.id);
       return;
     }
+
+    if (!window.confirm(`Excluir o Scout de ${item.athlete} × ${item.opponent} da sua conta? Ele não aparecerá mais para você e a exclusão definitiva aguardará aprovação do administrador.`)) return;
+
+    const updatedPayload = {
+      ...(item.payload || item),
+      deletionRequested: true,
+      deletionRequestedAt: new Date().toISOString(),
+      deletionRequestedBy: currentUserId,
+    };
+
+    const { error: updateError } = await supabase.from("scout_sessions").update({
+      approval_status: "pending_deletion",
+      payload: updatedPayload,
+      updated_at: new Date().toISOString(),
+    }).eq("id", item.id);
+
+    if (updateError) {
+      console.warn("Aviso ao atualizar status no banco:", updateError.message);
+    }
+
+    try {
+      await supabase.from("admin_notifications").insert({
+        source_type: "scout",
+        source_id: item.id,
+        requester_id: currentUserId || null,
+        title: `Exclusão de Scout: ${item.athlete} × ${item.opponent}`,
+        message: `O usuário solicitou a exclusão do Scout de ${formatDateBR(item.date)}.`,
+        status: "pending",
+        change_data: {
+          action: "delete_scout",
+          scout_id: item.id,
+          athlete: item.athlete,
+          opponent: item.opponent,
+          date: item.date,
+        },
+      });
+    } catch (e) {
+      console.warn("Aviso ao registrar notificação:", e);
+    }
+
     if (selectedSessionId === item.id) setSelectedSessionId("");
     forgetSession(item.id);
     onDeleted?.(item.id);
+    alert("Scout excluído da sua conta com sucesso! A solicitação de exclusão definitiva foi enviada ao administrador.");
+  }
+
+  async function handleRestoreScout(item) {
+    if (!isSuperAdmin) return;
+    if (!window.confirm(`Restaurar o Scout de ${item.athlete} × ${item.opponent} para a conta do usuário?`)) return;
+
+    const nextPayload = { ...(item.payload || item), deletionRequested: false };
+    delete nextPayload.deletionRequestedAt;
+    delete nextPayload.deletionRequestedBy;
+
+    const { error } = await supabase.from("scout_sessions").update({
+      approval_status: "approved",
+      payload: nextPayload,
+      updated_at: new Date().toISOString(),
+    }).eq("id", item.id);
+
+    if (error) {
+      alert(error.message || "Não foi possível restaurar o Scout.");
+      return;
+    }
+
+    try {
+      await supabase.from("admin_notifications").update({
+        status: "rejected",
+        resolved_at: new Date().toISOString(),
+      }).eq("source_id", item.id).eq("status", "pending");
+    } catch {}
+
+    onRestore?.(item.id);
+    alert("Scout restaurado com sucesso! Ele voltou a aparecer na conta do usuário.");
   }
 
   async function exportSavedSessionReport(item) {
@@ -1241,8 +1477,10 @@ function MyMatchesScreen({ sessions, onBack, onDeleted, isAdmin = false, isSuper
               isExpanded={expandedSessionId === item.id}
               onToggle={() => setExpandedSessionId((prev) => (prev === item.id ? "" : item.id))}
               onSelectFull={() => { setSelectedSessionId(item.id); window.scrollTo(0,0); }}
-              onDelete={isSuperAdmin ? () => deleteScout(item) : null}
+              onDelete={() => handleDeleteScout(item)}
+              onRestore={isSuperAdmin && (item.deletionRequested || item.approvalStatus === "pending_deletion") ? () => handleRestoreScout(item) : null}
               isAdmin={isAdmin}
+              isSuperAdmin={isSuperAdmin}
             />
           ))}
         </div>
@@ -1504,11 +1742,16 @@ export default function BochaScout() {
             athlete: p.athlete || row.athlete_name,
             opponent: p.opponent || row.opponent_name,
             approvalStatus: row.approval_status || p.approvalStatus || "approved",
+            deletionRequested: row.approval_status === "pending_deletion" || p.deletionRequested === true,
             createdAt: p.createdAt || row.created_at,
           };
+        }).filter((s) => {
+          const isSuper = profiles.some((pr) => pr.id === currentUserId && pr.role === "super_admin");
+          if (isSuper) return true;
+          return !s.deletionRequested;
         });
         const dbIds = new Set(dbSessions.map((s) => s.id));
-        const localLegacy = safeLoad(`${STORAGE_KEYS.sessions}:${currentUserId}`, []).filter((s) => s.ownerUserId===currentUserId && !dbIds.has(s.id));
+        const localLegacy = safeLoad(`${STORAGE_KEYS.sessions}:${currentUserId}`, []).filter((s) => s.ownerUserId===currentUserId && !dbIds.has(s.id) && !s.deletionRequested && s.approvalStatus !== "pending_deletion");
         setSessions([...dbSessions, ...localLegacy]);
       }
     }
@@ -2373,11 +2616,12 @@ export default function BochaScout() {
             : a > o
             ? athlete
             : opponent,
+        penalty: endScoreDraft?.penaltyResult || null,
       },
     };
 
     setScores(updatedScores);
-    setEndScoreDraft({athlete:"",opponent:""});
+    setEndScoreDraft({athlete:"",opponent:"",penaltyResult:null});
 
     const isTieBreakEnd = String(currentEndName).startsWith("Tie-Break");
 
@@ -3140,10 +3384,15 @@ export default function BochaScout() {
           {view === "my-matches" && (
             <MyMatchesScreen
               sessions={historySessions}
-              onDeleted={id=>setSessions(previous=>previous.filter(item=>item.id!==id))}
+              onDeleted={(id) => setSessions((previous) => previous.filter((item) => item.id !== id))}
+              onRestore={(id) => {
+                setSessions((previous) => previous.map((item) => item.id === id ? { ...item, deletionRequested: false, approvalStatus: "approved" } : item));
+                window.dispatchEvent(new Event("boccia-catalog-updated"));
+              }}
               isAdmin={currentUserIsAdmin}
               isSuperAdmin={currentUserIsSuperAdmin}
               ownerAccounts={ownerAccounts}
+              currentUserId={currentUserId}
               onBack={() => setView("dashboard")}
             />
           )}
@@ -3698,31 +3947,32 @@ export default function BochaScout() {
               />
 
               <div
-                style={styles.warning}
+                style={{
+                  ...styles.warning,
+                  background: "#fef3c7",
+                  borderColor: "#f59e0b",
+                  color: "#92400e",
+                  lineHeight: 1.5,
+                }}
               >
-                <strong>
-                  MOVER BRANCA
-                </strong>
-
+                <strong>MOVER BOLA BRANCA</strong>
                 <br />
-
-                Posição atual:{" "}
-                <strong>
-                  {whitePosition}
-                </strong>
-
+                Posição original da branca: <strong>{whitePosition}</strong> (marcada com ⚪ no mapa).
                 <br />
-
-                Selecione a nova posição.
+                {newWhitePosition ? (
+                  <span style={{ color: "#15803d", fontWeight: 700 }}>
+                    Nova posição selecionada: {newWhitePosition}
+                  </span>
+                ) : (
+                  <span>Toque na quadra para escolher a nova posição da bola branca.</span>
+                )}
               </div>
 
               <PositionMap
-                selected={
-                  newWhitePosition
-                }
-                onSelect={
-                  selectNewWhitePosition
-                }
+                selected={newWhitePosition}
+                originPosition={whitePosition}
+                originPoint={whitePoint}
+                onSelect={selectNewWhitePosition}
               />
 
               <button
@@ -3752,8 +4002,12 @@ export default function BochaScout() {
               PLACAR DO END
           ================================================= */}
 
-          {stage === "endScore" && (
-            <EndScore draft={endScoreDraft} onDraftChange={value=>{pushUndoSnapshot();setEndScoreDraft(value);}}
+          {stage === "endScore" && (() => {
+            const endFouls = playsHistory.filter((p) => p.end === currentEndName && p.play === "Falta");
+            return (
+              <EndScore draft={endScoreDraft} onDraftChange={value=>{pushUndoSnapshot();setEndScoreDraft(value);}}
+                hasFoul={endFouls.length > 0}
+                foulCount={endFouls.length}
               athlete={athlete}
               opponent={opponent}
               athleteColor={
@@ -3769,7 +4023,8 @@ export default function BochaScout() {
                 saveEndScore
               }
             />
-          )}
+          );
+          })()}
 
           <div className="scout-live-performance">
             <PartialPerformance plays={playsHistory} gameType={gameType} athlete={athlete} opponent={opponent} athleteColor={athleteColor} scoutMode={scoutMode} />
@@ -4361,8 +4616,8 @@ function Field({
   );
 }
 
-function PositionMap({ selected, onSelect }) {
-  return <CourtPositionMap selected={selected} onSelect={onSelect} />;
+function PositionMap({ selected, onSelect, originPosition, originPoint }: { selected: string; onSelect: (pos: string) => void; originPosition?: string; originPoint?: any }) {
+  return <CourtPositionMap selected={selected} onSelect={onSelect} originPosition={originPosition} originPoint={originPoint} />;
 }
 
 function ResultBadge({
@@ -4807,11 +5062,13 @@ function ColorScoutSummary({
 // PLACAR DO END
 // ============================================================
 
-function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,draft,onDraftChange}) {
+function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,draft,onDraftChange,hasFoul=false,foulCount=0}) {
   const athleteScore=draft.athlete;
   const opponentScore=draft.opponent;
+  const penaltyResult=draft.penaltyResult || null;
   const setAthleteScore=(value)=>onDraftChange({...draft,athlete:value});
   const setOpponentScore=(value)=>onDraftChange({...draft,opponent:value});
+  const setPenaltyResult=(value)=>onDraftChange({...draft,penaltyResult:value});
 
   return (
     <div
@@ -4872,6 +5129,85 @@ function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,dr
             />
           </Field>
         ))}
+      </div>
+
+      {/* Seção de Penalização */}
+      <div style={{
+        marginTop: 18,
+        padding: "14px 16px",
+        background: hasFoul ? "#fffbeb" : "#f8fafc",
+        border: hasFoul ? "2px solid #f59e0b" : "1px solid #e2e8f0",
+        borderRadius: 12,
+        textAlign: "left"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "#1e293b", display: "flex", alignItems: "center", gap: 6 }}>
+            <span>⚖️ Penalização</span>
+            {hasFoul && (
+              <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 11, padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+                {foulCount} falta(s) registrada(s) neste End
+              </span>
+            )}
+          </div>
+          <span style={{ fontSize: 11, color: "#64748b" }}>
+            Opcional · Registre se houve cobrança de penalização
+          </span>
+        </div>
+
+        <p style={{ fontSize: 12, color: "#475569", margin: "0 0 10px" }}>
+          Houve cobrança de penalização neste End?
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setPenaltyResult(null)}
+            style={{
+              ...styles.button,
+              padding: "9px 6px",
+              fontSize: 12,
+              fontWeight: 700,
+              background: !penaltyResult ? "#334155" : "#f1f5f9",
+              color: !penaltyResult ? "#ffffff" : "#475569",
+              border: "1px solid #cbd5e1",
+              minHeight: 38,
+            }}
+          >
+            Sem penalização
+          </button>
+          <button
+            type="button"
+            onClick={() => setPenaltyResult("Acerto")}
+            style={{
+              ...styles.button,
+              padding: "9px 6px",
+              fontSize: 12,
+              fontWeight: 800,
+              background: penaltyResult === "Acerto" ? "#15803d" : "#f0fdf4",
+              color: penaltyResult === "Acerto" ? "#ffffff" : "#166534",
+              border: penaltyResult === "Acerto" ? "2px solid #166534" : "1px solid #bbf7d0",
+              minHeight: 38,
+            }}
+          >
+            ✅ Acerto
+          </button>
+          <button
+            type="button"
+            onClick={() => setPenaltyResult("Erro")}
+            style={{
+              ...styles.button,
+              padding: "9px 6px",
+              fontSize: 12,
+              fontWeight: 800,
+              background: penaltyResult === "Erro" ? "#b91c1c" : "#fef2f2",
+              color: penaltyResult === "Erro" ? "#ffffff" : "#991b1b",
+              border: penaltyResult === "Erro" ? "2px solid #991b1b" : "1px solid #fecaca",
+              minHeight: 38,
+            }}
+          >
+            ❌ Erro
+          </button>
+        </div>
       </div>
 
       <button

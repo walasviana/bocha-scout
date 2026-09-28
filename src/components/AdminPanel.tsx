@@ -189,8 +189,38 @@ export default function AdminPanel({ onClose, initialTab = 'overview',isSuperAdm
       ({ error } = await supabase.rpc('admin_set_athlete_approval', { target_athlete_id: item.source_id, new_status: status }));
     } else if (item.source_type === 'team_entry') {
       ({ error } = await supabase.rpc('admin_set_team_entry_approval', { target_entry_id: item.source_id, new_status: status }));
-    } else if (item.source_type === 'scout') {
-      ({ error } = await supabase.rpc('admin_set_scout_approval', { target_session_id: item.source_id, new_status: status }));
+    } else if (item.source_type === 'scout' || item.source_type === 'scout_deletion') {
+      const isDeleteAction = item.change_data?.action === 'delete_scout' || String(item.title || '').toLowerCase().includes('exclusão');
+      if (isDeleteAction) {
+        if (status === 'approved') {
+          const res = await supabase.rpc('super_admin_delete_scout', { target_scout_id: item.source_id });
+          if (res.error) {
+            const direct = await supabase.from('scout_sessions').delete().eq('id', item.source_id);
+            if (direct.error) error = direct.error;
+          }
+          await supabase.from('admin_notifications').update({
+            status: 'approved',
+            resolved_at: new Date().toISOString(),
+          }).eq('id', item.id);
+        } else {
+          const { data: cur } = await supabase.from('scout_sessions').select('payload').eq('id', item.source_id).maybeSingle();
+          const p = { ...(cur?.payload || {}), deletionRequested: false };
+          delete p.deletionRequestedAt;
+          delete p.deletionRequestedBy;
+          const up = await supabase.from('scout_sessions').update({
+            approval_status: 'approved',
+            payload: p,
+            updated_at: new Date().toISOString()
+          }).eq('id', item.source_id);
+          if (up.error) error = up.error;
+          await supabase.from('admin_notifications').update({
+            status: 'rejected',
+            resolved_at: new Date().toISOString(),
+          }).eq('id', item.id);
+        }
+      } else {
+        ({ error } = await supabase.rpc('admin_set_scout_approval', { target_session_id: item.source_id, new_status: status }));
+      }
     }
     if (error) return setMessage(error.message);
     window.dispatchEvent(new Event('boccia-catalog-updated'));
@@ -311,8 +341,17 @@ export default function AdminPanel({ onClose, initialTab = 'overview',isSuperAdm
               <div style={{ color: '#64748b', fontSize: 12, marginTop: 3 }}>Solicitado por: {ownerById[item.requester_id] || 'Conta'} · {fmt(item.created_at)}</div>
             </div>
             <div style={{ display: 'flex', gap: 7 }}>
-              <button onClick={() => resolveNotification(item, 'approved')} style={{ ...button, background: '#15803d', color: '#fff' }}>Aprovar</button>
-              <button onClick={() => resolveNotification(item, 'rejected')} style={{ ...button, background: '#b91c1c', color: '#fff' }}>Rejeitar</button>
+              {item.change_data?.action === 'delete_scout' || String(item.title || '').toLowerCase().includes('exclusão') ? (
+                <>
+                  <button onClick={() => resolveNotification(item, 'approved')} style={{ ...button, background: '#b91c1c', color: '#fff' }}>Excluir definitivamente</button>
+                  <button onClick={() => resolveNotification(item, 'rejected')} style={{ ...button, background: '#15803d', color: '#fff' }}>Restaurar Scout</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => resolveNotification(item, 'approved')} style={{ ...button, background: '#15803d', color: '#fff' }}>Aprovar</button>
+                  <button onClick={() => resolveNotification(item, 'rejected')} style={{ ...button, background: '#b91c1c', color: '#fff' }}>Rejeitar</button>
+                </>
+              )}
             </div>
           </div>)}
         </div>}
