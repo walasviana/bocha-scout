@@ -35,8 +35,15 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
     const a=score?.athlete,o=score?.opponent;
     text(score ? session.athleteColor==='Vermelho'?a:o : '—',x-9,153,9,true,red,'right');text('×',x,153,8,false,muted,'center');text(score ? session.athleteColor==='Azul'?a:o : '—',x+9,153,9,true,blue);
     text(rs.total?rs.efficiency.toFixed(0)+'%':'—',x-6,168,7,true,red,'right');text(bs.total?bs.efficiency.toFixed(0)+'%':'—',x+6,168,7,true,blue);
+    const pens = (score?.penalties || []).filter((p: any) => p.result && p.result !== 'Sem penalidade');
+    if (pens.length > 0) {
+      const penText = pens.map((p: any) => `${p.takerColor === 'Vermelho' ? 'V' : 'A'}:${p.result === 'Acerto' ? '✓' : '✗'}`).join(' ');
+      text(`Pen: ${penText}`, x, 176, 6, true, [180, 83, 9], 'center');
+    } else if (score?.penalty) {
+      text(`Pen: ${score.penalty === 'Acerto' ? '✓' : '✗'}`, x, 176, 6, true, [180, 83, 9], 'center');
+    }
   });
-  text('Eficiência por parcial · V = vermelho · A = azul · — = sem jogadas',W/2,182,6,false,muted,'center');
+  text('Eficiência por parcial · V = vermelho · A = azul · Pen = penalidades (✓ acerto, ✗ erro)',W/2,184,6,false,muted,'center');
   const gap=12,cw=(W-52-gap)/2;
   ['Vermelho','Azul'].forEach((color,index)=>{
     const x=26+index*(cw+gap),tone=index?blue:red;
@@ -52,8 +59,21 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
   const radarAxes=usedFoundations(radarSides);
   const addRadar=(series:any[],x:number,y:number,w:number)=>{const c=document.createElement('canvas');drawRadar(c,series,radarAxes);doc.addImage(c.toDataURL('image/png'),'PNG',x,y,w,w*570/720);};
   text(fit(redName,190,8).slice(0,2).join(' '),130,342,8,true,red,'center');text('Vermelho × Azul',W/2,342,9,true,navy,'center');text(fit(blueName,190,8).slice(0,2).join(' '),W-130,342,8,true,blue,'center');
-  addRadar([radarSides[0]],26,355,215);addRadar(radarSides,W/2-140,342,280);addRadar([radarSides[1]],W-241,355,215);
-  text('Acerto = 100%, Funcional = 50%, Erro = 0%. Tempo ausente não entra na média. Histórico de jogadas disponível no aplicativo.',26,H-18,7,false,muted);
+  const matchPenalties: string[] = [];
+  ends.forEach((end: string) => {
+    const sc = session.scores?.[end];
+    const pens = (sc?.penalties || []).filter((p: any) => p.result && p.result !== 'Sem penalidade');
+    pens.forEach((p: any) => {
+      matchPenalties.push(`${end.replace('End ','E').replace('Tie-Break','TB')}: ${p.takerColor || p.takerPlayer} (${p.result}) [Falta: ${p.foulColor || p.foulPlayer}]`);
+    });
+    if (!pens.length && sc?.penalty) {
+      matchPenalties.push(`${end.replace('End ','E').replace('Tie-Break','TB')}: (${sc.penalty})`);
+    }
+  });
+  if (matchPenalties.length > 0) {
+    text(`⚖️ Penalidades: ${matchPenalties.join(' · ')}`, 26, H - 28, 7, true, [180, 83, 9]);
+  }
+  text('Acerto = 100%, Funcional = 50%, Erro = 0%. Tempo ausente não entra na média. Histórico de jogadas disponível no aplicativo.',26,H-16,7,false,muted);
   const maps=matchSeries(session).map(g=>({name:g.name,color:g.color,data:positionStats(g.plays)}));
   for(let i=0;i<maps.length;i+=2)appendHeatmapReport(doc,maps.slice(i,i+2));
   for(let i=1;i<=doc.getNumberOfPages();i++){doc.setPage(i);text(`${i} / ${doc.getNumberOfPages()}`,W-26,H-8,6,false,muted,'right');}

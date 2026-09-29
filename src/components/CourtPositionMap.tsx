@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import { courtCells, drawCourtHeatmap } from '../lib/courtHeatmap';
 import './CourtHeatmap.css';
 const EMPTY_DATA = {};
-export default function CourtPositionMap({ selected, onSelect, originPosition, originPoint }: { selected: string; onSelect: (position: string) => void; originPosition?: string; originPoint?: { x: number; y: number } | null }) {
+export default function CourtPositionMap({ selected, onSelect, originPosition, originPoint, color }: { selected: string; onSelect: (position: string) => void; originPosition?: string; originPoint?: { x: number; y: number } | null; color?: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (canvas.current) drawCourtHeatmap(canvas.current, { data: EMPTY_DATA, selected, selectionOnly: true, originPosition, originPoint });
-  }, [selected, originPosition, originPoint]);
+    if (canvas.current) drawCourtHeatmap(canvas.current, { data: EMPTY_DATA, selected, selectionOnly: true, originPosition, originPoint, color });
+  }, [selected, originPosition, originPoint, color]);
   return <div className="court-heatmap" style={{padding:0,maxWidth:560}}>
     {originPosition && (
       <div style={{

@@ -1,5 +1,5 @@
 type Point = {x:number;y:number};
-export type Movement = {from:string;to:string;fromPoint?:Point;toPoint?:Point};
+export type Movement = {from:string;to:string;fromPoint?:Point;toPoint?:Point;color?:string};
 export type PositionStats = { total: number; points?: Point[]; movements?: Movement[]; acertos?: number; funcionais?: number; erros?: number; saidas: number; efficiency: number };
 export type CourtOptions = { data: Record<string, PositionStats>; mode?: string; color?: string; name?: string; selected?: string; showPositions?: boolean; showMovements?: boolean; selectionOnly?: boolean; originPosition?: string; originPoint?: Point | null };
 export const CHART_WIDTH = 800, CHART_HEIGHT = 1360;
@@ -119,9 +119,10 @@ export function drawCourtHeatmap(canvas: HTMLCanvasElement, options: CourtOption
       const fy=fromCell.y+(options.originPoint && Number.isFinite(options.originPoint.y)?options.originPoint.y*100:50);
       const tx=toCell.x+50, ty=toCell.y+50;
       const angle=Math.atan2(ty-fy,tx-fx);
+      const liveArrowColor = options.color === 'Vermelho' ? '#dc2626' : options.color === 'Azul' ? '#2563eb' : '#2563eb';
       ctx.save();
-      ctx.strokeStyle='#2563eb';
-      ctx.fillStyle='#2563eb';
+      ctx.strokeStyle = liveArrowColor;
+      ctx.fillStyle = liveArrowColor;
       ctx.lineWidth=3.5;
       ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(tx,ty);ctx.stroke();
       const head=13;
@@ -143,7 +144,8 @@ export function drawCourtHeatmap(canvas: HTMLCanvasElement, options: CourtOption
       const v=movementVector(m);if(!v)continue;
       const angle=Math.atan2(v.to.y-v.from.y,v.to.x-v.from.x);
       const head=Math.min(11,Math.hypot(v.to.x-v.from.x,v.to.y-v.from.y)*.4);
-      ctx.save();ctx.globalAlpha=.8;ctx.strokeStyle=accent;ctx.fillStyle=accent;ctx.lineWidth=3;
+      const moveColor = m.color === 'Vermelho' ? '#dc2626' : m.color === 'Azul' ? '#2563eb' : (options.color === 'Vermelho' ? '#dc2626' : '#2563eb');
+      ctx.save();ctx.globalAlpha=.88;ctx.strokeStyle=moveColor;ctx.fillStyle=moveColor;ctx.lineWidth=3.5;
       ctx.setLineDash(v.approximate?[7,5]:[]);
       ctx.beginPath();ctx.moveTo(v.from.x,v.from.y);ctx.lineTo(v.to.x,v.to.y);ctx.stroke();ctx.setLineDash([]);
       ctx.beginPath();ctx.moveTo(v.to.x,v.to.y);ctx.lineTo(v.to.x-head*Math.cos(angle-.5),v.to.y-head*Math.sin(angle-.5));ctx.lineTo(v.to.x-head*Math.cos(angle+.5),v.to.y-head*Math.sin(angle+.5));ctx.closePath();ctx.fill();

@@ -280,7 +280,7 @@ function buildPositionPerformance(plays) {
     if (!map[pos]) map[pos] = { total: 0, acertos: 0, funcionais: 0, erros: 0, saidas: 0 };
     const item = map[pos];
     if(p.play==='Mover branca' && p.result!=='Erro' && p.whitePositionFrom && p.whitePositionTo) {
-      (item.movements ||= []).push({from:p.whitePositionFrom,to:p.whitePositionTo,fromPoint:p.whitePointFrom,toPoint:p.whitePointTo});
+      (item.movements ||= []).push({from:p.whitePositionFrom,to:p.whitePositionTo,fromPoint:p.whitePointFrom,toPoint:p.whitePointTo,color:p.color});
     }
     item.total += 1;
     if (p.result === "Acerto") item.acertos += 1;
@@ -677,7 +677,26 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
         <div key={name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, padding: "7px 0", borderBottom: "1px solid #e2e8f0" }}>
           <div>
             <span>{name}</span>
-            {s.penalty && (
+            {s.penalties && s.penalties.filter(pen => pen.result && pen.result !== "Sem penalidade").length > 0 ? (
+              <span style={{ display: "inline-flex", gap: 4, flexWrap: "wrap", marginLeft: 8, verticalAlign: "middle" }}>
+                {s.penalties.filter(pen => pen.result && pen.result !== "Sem penalidade").map((pen, pIdx) => {
+                  const isHit = pen.result === "Acerto";
+                  return (
+                    <span key={pen.id || pIdx} style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 6px",
+                      borderRadius: 6,
+                      background: isHit ? "#dcfce7" : "#fee2e2",
+                      color: isHit ? "#166534" : "#991b1b",
+                      border: isHit ? "1px solid #bbf7d0" : "1px solid #fecaca",
+                    }}>
+                      ⚖️ {pen.takerColor || pen.takerPlayer}: {isHit ? "✓ Acerto" : "✗ Erro"}
+                    </span>
+                  );
+                })}
+              </span>
+            ) : s.penalty ? (
               <span style={{
                 marginLeft: 8,
                 fontSize: 11,
@@ -689,7 +708,7 @@ function SessionDetail({ item, onClose, onExportPdf, selectedAthleteId }) {
               }}>
                 ⚖️ Penalidade: {s.penalty}
               </span>
-            )}
+            ) : null}
           </div>
           <strong>{s.athlete} × {s.opponent}</strong><span>{item.athlete}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color===item.athleteColor)).efficiency.toFixed(1)}% · {item.opponent}: {calcStats((item.plays||[]).filter(p=>p.end===name&&p.color!==item.athleteColor)).efficiency.toFixed(1)}%</span>
         </div>
@@ -834,6 +853,14 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
     return hasHistory && classOk && genderOk && nameOk;
   }).sort((a,b) => Number(favoriteAthleteIds.includes(b.id)) - Number(favoriteAthleteIds.includes(a.id)) || a.name.localeCompare(b.name,"pt-BR")), [athletes, athletesWithHistory, historyClassFilter, historyGenderFilter, historyAthleteSearch, favoriteAthleteIds]);
 
+  async function exportSavedSessionReport(item) {
+    const doc = await createMatchReport({
+      ...item,
+      ownerDisplay: item.ownerDisplay || ownerAccounts.find((a) => a.id === item.ownerUserId)?.name,
+    }, buildPositionPerformance);
+    doc.save(matchReportFileName(item));
+  }
+
   async function exportSavedSessionReportLegacy(item) {
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -877,7 +904,13 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
     y+=6;
 
     title("PLACAR POR END");
-    Object.entries(item.scores||{}).forEach(([name,sc])=>line(`${name}: ${sc.athlete} x ${sc.opponent}`));
+    Object.entries(item.scores||{}).forEach(([name,sc]: [string, any])=>{
+      const scoredPens = (sc.penalties || []).filter((p: any) => p.result && p.result !== "Sem penalidade");
+      const penText = scoredPens.length > 0
+        ? ` · Penal: ${scoredPens.map((p: any) => `${p.takerColor || p.takerPlayer} (${p.result})`).join(", ")}`
+        : sc.penalty ? ` · Penalidade: ${sc.penalty}` : "";
+      line(`${name}: ${sc.athlete} x ${sc.opponent}${penText}`);
+    });
     y+=6;
 
     title("JOGADAS DO ATLETA");
@@ -1161,7 +1194,7 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
               <SessionDetail
                 item={fullSelectedSession}
                 onClose={() => setSelectedSessionId("")}
-                onExportPdf={exportPdf}
+                onExportPdf={exportSavedSessionReport}
                 selectedAthleteId={athleteFilter}
               />
             </div>
@@ -1270,7 +1303,23 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
                     <span style={{ color: "#cbd5e1", fontSize: 10 }}>-</span>
                     <span className={oLead ? "score-trail" : ""}>{oPts}</span>
                   </div>
-                  {sc.penalty && (
+                  {sc.penalties && sc.penalties.filter(p => p.result && p.result !== "Sem penalidade").length > 0 ? (
+                    <div style={{ display: "flex", gap: 2, flexWrap: "wrap", marginTop: 2, justifyContent: "center" }}>
+                      {sc.penalties.filter(p => p.result && p.result !== "Sem penalidade").map((pen, pIdx) => (
+                        <span key={pen.id || pIdx} style={{
+                          fontSize: 9,
+                          fontWeight: 800,
+                          padding: "1px 4px",
+                          borderRadius: 4,
+                          background: pen.result === "Acerto" ? "#dcfce7" : "#fee2e2",
+                          color: pen.result === "Acerto" ? "#166534" : "#991b1b",
+                          whiteSpace: "nowrap"
+                        }}>
+                          ⚖️ {pen.takerColor === "Vermelho" ? "R" : "A"}:{pen.result === "Acerto" ? "✓" : "✗"}
+                        </span>
+                      ))}
+                    </div>
+                  ) : sc.penalty ? (
                     <span style={{
                       fontSize: 9,
                       fontWeight: 800,
@@ -1283,7 +1332,7 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
                     }}>
                       {sc.penalty === "Acerto" ? "⚖️ Penal: ✓" : "⚖️ Penal: ✗"}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               );
             })}
@@ -2603,6 +2652,12 @@ export default function BochaScout() {
 
     pushUndoSnapshot();
 
+    const endPenalties = endScoreDraft?.penalties || [];
+    const scoredPenalties = endPenalties.filter(p => p.result && p.result !== "Sem penalidade");
+    const legacyPenalty = scoredPenalties.length > 0
+      ? (scoredPenalties.some(p => p.result === "Acerto") ? "Acerto" : "Erro")
+      : null;
+
     const updatedScores = {
       ...scores,
 
@@ -2616,12 +2671,13 @@ export default function BochaScout() {
             : a > o
             ? athlete
             : opponent,
-        penalty: endScoreDraft?.penaltyResult || null,
+        penalty: legacyPenalty,
+        penalties: endPenalties,
       },
     };
 
     setScores(updatedScores);
-    setEndScoreDraft({athlete:"",opponent:"",penaltyResult:null});
+    setEndScoreDraft({athlete:"",opponent:"",penalties:[]});
 
     const isTieBreakEnd = String(currentEndName).startsWith("Tie-Break");
 
@@ -3040,6 +3096,19 @@ export default function BochaScout() {
       doc.setFontSize(10);
     });
     y = tableTop + 74;
+
+    const penaltyRows = endNames.map(name => {
+      const s = scores[name];
+      const pens = (s?.penalties || []).filter(p => p.result && p.result !== "Sem penalidade");
+      if (pens.length > 0) {
+        return `${name.replace("End ", "E")}: ${pens.map(p => `${p.takerColor || p.takerPlayer} (${p.result})`).join(", ")}`;
+      }
+      if (s?.penalty) return `${name.replace("End ", "E")}: (${s.penalty})`;
+      return null;
+    }).filter(Boolean);
+    if (penaltyRows.length > 0) {
+      line(`⚖️ Penalidades: ${penaltyRows.join(" | ")}`, true);
+    }
 
     if (bestEnd.athlete) {
       line(
@@ -3972,6 +4041,7 @@ export default function BochaScout() {
                 selected={newWhitePosition}
                 originPosition={whitePosition}
                 originPoint={whitePoint}
+                color={selectedColor}
                 onSelect={selectNewWhitePosition}
               />
 
@@ -4005,25 +4075,18 @@ export default function BochaScout() {
           {stage === "endScore" && (() => {
             const endFouls = playsHistory.filter((p) => p.end === currentEndName && p.play === "Falta");
             return (
-              <EndScore draft={endScoreDraft} onDraftChange={value=>{pushUndoSnapshot();setEndScoreDraft(value);}}
-                hasFoul={endFouls.length > 0}
-                foulCount={endFouls.length}
-              athlete={athlete}
-              opponent={opponent}
-              athleteColor={
-                athleteColor
-              }
-              opponentColor={
-                opponentColor
-              }
-              endName={
-                currentEndName
-              }
-              onSave={
-                saveEndScore
-              }
-            />
-          );
+              <EndScore
+                draft={endScoreDraft}
+                onDraftChange={value => { pushUndoSnapshot(); setEndScoreDraft(value); }}
+                endFouls={endFouls}
+                athlete={athlete}
+                opponent={opponent}
+                athleteColor={athleteColor}
+                opponentColor={opponentColor}
+                endName={currentEndName}
+                onSave={saveEndScore}
+              />
+            );
           })()}
 
           <div className="scout-live-performance">
@@ -4616,8 +4679,8 @@ function Field({
   );
 }
 
-function PositionMap({ selected, onSelect, originPosition, originPoint }: { selected: string; onSelect: (pos: string) => void; originPosition?: string; originPoint?: any }) {
-  return <CourtPositionMap selected={selected} onSelect={onSelect} originPosition={originPosition} originPoint={originPoint} />;
+function PositionMap({ selected, onSelect, originPosition, originPoint, color }: { selected: string; onSelect: (pos: string) => void; originPosition?: string; originPoint?: any; color?: string }) {
+  return <CourtPositionMap selected={selected} onSelect={onSelect} originPosition={originPosition} originPoint={originPoint} color={color} />;
 }
 
 function ResultBadge({
@@ -5062,52 +5125,105 @@ function ColorScoutSummary({
 // PLACAR DO END
 // ============================================================
 
-function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,draft,onDraftChange,hasFoul=false,foulCount=0}) {
-  const athleteScore=draft.athlete;
-  const opponentScore=draft.opponent;
-  const penaltyResult=draft.penaltyResult || null;
-  const setAthleteScore=(value)=>onDraftChange({...draft,athlete:value});
-  const setOpponentScore=(value)=>onDraftChange({...draft,opponent:value});
-  const setPenaltyResult=(value)=>onDraftChange({...draft,penaltyResult:value});
+function EndScore({
+  athlete,
+  opponent,
+  athleteColor,
+  opponentColor,
+  endName,
+  onSave,
+  draft,
+  onDraftChange,
+  endFouls = [],
+}) {
+  const athleteScore = draft.athlete ?? "";
+  const opponentScore = draft.opponent ?? "";
+  const setAthleteScore = (value) => onDraftChange({ ...draft, athlete: value });
+  const setOpponentScore = (value) => onDraftChange({ ...draft, opponent: value });
+
+  // Lista inicial calculada a partir das faltas registradas no End
+  const defaultPenalties = useMemo(() => {
+    return (endFouls || []).map((foul, idx) => {
+      const foulColor = foul.color || athleteColor;
+      const isAthleteFoul = foulColor === athleteColor;
+      return {
+        id: `foul_${foul.id || idx}_${idx}`,
+        foulColor,
+        foulPlayer: isAthleteFoul ? athlete : opponent,
+        takerColor: isAthleteFoul ? opponentColor : athleteColor,
+        takerPlayer: isAthleteFoul ? opponent : athlete,
+        result: "Sem penalidade",
+        isManual: false,
+      };
+    });
+  }, [endFouls, athlete, opponent, athleteColor, opponentColor]);
+
+  // Se o draft ainda não tiver penalties inicializadas, inicializa com as faltas do End
+  useEffect(() => {
+    if (draft.penalties === undefined) {
+      onDraftChange({ ...draft, penalties: defaultPenalties });
+    }
+  }, [draft.penalties, defaultPenalties]);
+
+  const penalties = draft.penalties ?? defaultPenalties;
+
+  const updatePenaltyResult = (id, result) => {
+    const updated = penalties.map((p) => (p.id === id ? { ...p, result } : p));
+    onDraftChange({ ...draft, penalties: updated });
+  };
+
+  const toggleFoulParty = (id) => {
+    const updated = penalties.map((p) => {
+      if (p.id !== id) return p;
+      const nextFoulColor = p.foulColor === athleteColor ? opponentColor : athleteColor;
+      const isAthleteFoul = nextFoulColor === athleteColor;
+      return {
+        ...p,
+        foulColor: nextFoulColor,
+        foulPlayer: isAthleteFoul ? athlete : opponent,
+        takerColor: isAthleteFoul ? opponentColor : athleteColor,
+        takerPlayer: isAthleteFoul ? opponent : athlete,
+      };
+    });
+    onDraftChange({ ...draft, penalties: updated });
+  };
+
+  const removePenalty = (id) => {
+    const updated = penalties.filter((p) => p.id !== id);
+    onDraftChange({ ...draft, penalties: updated });
+  };
+
+  const addManualPenalty = () => {
+    // Por padrão: falta cometida pelo adversário e benefício ao atleta da casa
+    const defaultFoulColor = opponentColor;
+    const isAthleteFoul = defaultFoulColor === athleteColor;
+    const newPenalty = {
+      id: `manual_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      foulColor: defaultFoulColor,
+      foulPlayer: isAthleteFoul ? athlete : opponent,
+      takerColor: isAthleteFoul ? opponentColor : athleteColor,
+      takerPlayer: isAthleteFoul ? opponent : athlete,
+      result: "Sem penalidade",
+      isManual: true,
+    };
+    onDraftChange({ ...draft, penalties: [...penalties, newPenalty] });
+  };
 
   return (
     <div
       style={{
         ...styles.card,
-        border:
-          "3px solid #f97316",
+        border: "3px solid #f97316",
       }}
     >
-      <div
-        style={{
-          textAlign:
-            "center",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 35,
-          }}
-        >
-          
-        </div>
-
-        <h2>
-          {endName}
-          {" "}
-          finalizado
-        </h2>
-
+      <div style={{ textAlign: "center" }}>
+        <h2>{endName} finalizado</h2>
         <p style={styles.helpText}>
-          As 12 bolas deste End foram
-          registradas. Informe o placar
-          da parcial.
+          As 12 bolas deste End foram registradas. Informe o placar da parcial.
         </p>
       </div>
 
-      <div
-        style={styles.grid2}
-      >
+      <div style={styles.grid2}>
         {(athleteColor === "Azul"
           ? [
               { color: athleteColor, name: athlete, value: athleteScore, setValue: setAthleteScore },
@@ -5131,84 +5247,238 @@ function EndScore({athlete,opponent,athleteColor,opponentColor,endName,onSave,dr
         ))}
       </div>
 
-      {/* Seção de Penalização */}
-      <div style={{
-        marginTop: 18,
-        padding: "14px 16px",
-        background: hasFoul ? "#fffbeb" : "#f8fafc",
-        border: hasFoul ? "2px solid #f59e0b" : "1px solid #e2e8f0",
-        borderRadius: 12,
-        textAlign: "left"
-      }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
-          <div style={{ fontWeight: 800, fontSize: 14, color: "#1e293b", display: "flex", alignItems: "center", gap: 6 }}>
-            <span>⚖️ Penalização</span>
-            {hasFoul && (
-              <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 11, padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
-                {foulCount} falta(s) registrada(s) neste End
+      {/* Seção de Penalizações */}
+      {penalties.length === 0 ? (
+        <div style={{
+          marginTop: 18,
+          padding: "14px 16px",
+          background: "#f8fafc",
+          border: "1px solid #e2e8f0",
+          borderRadius: 12,
+          textAlign: "left"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: "#1e293b", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>⚖️ Penalização</span>
+              <span style={{ background: "#f1f5f9", color: "#64748b", fontSize: 11, padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+                Nenhuma falta registrada neste End
               </span>
-            )}
+            </div>
           </div>
-          <span style={{ fontSize: 11, color: "#64748b" }}>
-            Opcional · Registre se houve cobrança de penalização
-          </span>
-        </div>
-
-        <p style={{ fontSize: 12, color: "#475569", margin: "0 0 10px" }}>
-          Houve cobrança de penalização neste End?
-        </p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <p style={{ fontSize: 12, color: "#64748b", margin: "4px 0 12px" }}>
+            Se houve alguma falta ou penalidade não anotada nas jogadas, você pode adicionar abaixo:
+          </p>
           <button
             type="button"
-            onClick={() => setPenaltyResult(null)}
+            onClick={addManualPenalty}
             style={{
               ...styles.button,
-              padding: "9px 6px",
-              fontSize: 12,
+              background: "#ffffff",
+              color: "#0284c7",
+              border: "1px dashed #38bdf8",
+              fontSize: 13,
               fontWeight: 700,
-              background: !penaltyResult ? "#334155" : "#f1f5f9",
-              color: !penaltyResult ? "#ffffff" : "#475569",
-              border: "1px solid #cbd5e1",
-              minHeight: 38,
+              padding: "8px 14px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6
             }}
           >
-            Sem penalização
-          </button>
-          <button
-            type="button"
-            onClick={() => setPenaltyResult("Acerto")}
-            style={{
-              ...styles.button,
-              padding: "9px 6px",
-              fontSize: 12,
-              fontWeight: 800,
-              background: penaltyResult === "Acerto" ? "#15803d" : "#f0fdf4",
-              color: penaltyResult === "Acerto" ? "#ffffff" : "#166534",
-              border: penaltyResult === "Acerto" ? "2px solid #166534" : "1px solid #bbf7d0",
-              minHeight: 38,
-            }}
-          >
-            ✅ Acerto
-          </button>
-          <button
-            type="button"
-            onClick={() => setPenaltyResult("Erro")}
-            style={{
-              ...styles.button,
-              padding: "9px 6px",
-              fontSize: 12,
-              fontWeight: 800,
-              background: penaltyResult === "Erro" ? "#b91c1c" : "#fef2f2",
-              color: penaltyResult === "Erro" ? "#ffffff" : "#991b1b",
-              border: penaltyResult === "Erro" ? "2px solid #991b1b" : "1px solid #fecaca",
-              minHeight: 38,
-            }}
-          >
-            ❌ Erro
+            ➕ Adicionar penalidade manual
           </button>
         </div>
-      </div>
+      ) : (
+        <div style={{
+          marginTop: 18,
+          padding: "14px 16px",
+          background: "#fffbeb",
+          border: "2px solid #f59e0b",
+          borderRadius: 12,
+          textAlign: "left"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 6 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: "#1e293b", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>⚖️ Penalização ({penalties.length})</span>
+              <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 11, padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+                Benefício para o adversário da falta
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={addManualPenalty}
+              style={{
+                background: "#ffffff",
+                color: "#0369a1",
+                border: "1px solid #bae6fd",
+                borderRadius: 8,
+                fontSize: 11,
+                fontWeight: 700,
+                padding: "4px 10px",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4
+              }}
+            >
+              ➕ Adicionar outra
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {penalties.map((pen, index) => {
+              const takerIsRed = pen.takerColor === "Vermelho";
+              const foulIsRed = pen.foulColor === "Vermelho";
+              const currentResult = pen.result || "Sem penalidade";
+
+              return (
+                <div
+                  key={pen.id || index}
+                  style={{
+                    padding: "12px 14px",
+                    background: "#ffffff",
+                    border: `2px solid ${takerIsRed ? "#fca5a5" : "#93c5fd"}`,
+                    borderRadius: 10,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+                  }}
+                >
+                  {/* Cabeçalho da Caixa */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#334155" }}>
+                      Cobrança #{index + 1} {pen.isManual ? "· Adicionada manual" : "· Falta registrada no End"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePenalty(pen.id)}
+                      title="Remover esta cobrança"
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#94a3b8",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        padding: "2px 6px"
+                      }}
+                    >
+                      ✕ Excluir
+                    </button>
+                  </div>
+
+                  {/* Linha da Falta (Infrator) */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6, marginBottom: 8, fontSize: 12 }}>
+                    <div>
+                      <span style={{ color: "#64748b", marginRight: 6 }}>⚠️ Falta cometida por:</span>
+                      <span style={{
+                        fontWeight: 800,
+                        color: foulIsRed ? "#b91c1c" : "#1d4ed8",
+                        background: foulIsRed ? "#fee2e2" : "#dbeafe",
+                        padding: "2px 8px",
+                        borderRadius: 6
+                      }}>
+                        {pen.foulColor} · {pen.foulPlayer}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleFoulParty(pen.id)}
+                      title="Clique para alternar quem cometeu a falta"
+                      style={{
+                        background: "#f1f5f9",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: "#475569",
+                        padding: "2px 6px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      ⇄ Inverter lados
+                    </button>
+                  </div>
+
+                  {/* Linha do Benefício / Cobrador */}
+                  <div style={{
+                    background: takerIsRed ? "#fef2f2" : "#eff6ff",
+                    border: `1px solid ${takerIsRed ? "#fecaca" : "#bfdbfe"}`,
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    marginBottom: 10
+                  }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: takerIsRed ? "#991b1b" : "#1e40af", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span>🎯 Benefício / Cobrança:</span>
+                      <span style={{
+                        background: takerIsRed ? "#dc2626" : "#2563eb",
+                        color: "#ffffff",
+                        fontSize: 11,
+                        padding: "1px 8px",
+                        borderRadius: 12,
+                        fontWeight: 800
+                      }}>
+                        {pen.takerColor} · {pen.takerPlayer}
+                      </span>
+                    </div>
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: takerIsRed ? "#b91c1c" : "#1d4ed8" }}>
+                      Quem tem a chance de pontuar é o adversário. Escolha o resultado da cobrança:
+                    </p>
+                  </div>
+
+                  {/* 3 Botões de Opção */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => updatePenaltyResult(pen.id, "Sem penalidade")}
+                      style={{
+                        ...styles.button,
+                        padding: "8px 4px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        background: currentResult === "Sem penalidade" ? "#334155" : "#f1f5f9",
+                        color: currentResult === "Sem penalidade" ? "#ffffff" : "#475569",
+                        border: currentResult === "Sem penalidade" ? "1px solid #1e293b" : "1px solid #cbd5e1",
+                        minHeight: 36,
+                      }}
+                    >
+                      Sem penalidade
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePenaltyResult(pen.id, "Acerto")}
+                      style={{
+                        ...styles.button,
+                        padding: "8px 4px",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        background: currentResult === "Acerto" ? "#15803d" : "#f0fdf4",
+                        color: currentResult === "Acerto" ? "#ffffff" : "#166534",
+                        border: currentResult === "Acerto" ? "2px solid #166534" : "1px solid #bbf7d0",
+                        minHeight: 36,
+                      }}
+                    >
+                      ✅ Acerto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePenaltyResult(pen.id, "Erro")}
+                      style={{
+                        ...styles.button,
+                        padding: "8px 4px",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        background: currentResult === "Erro" ? "#b91c1c" : "#fef2f2",
+                        color: currentResult === "Erro" ? "#ffffff" : "#991b1b",
+                        border: currentResult === "Erro" ? "2px solid #991b1b" : "1px solid #fecaca",
+                        minHeight: 36,
+                      }}
+                    >
+                      ❌ Erro
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <button
         onClick={() =>
