@@ -59,6 +59,11 @@ export async function createMatchReport(session: any, positionStats: (plays:any[
   const radarAxes=usedFoundations(radarSides);
   const addRadar=(series:any[],x:number,y:number,w:number)=>{const c=document.createElement('canvas');drawRadar(c,series,radarAxes);doc.addImage(c.toDataURL('image/png'),'PNG',x,y,w,w*570/720);};
   text(fit(redName,190,8).slice(0,2).join(' '),130,342,8,true,red,'center');text('Vermelho × Azul',W/2,342,9,true,navy,'center');text(fit(blueName,190,8).slice(0,2).join(' '),W-130,342,8,true,blue,'center');
+  const redSeries = radarSides.find((s: any) => s.color === 'Vermelho') || radarSides[1] || radarSides[0];
+  const blueSeries = radarSides.find((s: any) => s.color === 'Azul') || radarSides[0] || radarSides[1];
+  addRadar([redSeries], 26, 350, 220);
+  addRadar(radarSides, W / 2 - 135, 342, 270);
+  addRadar([blueSeries], W - 246, 350, 220);
   const matchPenalties: string[] = [];
   ends.forEach((end: string) => {
     const sc = session.scores?.[end];

@@ -426,10 +426,26 @@ function TopNav({ view, setView }) {
     </nav>
   </HeaderNavigation>;
 }
-function getRegularScoreTotals(scores = {}) {
+function isTieBreakEndName(name = "") {
+  const n = String(name).trim().toLowerCase();
+  return (
+    n.startsWith("tie-break") ||
+    n.startsWith("tiebreak") ||
+    n.startsWith("tie break") ||
+    n === "tb" ||
+    n.startsWith("tb ") ||
+    n.startsWith("tb-") ||
+    n.startsWith("desempate")
+  );
+}
+
+function getRegularScoreTotals(scores = {}, gameType = "") {
+  const maxReg = (gameType === "Equipes" || gameType === "Equipe BC1/BC2") ? 6 : 4;
   return Object.entries(scores || {}).reduce(
-    (acc, [name, score]) => {
-      if (String(name).startsWith("Tie-Break")) return acc;
+    (acc, [name, score]: [string, any]) => {
+      if (isTieBreakEndName(name)) return acc;
+      const match = String(name).match(/end\s*(\d+)/i);
+      if (match && Number(match[1]) > maxReg) return acc;
       acc.athlete += Number(score?.athlete || 0);
       acc.opponent += Number(score?.opponent || 0);
       return acc;
@@ -438,27 +454,43 @@ function getRegularScoreTotals(scores = {}) {
   );
 }
 
-function getTieBreakWinnerFromScores(scores = {}) {
+function getTieBreakWinnerFromScores(scores = {}, gameType = "") {
+  // 1. Ends com nomenclatura de tie-break (Tie-Break, TB, etc.)
   const entries = Object.entries(scores || {})
-    .filter(([name]) => String(name).startsWith("Tie-Break"));
+    .filter(([name]) => isTieBreakEndName(name));
   for (let i = entries.length - 1; i >= 0; i--) {
-    const [, score] = entries[i];
+    const [, score]: [string, any] = entries[i];
     const a = Number(score?.athlete || 0);
     const o = Number(score?.opponent || 0);
     if (a > o) return "athlete";
     if (o > a) return "opponent";
   }
+
+  // 2. Ends extras além dos regulares
+  const maxReg = (gameType === "Equipes" || gameType === "Equipe BC1/BC2") ? 6 : 4;
+  const overtime = Object.entries(scores || {}).filter(([name]) => {
+    const match = String(name).match(/end\s*(\d+)/i);
+    return match && Number(match[1]) > maxReg;
+  });
+  for (let i = overtime.length - 1; i >= 0; i--) {
+    const [, score]: [string, any] = overtime[i];
+    const a = Number(score?.athlete || 0);
+    const o = Number(score?.opponent || 0);
+    if (a > o) return "athlete";
+    if (o > a) return "opponent";
+  }
+
   return null;
 }
 
-function getSessionWinner(s) {
-  const totals = getRegularScoreTotals(s?.scores || {});
+function getSessionWinner(s: any) {
+  const totals = getRegularScoreTotals(s?.scores || {}, s?.gameType);
   if (totals.athlete > totals.opponent) return "Vitória";
   if (totals.athlete < totals.opponent) return "Derrota";
-  const tbWinner = getTieBreakWinnerFromScores(s?.scores || {});
-  if (tbWinner === "athlete") return "Vitória";
-  if (tbWinner === "opponent") return "Derrota";
-  return "—";
+  const tbWinner = getTieBreakWinnerFromScores(s?.scores || {}, s?.gameType);
+  if (tbWinner === "athlete") return "Vitória (TB)";
+  if (tbWinner === "opponent") return "Derrota (TB)";
+  return totals.athlete === totals.opponent && totals.athlete > 0 ? "Empate" : "—";
 }
 
 function aggregateFundaments(sessions) {
@@ -1210,8 +1242,11 @@ function HistoryScreen({ sessions, athletes, onBack, onDeleted, isAdmin = false,
 function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete = null, onRestore = null, isAdmin = false, isSuperAdmin = false }) {
   const athleteTotal = Number(item.totalAthlete ?? 0);
   const opponentTotal = Number(item.totalOpponent ?? 0);
-  const isAthleteWin = athleteTotal > opponentTotal;
-  const isOpponentWin = opponentTotal > athleteTotal;
+  const tbWinner = (athleteTotal === opponentTotal)
+    ? getTieBreakWinnerFromScores(item.scores, item.gameType)
+    : null;
+  const isAthleteWin = athleteTotal > opponentTotal || tbWinner === "athlete";
+  const isOpponentWin = opponentTotal > athleteTotal || tbWinner === "opponent";
   const ends = sessionEnds(item);
 
   return (
@@ -1224,7 +1259,7 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
             {isAthleteWin ? (
               <span className="scout-winner-mask">
                 <span className="scout-winner-name">{item.athlete}</span>
-                <span className="scout-win-pill">Vitória</span>
+                <span className="scout-win-pill">{tbWinner === "athlete" ? "Vitória (TB)" : "Vitória"}</span>
               </span>
             ) : (
               <span className="scout-player-name">{item.athlete}</span>
@@ -1236,6 +1271,7 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
             <span className={isAthleteWin ? "scout-num-win" : ""}>{athleteTotal}</span>
             <span className="scout-score-sep">×</span>
             <span className={isOpponentWin ? "scout-num-win" : ""}>{opponentTotal}</span>
+            {tbWinner && <span style={{ fontSize: 9, color: "#facc15", marginLeft: 2, fontWeight: 700 }} title="Decidido no Tie-Break">TB</span>}
           </div>
 
           {/* Lado Adversário */}
@@ -1244,7 +1280,7 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
             {isOpponentWin ? (
               <span className="scout-winner-mask">
                 <span className="scout-winner-name">{item.opponent}</span>
-                <span className="scout-win-pill">Vitória</span>
+                <span className="scout-win-pill">{tbWinner === "opponent" ? "Vitória (TB)" : "Vitória"}</span>
               </span>
             ) : (
               <span className="scout-player-name">{item.opponent}</span>
@@ -1291,7 +1327,7 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
               const oPts = Number(sc.opponent || 0);
               const aLead = aPts > oPts;
               const oLead = oPts > aPts;
-              const isTb = endName.startsWith("Tie-Break") || endName === "TB";
+              const isTb = isTieBreakEndName(endName);
 
               return (
                 <div key={endName} className={`scout-end-chip ${isTb ? "is-tb" : ""}`}>
@@ -1299,9 +1335,9 @@ function MatchAccordionItem({ item, isExpanded, onToggle, onSelectFull, onDelete
                     {isTb ? "TB" : endName.replace("End ", "E")}
                   </span>
                   <div className="scout-end-chip-score">
-                    <span className={aLead ? "score-lead" : ""}>{aPts}</span>
+                    <span className={aLead ? "score-lead" : (oLead ? "score-trail" : "")}>{aPts}</span>
                     <span style={{ color: "#cbd5e1", fontSize: 10 }}>-</span>
-                    <span className={oLead ? "score-trail" : ""}>{oPts}</span>
+                    <span className={oLead ? "score-lead" : (aLead ? "score-trail" : "")}>{oPts}</span>
                   </div>
                   {sc.penalties && sc.penalties.filter(p => p.result && p.result !== "Sem penalidade").length > 0 ? (
                     <div style={{ display: "flex", gap: 2, flexWrap: "wrap", marginTop: 2, justifyContent: "center" }}>
@@ -2933,7 +2969,8 @@ export default function BochaScout() {
     if (!finished || !draftReady || !currentUserId || !draftId) return;
 
     const statsSnapshot = calcStats(playsHistory.filter((p) => p.color === athleteColor));
-    const totals = getRegularScoreTotals(scores);
+    const totals = getRegularScoreTotals(scores, gameType);
+    const tbWinner = getTieBreakWinnerFromScores(scores, gameType);
 
     const id = `session-${draftId}`;
 
@@ -2959,6 +2996,7 @@ export default function BochaScout() {
           athleteColor,
           totalAthlete: totals.athlete,
           totalOpponent: totals.opponent,
+          tieBreakWinner: tbWinner,
           scores,
           plays: playsHistory,
           commands: commandHistory,
